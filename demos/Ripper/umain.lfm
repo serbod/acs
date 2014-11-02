@@ -1,0 +1,119 @@
+object fMain: TfMain
+  ActiveControl = lvTracks
+  Caption = 'CD Ripper'
+  ClientHeight = 300
+  ClientWidth = 400
+  OnCreate = FormCreate
+  PixelsPerInch = 75
+  HorzScrollBar.Page = 399
+  VertScrollBar.Page = 299
+  Left = 271
+  Height = 300
+  Top = 150
+  Width = 400
+  object Label1: TLabel
+    Caption = 'Drive'
+    Color = clNone
+    ParentColor = False
+    Left = 8
+    Height = 13
+    Top = 7
+    Width = 31
+  end
+  object Label2: TLabel
+    Caption = 'Output Format'
+    Color = clNone
+    ParentColor = False
+    Left = 265
+    Height = 13
+    Top = 7
+    Width = 80
+  end
+  object lvTracks: TListView
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    Columns = <    
+      item
+        Caption = 'Track'
+        Width = 10
+      end    
+      item
+        Caption = 'Tracktitle'
+        Width = 10
+      end    
+      item
+        Caption = 'Length'
+        Width = 10
+      end>
+    MultiSelect = True
+    RowSelect = True
+    ViewStyle = vsReport
+    Height = 250
+    Top = 34
+    Width = 400
+  end
+  object cbDrives: TComboBox
+    MaxLength = 0
+    OnChange = cbDrivesChange
+    Style = csDropDownList
+    TabOrder = 1
+    Left = 40
+    Height = 21
+    Top = 4
+    Width = 132
+  end
+  object bRip: TButton
+    BorderSpacing.InnerBorder = 2
+    Caption = 'Rip selected'
+    OnClick = Button1Click
+    TabOrder = 2
+    Left = 184
+    Height = 21
+    Top = 4
+    Width = 75
+  end
+  object cbFormat: TComboBox
+    ItemIndex = 2
+    Items.Strings = (
+      'ogg'
+      'mp3'
+      'wav'
+    )
+    MaxLength = 0
+    Style = csDropDownList
+    TabOrder = 3
+    Text = 'wav'
+    Left = 340
+    Height = 21
+    Top = 4
+    Width = 61
+  end
+  object ProgressBar: TProgressBar
+    Align = alBottom
+    Max = 100
+    Height = 12
+    Top = 288
+    Width = 400
+  end
+  object Timer: TTimer
+    OnTimer = TimerTimer
+    left = 76
+    top = 4
+  end
+  object SelectDirectoryDialog: TSelectDirectoryDialog
+    Title = 'Select Directory'
+    FilterIndex = 0
+    Title = 'Select Directory'
+    left = 144
+    top = 4
+  end
+  object FileOut: TACSFileOut
+    Input = CDIn
+    OnDone = FileOutDone
+    left = 112
+    top = 4
+  end
+  object CDIn: TACSCDIn
+    left = 44
+    top = 4
+  end
+end

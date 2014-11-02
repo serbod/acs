@@ -1,0 +1,131 @@
+2014-10-10  serbod
++ property editors for Driver property (AudioIn, AudioOut)
+
+2014-10-06  serbod
+TACSSoundIndicator:
+* range checking disabled only for pointer-based operations 
++ Pascal analogs for non-portable x86 assembler code
+* fixes and optimizations
+
+2014-10-05  serbod
+* code formatted to LCL code style
+* removed exceptions from design-time components
+* some code rewritten to more strict FreePascal syntax
+
+TACSMixer:
+* added error checking for external functions calls
+* fixed errors in SetDevNum
+
+2006/07/04 17:12:45  z0m3ie
+ACS 2.4 alt wiederhergestellt (unterschiedliche Sampleformate ...)
+
+2005/12/30 13:24:27  z0m3ie
+waveformat corrections, localizing
+
+2005/12/30 12:54:42  z0m3ie
+some error checks
+
+2005/12/30 11:10:57  z0m3ie
+some corrections to lazarus-linux depending things
+
+2005/12/27 05:43:03  z0m3ie
+fixed little bug with TDoneThread
+
+2005/12/26 17:31:38  z0m3ie
+fixed some problems in acs_dsfiles
+fixed some problems in acs_vorbis
+reworked all buffers
+
+2005/12/20 20:11:52  z0m3ie
+updated package
+
+2005/12/18 17:01:54  z0m3ie
+delphi compatibility
+
+2005/12/04 16:54:34  z0m3ie
+All classes are renamed, Style TACS... than T... to avoid conflicts with other components (eg TMixer is TACSMixer now)
+
+2005/11/28 21:57:24  z0m3ie
+mostly FileOut fixes
+moved PBuffer to PBuffer8
+set all to dynamically Buffering
+
+2005/11/27 16:50:33  z0m3ie
+add ACS VolumeQuerry
+make ACS_VolumeQuerry localizeable
+some little errorfixes (buffersize for linuxdrivers was initially 0)
+make TAudioIn workable
+
+2005/10/05 20:26:36  z0m3ie
+Linux changes
+
+2005/09/18 19:28:59  z0m3ie
+more progress on driver handling
+
+2005/09/15 20:59:37  z0m3ie
+start translate the documentation in the source for pasdoc
+
+2005/09/13 21:54:11  z0m3ie
+acs is localizeable now (ACS_Strings)
+
+2005/09/13 20:14:52  z0m3ie
+driver handling classes (basic audio class)
+
+2005/09/13 04:04:50  z0m3ie
+First release without Components for Fileformats
+only TFileIn and TFileOut are Visible
+
+2005/09/12 22:04:52  z0m3ie
+modified structure again, fileformats are now in an sperat folder.
+all File In/Out classes are capsulated from TFileIn and TFileOut
+
+2005/09/11 18:06:26  z0m3ie
+first working Version
+
+2005/09/09 21:33:42  z0m3ie
+linux corrections
+
+2005/09/07 20:53:22  z0m3ie
+begon to add MPEG and WMA support using DirectX
+
+2005/09/04 17:59:37  z0m3ie
+moving CDIn support to AKRip mostly
+begon to add mpegin support for Win with mpg123
+
+2005/09/01 19:55:48  z0m3ie
+again Delphi corrections
+
+2005/08/31 20:30:39  z0m3ie
+Mixer Channelname work now
+minior corrections for Converters
+
+2005/08/31 14:33:16  z0m3ie
+fixed delphi issue with TControlEntry
+
+2005/08/30 22:10:55  z0m3ie
+Mixer mostly completed
+
+2005/08/28 20:31:18  z0m3ie
+linux restructuring for 2.4
+
+2005/08/28 18:35:53  z0m3ie
+created Delphi package for 2.4
+more Mixer stuff
+updated some things for Delphi
+
+2005/08/26 17:03:20  z0m3ie
+begon to make acs resourcestring aware
+more advanced tmixer for windows
+restructured tmixer its better handleable now
+
+2005/08/25 21:06:29  z0m3ie
+Added TMultiMixer
+
+2005/08/25 20:18:00  z0m3ie
+Version 2.4 restructure
+TCDPlayer removed (fits not in component structure)
+TMP3ToWavConverter removed (fits not in component structure)
+
+2005/08/22 20:17:01  z0m3ie
+changed Headers to log
+changed mail adress
