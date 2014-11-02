@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <Package Version="4">
+    <PathDelim Value="\"/>
+    <Name Value="laz_acs"/>
+    <AddToProjectUsesSection Value="True"/>
+    <Author Value="2002-2005 Andrei Borovsky"/>
+    <CompilerOptions>
+      <Version Value="11"/>
+      <PathDelim Value="\"/>
+      <SearchPaths>
+        <IncludeFiles Value="..\src\filters\$(TargetOS);..\src\formats\$(TargetOS);..\src\devices\$(TargetOS)"/>
+        <OtherUnitFiles Value="..\src\filters;..\src\filters\$(TargetOS);..\src\formats;..\src\formats\$(TargetOS);..\src\formats\general;..\src\devices;..\src\devices\$(TargetOS)"/>
+        <UnitOutputDirectory Value="lib"/>
+      </SearchPaths>
+      <Parsing>
+        <SyntaxOptions>
+          <SyntaxMode Value="Delphi"/>
+          <CStyleOperator Value="False"/>
+          <IncludeAssertionCode Value="True"/>
+          <UseAnsiStrings Value="False"/>
+        </SyntaxOptions>
+      </Parsing>
+      <CodeGeneration>
+        <Checks>
+          <IOChecks Value="True"/>
+          <RangeChecks Value="True"/>
+          <OverflowChecks Value="True"/>
+          <StackChecks Value="True"/>
+        </Checks>
+        <VerifyObjMethodCallValidity Value="True"/>
+      </CodeGeneration>
+      <Other>
+        <CompilerPath Value="$(CompPath)"/>
+      </Other>
+    </CompilerOptions>
+    <Description Value="Audio Component Suite
+"/>
+    <Version Major="2" Minor="5" Release="1"/>
+    <Files Count="27">
+      <Item1>
+        <Filename Value="acs_reg.pas"/>
+        <HasRegisterProc Value="True"/>
+        <UnitName Value="acs_reg"/>
+      </Item1>
+      <Item2>
+        <Filename Value="..\src\filters\acs_audio.pas"/>
+        <UnitName Value="acs_audio"/>
+      </Item2>
+      <Item3>
+        <Filename Value="..\src\filters\acs_audiomix.pas"/>
+        <UnitName Value="acs_audiomix"/>
+      </Item3>
+      <Item4>
+        <Filename Value="..\src\filters\acs_cdrom.pas"/>
+        <UnitName Value="acs_cdrom"/>
+      </Item4>
+      <Item5>
+        <Filename Value="..\src\filters\acs_classes.pas"/>
+        <UnitName Value="acs_classes"/>
+      </Item5>
+      <Item6>
+        <Filename Value="..\src\filters\acs_converters.pas"/>
+        <UnitName Value="acs_converters"/>
+      </Item6>
+      <Item7>
+        <Filename Value="..\src\filters\acs_file.pas"/>
+        <UnitName Value="acs_file"/>
+      </Item7>
+      <Item8>
+        <Filename Value="..\src\filters\acs_filters.pas"/>
+        <UnitName Value="acs_filters"/>
+      </Item8>
+      <Item9>
+        <Filename Value="..\src\filters\acs_indicator.pas"/>
+        <UnitName Value="acs_indicator"/>
+      </Item9>
+      <Item10>
+        <Filename Value="..\src\filters\acs_misc.pas"/>
+        <UnitName Value="acs_misc"/>
+      </Item10>
+      <Item11>
+        <Filename Value="..\src\filters\acs_mixer.pas"/>
+        <UnitName Value="acs_mixer"/>
+      </Item11>
+      <Item12>
+        <Filename Value="..\src\filters\acs_multimix.pas"/>
+        <UnitName Value="acs_multimix"/>
+      </Item12>
+      <Item13>
+        <Filename Value="..\src\filters\acs_procs.pas"/>
+        <UnitName Value="acs_procs"/>
+      </Item13>
+      <Item14>
+        <Filename Value="..\src\filters\acs_streams.pas"/>
+        <UnitName Value="acs_streams"/>
+      </Item14>
+      <Item15>
+        <Filename Value="..\src\filters\acs_strings.pas"/>
+        <UnitName Value="acs_strings"/>
+      </Item15>
+      <Item16>
+        <Filename Value="..\src\filters\acs_types.pas"/>
+        <UnitName Value="acs_types"/>
+      </Item16>
+      <Item17>
+        <Filename Value="..\src\filters\acs_properties.pas"/>
+        <UnitName Value="acs_properties"/>
+      </Item17>
+      <Item18>
+        <Filename Value="..\src\formats\acs_dsfiles.pas"/>
+        <UnitName Value="acs_dsfiles"/>
+      </Item18>
+      <Item19>
+        <Filename Value="..\src\formats\acs_flac.pas"/>
+        <UnitName Value="acs_flac"/>
+      </Item19>
+      <Item20>
+        <Filename Value="..\src\formats\acs_lame.pas"/>
+        <UnitName Value="acs_lame"/>
+      </Item20>
+      <Item21>
+        <Filename Value="..\src\formats\acs_mac.pas"/>
+        <UnitName Value="acs_mac"/>
+      </Item21>
+      <Item22>
+        <Filename Value="..\src\formats\acs_vorbis.pas"/>
+        <UnitName Value="acs_vorbis"/>
+      </Item22>
+      <Item23>
+        <Filename Value="..\src\formats\acs_wave.pas"/>
+        <UnitName Value="acs_wave"/>
+      </Item23>
+      <Item24>
+        <Filename Value="..\src\formats\acs_allformats.pas"/>
+        <UnitName Value="acs_allformats"/>
+      </Item24>
+      <Item25>
+        <Filename Value="..\src\devices\acs_dxaudio.pas"/>
+        <UnitName Value="acs_dxaudio"/>
+      </Item25>
+      <Item26>
+        <Filename Value="..\src\devices\acs_stdaudio.pas"/>
+        <UnitName Value="acs_stdaudio"/>
+      </Item26>
+      <Item27>
+        <Filename Value="acs_reg.lrs"/>
+        <Type Value="LRS"/>
+      </Item27>
+    </Files>
+    <Type Value="RunAndDesignTime"/>
+    <RequiredPkgs Count="3">
+      <Item1>
+        <PackageName Value="IDEIntf"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="LCL"/>
+      </Item2>
+      <Item3>
+        <PackageName Value="FCL"/>
+        <MinVersion Major="1" Valid="True"/>
+      </Item3>
+    </RequiredPkgs>
+    <UsageOptions>
+      <UnitPath Value="$(PkgOutDir)"/>
+    </UsageOptions>
+    <PublishOptions>
+      <Version Value="2"/>
+      <DestinationDirectory Value="$(TestDir)\publishedpackage\"/>
+      <IgnoreBinaries Value="False"/>
+    </PublishOptions>
+    <CustomOptions Items="ExternHelp" Version="2">
+      <_ExternHelp Items="Count"/>
+    </CustomOptions>
+  </Package>
+</CONFIG>

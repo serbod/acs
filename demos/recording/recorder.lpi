@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectOptions>
+    <Version Value="9"/>
+    <General>
+      <Flags>
+        <LRSInOutputDirectory Value="False"/>
+      </Flags>
+      <MainUnit Value="0"/>
+      <ActiveWindowIndexAtStart Value="0"/>
+    </General>
+    <BuildModes Count="1">
+      <Item1 Name="default" Default="True"/>
+    </BuildModes>
+    <PublishOptions>
+      <Version Value="2"/>
+      <IgnoreBinaries Value="False"/>
+      <IncludeFileFilter Value="*.(pas|pp|inc|lfm|lpr|lrs|lpi|lpk|sh|xml)"/>
+      <ExcludeFileFilter Value="*.(bak|ppu|ppw|o|so);*~;backup"/>
+    </PublishOptions>
+    <RunParams>
+      <local>
+        <FormatVersion Value="1"/>
+        <LaunchingApplication PathPlusParams="/usr/X11R6/bin/xterm -T 'Lazarus Run Output' -e $(LazarusDir)/tools/runwait.sh $(TargetCmdLine)"/>
+        <Display Use="True" Value=":1"/>
+      </local>
+    </RunParams>
+    <RequiredPackages Count="2">
+      <Item1>
+        <PackageName Value="LCL"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="LAZ_ACS"/>
+        <MinVersion Major="2" Minor="4" Valid="True"/>
+      </Item2>
+    </RequiredPackages>
+    <Units Count="22">
+      <Unit0>
+        <Filename Value="recorder.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="recorder"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="1"/>
+        <CursorPos X="31" Y="17"/>
+        <UsageCount Value="26"/>
+        <Loaded Value="True"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="umain.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="fMain"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="uMain"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="0"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="20"/>
+        <CursorPos X="49" Y="22"/>
+        <UsageCount Value="26"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="D:/LKomponenten/acs/Src/classes/ACS_Audio.pas"/>
+        <UnitName Value="acs_audio"/>
+        <TopLine Value="9"/>
+        <CursorPos X="1" Y="41"/>
+        <UsageCount Value="11"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="D:/LKomponenten/acs/Src/classes/ACS_Classes.pas"/>
+        <UnitName Value="ACS_Classes"/>
+        <TopLine Value="63"/>
+        <CursorPos X="3" Y="77"/>
+        <UsageCount Value="11"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="D:/LKomponenten/acs/Src/classes/ACS_VolumeQuery.pas"/>
+        <UnitName Value="ACS_VolumeQuery"/>
+        <TopLine Value="157"/>
+        <CursorPos X="1" Y="171"/>
+        <UsageCount Value="11"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="D:/LKomponenten/acs/Src/Win32/acs_reg.pas"/>
+        <UnitName Value="acs_reg"/>
+        <TopLine Value="13"/>
+        <CursorPos X="69" Y="32"/>
+        <UsageCount Value="10"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="D:/LKomponenten/acs/Src/Linux/acs_reg.pas"/>
+        <UnitName Value="acs_reg"/>
+        <TopLine Value="1"/>
+        <CursorPos X="53" Y="17"/>
+        <UsageCount Value="10"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="D:/LKomponenten/acs/Src/classes/ACS_Misc.pas"/>
+        <UnitName Value="ACS_Misc"/>
+        <TopLine Value="340"/>
+        <CursorPos X="9" Y="363"/>
+        <UsageCount Value="11"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="D:/LKomponenten/acs/Src/drivers/windows/ACS_Audio.inc"/>
+        <TopLine Value="271"/>
+        <CursorPos X="1" Y="298"/>
+        <UsageCount Value="11"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="D:/LKomponenten/acs/Src/drivers/ACS_StdAudio.pas"/>
+        <UnitName Value="ACS_StdAudio"/>
+        <TopLine Value="168"/>
+        <CursorPos X="20" Y="176"/>
+        <UsageCount Value="11"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="D:/LKomponenten/acs/Src/classes/ACS_Strings.pas"/>
+        <UnitName Value="ACS_Strings"/>
+        <TopLine Value="18"/>
+        <CursorPos X="3" Y="26"/>
+        <UsageCount Value="10"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="D:/LKomponenten/acs/Src/drivers/linux/ACS_Audio.inc"/>
+        <TopLine Value="104"/>
+        <CursorPos X="1" Y="114"/>
+        <UsageCount Value="10"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="umain.lfm"/>
+        <TopLine Value="38"/>
+        <CursorPos X="27" Y="63"/>
+        <SyntaxHighlighter Value="LFM"/>
+        <UsageCount Value="10"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="D:/fpc/packages/extra/winunits/mmsystem.pp"/>
+        <UnitName Value="mmsystem"/>
+        <TopLine Value="957"/>
+        <CursorPos X="1" Y="989"/>
+        <UsageCount Value="11"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="D:/LKomponenten/acs/Src/drivers/acs_dxaudio.pas"/>
+        <UnitName Value="acs_dxaudio"/>
+        <TopLine Value="171"/>
+        <CursorPos X="4" Y="203"/>
+        <UsageCount Value="11"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="/windows/D/LKomponenten/acs/Src/drivers/acs_stdaudio.pas"/>
+        <UnitName Value="acs_stdaudio"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="103"/>
+        <CursorPos X="22" Y="109"/>
+        <UsageCount Value="10"/>
+        <LoadedDesigner Value="True"/>
+      </Unit15>
+      <Unit16>
+        <Filename Value="/windows/D/LKomponenten/acs/Src/drivers/windows/acs_audio.inc"/>
+        <TopLine Value="73"/>
+        <CursorPos X="21" Y="96"/>
+        <UsageCount Value="10"/>
+      </Unit16>
+      <Unit17>
+        <Filename Value="/windows/D/LKomponenten/acs/Src/drivers/linux/acs_audio.inc"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="203"/>
+        <CursorPos X="16" Y="239"/>
+        <UsageCount Value="10"/>
+        <LoadedDesigner Value="True"/>
+      </Unit17>
+      <Unit18>
+        <Filename Value="/windows/D/lazarus/lcl/include/screen.inc"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="321"/>
+        <CursorPos X="1" Y="339"/>
+        <UsageCount Value="10"/>
+        <LoadedDesigner Value="True"/>
+      </Unit18>
+      <Unit19>
+        <Filename Value="/windows/D/LKomponenten/acs/Src/drivers/linux/alsa.pas"/>
+        <UnitName Value="alsa"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="284"/>
+        <CursorPos X="26" Y="320"/>
+        <UsageCount Value="10"/>
+        <LoadedDesigner Value="True"/>
+      </Unit19>
+      <Unit20>
+        <Filename Value="/windows/D/LKomponenten/acs/Src/drivers/linux/libao.pas"/>
+        <UnitName Value="libao"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="211"/>
+        <CursorPos X="27" Y="247"/>
+        <UsageCount Value="10"/>
+        <LoadedDesigner Value="True"/>
+      </Unit20>
+      <Unit21>
+        <Filename Value="/windows/D/LKomponenten/acs/Src/drivers/acs_alsaaudio.pas"/>
+        <UnitName Value="acs_alsaaudio"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="56"/>
+        <CursorPos X="1" Y="67"/>
+        <UsageCount Value="10"/>
+        <LoadedDesigner Value="True"/>
+      </Unit21>
+    </Units>
+    <JumpHistory Count="0" HistoryIndex="-1"/>
+  </ProjectOptions>
+  <CompilerOptions>
+    <Version Value="11"/>
+    <SearchPaths>
+      <SrcPath Value="$(LazarusDir)/lcl;$(LazarusDir)/lcl/interfaces/$(LCLWidgetType)"/>
+    </SearchPaths>
+    <Parsing>
+      <SyntaxOptions>
+        <UseAnsiStrings Value="False"/>
+      </SyntaxOptions>
+    </Parsing>
+    <Linking>
+      <Options>
+        <Win32>
+          <GraphicApplication Value="True"/>
+        </Win32>
+      </Options>
+    </Linking>
+    <Other>
+      <CompilerPath Value="$(CompPath)"/>
+    </Other>
+  </CompilerOptions>
+  <Debugging>
+    <BreakPoints Count="1">
+      <Item1>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsGlobal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="D:/Worldspace/Src/gstdintf/home/z0m3ie/lazarus/components/turbopower_ipro/iphtml.pas"/>
+        <Line Value="17239"/>
+      </Item1>
+    </BreakPoints>
+    <Watches Count="1">
+      <Item1>
+        <Expression Value="TControlPanel(FList^[i])"/>
+      </Item1>
+    </Watches>
+  </Debugging>
+  <EditorMacros Count="0"/>
+</CONFIG>

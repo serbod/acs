@@ -1,0 +1,910 @@
+(*
+  this file is a part of audio components suite.
+  see the license file for more details.
+  you can contact me at mail@z0m3ie.de
+
+$Log: acs_converters.pas,v $
+Revision 1.6  2006/08/31 20:10:54  z0m3ie
+*** empty log message ***
+
+Revision 1.5  2006/07/04 18:38:32  z0m3ie
+*** empty log message ***
+
+Revision 1.4  2006/07/04 17:12:45  z0m3ie
+ACS 2.4 alt wiederhergestellt (unterschiedliche Sampleformate ...)
+
+Revision 1.2  2006/01/01 18:46:40  z0m3ie
+*** empty log message ***
+
+Revision 1.1  2005/12/19 18:34:35  z0m3ie
+*** empty log message ***
+
+Revision 1.4  2005/12/04 16:54:33  z0m3ie
+All classes are renamed, Style TACS... than T... to avoid conflicts with other components (eg TMixer is TACSMixer now)
+
+Revision 1.3  2005/09/15 20:59:38  z0m3ie
+start translate the documentation in the source for pasdoc
+
+Revision 1.2  2005/09/13 21:54:11  z0m3ie
+acs is localizeable now (ACS_Strings)
+
+Revision 1.1  2005/09/12 22:04:52  z0m3ie
+modified structure again, fileformats are now in an sperat folder.
+all File In/Out classes are capsulated from TFileIn and TFileOut
+
+Revision 1.4  2005/09/01 19:55:48  z0m3ie
+again Delphi corrections
+
+Revision 1.3  2005/08/31 20:30:39  z0m3ie
+Mixer Channelname work now
+minior corrections for Converters
+
+Revision 1.2  2005/08/22 20:17:01  z0m3ie
+changed Headers to log
+changed mail adress
+*)
+
+{
+@abstract(this unit introduces the base classes for acs)
+@author(Andrei Borovsky (2003-2005))
+@author(Christian Ulrich (2005))
+}
+
+unit acs_converters;
+
+{$ifdef fpc}
+{$mode delphi}
+{$endif}
+
+interface
+
+uses
+  Classes, SysUtils, ACS_Types, ACS_Procs, ACS_Classes, ACS_Strings, Math;
+
+const
+  BUF_SIZE = $8000;
+
+  KERNEL_WIDTH = 64;
+
+  SD_BUF_SIZE = 2048;
+
+type
+
+  TACSMSConverterMode = (msmMonoToBoth, msmMonoToLeft, msmMonoToRight);
+
+  TDA = array[0..63] of Double;
+  PDA = ^TDA;
+
+
+  TACSRateConverter = class(TACSCustomConverter)
+  private
+    FOutSampleRate : Integer;
+    WantedSize : Integer;
+    EndOfInput : Boolean;
+    remainder : Integer;
+    InBufM, OutBufM : PACSBuffer16;
+    InBufS, OutBufS : PACSStereoBuffer16;
+    DAM : array of Double;
+    DAS : array of TACSStereoSampleD;
+    Kernel : array of Double;
+    FKernelWidth : Integer;
+    FFilterWindow : TACSFilterWindowType;
+    Tail : Pointer;
+    LBS : TACSStereoSample16;
+    function ConvertFreqs16Mono(InSize : Integer): Integer;
+    function ConvertFreqs16Stereo(InSize : Integer): Integer;
+    procedure SetOutSampleRate(aSR : Integer);
+    procedure SetKernelWidth(aKW : Integer);
+  protected
+    function GetBPS : Integer; override;
+    function GetCh : Integer; override;
+    function GetSR : Integer; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function GetData(Buffer : Pointer; BufferSize : Integer): Integer; override;
+    procedure Init; override;
+    procedure Flush; override;
+  published
+    property FilterWindow : TACSFilterWindowType read FFilterWindow write FFilterWindow;
+    property KernelWidth : Integer read FKernelWidth write SetKernelWidth;
+    property OutSampleRate : Integer read FOutSampleRate write SetOutSampleRate;
+  end;
+
+  TACSMSConverter = class(TACSCustomConverter)
+  private
+    WantedSize : Integer;
+    EndOfInput : Boolean;
+    InOutBuf : array[1..BUF_SIZE] of Byte;
+    FMode : TACSMSConverterMode;
+  protected
+    function GetBPS : Integer; override;
+    function GetCh : Integer; override;
+    function GetSR : Integer; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function GetData(Buffer : Pointer; BufferSize : Integer): Integer; override;
+    procedure Init; override;
+    procedure Flush; override;
+  published
+    property Mode : TACSMSConverterMode read FMode write FMode;
+  end;
+
+  TACSSampleConverter = class(TACSCustomConverter)
+  private
+    WantedSize : Integer;
+    EndOfInput : Boolean;
+    InOutBuf : array[1..BUF_SIZE] of Byte;
+  protected
+    function GetBPS : Integer; override;
+    function GetCh : Integer; override;
+    function GetSR : Integer; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function GetData(Buffer : Pointer; BufferSize : Integer): Integer; override;
+    procedure Init; override;
+    procedure Flush; override;
+  end;
+
+  TACSStereoBalance = class(TACSCustomConverter)
+  private
+    FBalance : Single;
+    procedure SetBalance(a : Single);
+  protected
+    function GetBPS : Integer; override;
+    function GetCh : Integer; override;
+    function GetSR : Integer; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function GetData(Buffer : Pointer; BufferSize : Integer): Integer; override;
+    procedure Init; override;
+    procedure Flush; override;
+  published
+    property Balance : Single read FBalance write SetBalance;
+  end;
+
+implementation
+
+  function TACSRateConverter.ConvertFreqs16Mono(InSize : Integer): Integer;
+  var
+    i, step, j, k, s, m : Integer;
+    D : Double;
+    TailMono : PACSBuffer16;
+    TailMonoD : PACSDoubleArray;
+  begin
+    TailMono := Tail;
+    s := InSize shr 1;
+    if FInput.SampleRate > FOutSampleRate then
+    begin
+      step := FInput.SampleRate - FOutSampleRate;
+      j := 0;
+      if remainder < 0 then remainder := FOutSampleRate;
+      for i := 0 to s - 1 do
+      begin
+        if remainder > FOutSampleRate then Dec(remainder, FOutSampleRate)
+        else begin
+          D := 0;
+          for k := 0 to FKernelWidth - 1 do
+          if i-k >= 0 then
+          D := D + InBufM[i-k]*Kernel[FKernelWidth - 1 - k]
+          else
+          D := D + TailMono[FKernelWidth-1+i-k]*Kernel[FKernelWidth - 1 - k];
+          OutBufM[j] := Round(D);
+          Inc(j);
+          Inc(remainder, step);
+        end;
+      end;
+      for i := 0 to FKernelWidth-2 do TailMono[i] := InBufM[i+s-FKernelWidth+1]
+    end else
+    begin
+      TailMonoD := Tail;
+      FillChar(DAM[0], Length(DAM)*8, 0);
+      for i := 0 to FKernelWidth-2 do
+      begin
+        DAM[i] := TailMonoD[i];
+        TailMonoD[i] := 0;
+      end;
+      Step := Finput.SampleRate;
+      j := 0;
+      if remainder < 0 then remainder := 0;
+      while remainder < FOutSampleRate do
+      begin
+        m := Round(((FOutSampleRate - remainder)*LBS.Left +  remainder*InBufM[0])/FOutSampleRate);
+        for k := 0 to FKernelWidth-1 do
+        DAM[j+k] := DAM[j+k] + m*Kernel[k];
+        Inc(j);
+        Inc(remainder, step);
+      end;
+      Dec(remainder, FOutSampleRate);
+      for i := 0 to s - 2 do
+      begin
+        while remainder < FOutSampleRate do
+        begin
+          m := Round(((FOutSampleRate - remainder)*InBufM[i] +  remainder*InBufM[i+1])/FOutSampleRate);
+          for k := 0 to FKernelWidth-1 do
+          DAM[j+k] := DAM[j+k] + m*Kernel[k];
+          Inc(j);
+          Inc(remainder, step);
+        end;
+        Dec(remainder, FOutSampleRate);
+      end;
+      LBS.Left := InBufM[s-1];
+      for i := 0 to j-1 do
+      OutBufM[i] := Round(DAM[i]);
+      for i := 0 to FKernelWidth-2 do TailMonoD[i] := DAM[i+j];
+    end;
+    Result := j shl 1;
+  end;
+
+  function TACSRateConverter.ConvertFreqs16Stereo(InSize : Integer): Integer;
+  var
+    i, step, j, k, s, m1, m2 : Integer;
+    D1, D2 : Double;
+    TailStereo : PACSStereoBuffer16;
+    TailStereoD : PACSStereoBufferD;
+  begin
+    TailStereo := Tail;
+    s := InSize shr 2;
+    if FInput.SampleRate > FOutSampleRate then
+    begin
+      step := FInput.SampleRate - FOutSampleRate;
+      j := 0;
+      if remainder < 0 then remainder := FOutSampleRate;
+      for i := 0 to s - 1 do
+      begin
+        try
+        if remainder > FOutSampleRate then Dec(remainder, FOutSampleRate)
+        else begin
+          D1 := 0;
+          D2 := 0;
+          for k := 0 to FKernelWidth - 1 do
+          if i-k >= 0 then
+          begin
+            D1 := D1 + InBufS[i-k].Left*Kernel[FKernelWidth - 1 - k];
+            D2 := D2 + InBufS[i-k].Right*Kernel[FKernelWidth - 1 - k];
+          end else
+          begin
+            D1 := D1 + TailStereo[FKernelWidth-1+i-k].Left*Kernel[FKernelWidth - 1 - k];
+            D2 := D2 + TailStereo[FKernelWidth-1+i-k].Right*Kernel[FKernelWidth - 1 - k];
+          end;
+          OutBufS[j].Left := Round(D1);
+          OutBufS[j].Right := Round(D2);
+          Inc(j);
+          Inc(remainder, step);
+        end;
+        except
+        end;
+      end;
+      for i := 0 to FKernelWidth-2 do TailStereo[i] := InBufS[i+s-FKernelWidth+1]
+      //Move(InBufS[s-FKernelWidth+1], TailStereo[0], FKernelWidth-1);
+    end else
+    begin
+      TailStereoD := Tail;
+      FillChar(DAS[0], Length(DAS)*16, 0);
+      for i := 0 to FKernelWidth-2 do
+      begin
+        DAS[i] := TailStereoD[i];
+        TailStereoD[i].Left := 0;
+        TailStereoD[i].Right := 0;
+      end;
+      Step := Finput.SampleRate;
+      j := 0;
+      if remainder < 0 then remainder := 0;
+      while remainder < FOutSampleRate do
+      begin
+        m1 := Round(((FOutSampleRate - remainder)*LBS.Left +  remainder*InBufS[0].Left)/FOutSampleRate);
+        m2 := Round(((FOutSampleRate - remainder)*LBS.Right +  remainder*InBufS[0].Right)/FOutSampleRate);
+        for k := 0 to FKernelWidth-1 do
+        begin
+          DAS[j+k].Left := DAS[j+k].Left + m1*Kernel[k]; //InBufS[i].Left*Kernel[k];
+          DAS[j+k].Right := DAS[j+k].Right + m2*Kernel[k]; //InBufS[i].Right*Kernel[k];
+        end;
+        Inc(j);
+        Inc(remainder, step);
+      end;
+      Dec(remainder, FOutSampleRate);
+      for i := 0 to s - 2 do
+      begin
+        while remainder < FOutSampleRate do
+        begin
+          m1 := Round(((FOutSampleRate - remainder)*InBufS[i].Left +  remainder*InBufS[i+1].Left)/FOutSampleRate);
+          m2 := Round(((FOutSampleRate - remainder)*InBufS[i].Right +  remainder*InBufS[i+1].Right)/FOutSampleRate);
+          for k := 0 to FKernelWidth-1 do
+          begin
+           DAS[j+k].Left := DAS[j+k].Left + m1*Kernel[k]; //InBufS[i].Left*Kernel[k];
+           DAS[j+k].Right := DAS[j+k].Right + m2*Kernel[k]; //InBufS[i].Right*Kernel[k];
+          end;
+          Inc(j);
+          Inc(remainder, step);
+        end;
+        Dec(remainder, FOutSampleRate);
+      end;
+      LBS := InBufS[s-1];
+      for i := 0 to j-1 do
+      begin
+        OutBufS[i].Left := Round(DAS[i].Left);
+        OutBufS[i].Right := Round(DAS[i].Right);
+      end;
+      for i := 0 to FKernelWidth-2 do TailStereoD[i] := DAS[i+j];
+    end;
+    Result := j shl 2;
+  end;
+
+  procedure Convert16To8(InOutBuf : PACSBuffer8; InSize : Integer);
+  var
+    i : Integer;
+    P : PACSBuffer16;
+  begin
+    P := @InOutBuf[0];
+    for i := 0 to (Insize shr 1) -1 do
+    InOutBuf[i] := Hi(P[i]+$8000);
+  end;
+
+  procedure Convert8To16(InOutBuf : PACSBuffer8; InSize : Integer);
+  var
+    i : Integer;
+    P : PACSBuffer16;
+  begin
+    P := @InOutBuf[0];
+    for i := Insize - 1 downto 0 do P[i] := (InOutBuf[i] shl 8) - $8000;
+  end;
+
+  procedure ConvertStereoToMono16(InOutBuf : PACSBuffer16; InSize : Integer);
+  var
+    i : Integer;
+  begin
+    for i := 0 to (Insize shr 2) - 1 do
+    begin
+      InOutBuf[i] := (InOutBuf[i shl 1] + InOutBuf[(i shl 1)+1]) div 2;
+    end;
+  end;
+
+
+  procedure ConvertMonoToStereo16(InOutBuf : PACSBuffer16; InSize : Integer; Mode : TACSMSConverterMode);
+  var
+    i : Integer;
+  begin
+    case Mode of
+      msmMonoToBoth :
+      for i := (Insize shr 1) - 1 downto 0 do
+      begin
+        InOutBuf[i shl 1] := InOutBuf[i];
+        InOutBuf[(i shl 1)+1] := InOutBuf[i];
+      end;
+      msmMonoToLeft :
+      for i := (Insize shr 1) - 1 downto 0 do
+      begin
+        InOutBuf[i shl 1] := 0;
+        InOutBuf[(i shl 1)+1] := InOutBuf[i];
+      end;
+      msmMonoToRight :
+      for i := (Insize shr 1) - 1 downto 0 do
+      begin
+        InOutBuf[i shl 1] := InOutBuf[i];
+        InOutBuf[(i shl 1)+1] := 0;
+      end;
+    end;
+  end;
+
+  function GCD(a, b : Integer) : Integer;
+  var
+    p, q, r : Integer;
+  begin
+    p := a;
+    q := b;
+    r := p mod q;
+    while r <> 0 do
+    begin
+      p := q;
+      q := r;
+      r := p mod q;
+    end;
+    Result := q;
+  end;
+
+  constructor TACSRateConverter.Create;
+  begin
+    inherited Create(AOwner);
+    FOutSampleRate := 22050;
+    FKernelWidth := 30;
+    FFilterWindow := fwBlackman;
+  end;
+
+  destructor TACSRateConverter.Destroy;
+  begin
+    Kernel := nil;
+    DAS := nil;
+    DAM := nil;
+    inherited Destroy;
+  end;
+
+  function TACSRateConverter.GetBPS : Integer;
+  begin
+    Result := 16;
+  end;
+
+  function TACSRateConverter.GetCh : Integer;
+  begin
+    if not Assigned(FInput) then
+    raise EACSException.Create(strInputnotAssigned);
+    Result := FInput.Channels;
+  end;
+
+  function TACSRateConverter.GetSR : Integer;
+  begin
+    Result := FOutSampleRate;
+  end;
+
+  procedure TACSRateConverter.Init;
+  var
+    Ratio : Single;
+    TailSize : Integer;
+  begin
+    if not Assigned(FInput) then
+    raise EACSException.Create(strInputnotAssigned);
+    FInput.Init;
+    InputLock := False;
+    FBusy := True;
+    FPosition := 0;
+    BufStart := 1;
+    BufEnd := 0;
+    EndOfInput := False;
+    Ratio := FOutSampleRate/Finput.SampleRate;
+    if Ratio > 1. then
+    WantedSize := (Trunc(BUF_SIZE/Ratio) shr 2) * 4
+    else WantedSize := BUF_SIZE;
+    if Finput.Channels = 1  then
+    begin
+      GetMem(InBufM, WantedSize);
+      GetMem(OutBufM, BUF_SIZE);
+      if Ratio < 1. then
+      TailSize := (KernelWidth-1)*2
+      else
+      begin
+        SetLength(DAM, (BUF_SIZE div 2)+KernelWidth);
+        TailSize := (KernelWidth-1)*8;
+      end;
+      FillChar(DAM[0], Length(DAM)*Sizeof(DAM[0]), 0);
+    end else
+    begin
+      GetMem(InBufS, WantedSize);
+      GetMem(OutBufS, BUF_SIZE);
+      if Ratio < 1. then
+      TailSize := (KernelWidth-1)*4
+      else
+      begin
+        SetLength(DAS, (BUF_SIZE div 4)+KernelWidth);
+        TailSize := (KernelWidth-1)*16;
+      end;
+    end;
+    GetMem(Tail, TailSize);
+    FillChar(Tail^, TailSize, 0);
+    FSize := Round(FInput.Size*Ratio);
+    remainder := -1;
+    if Ratio > 1. then Ratio := 1/Ratio;
+    Ratio := Ratio*0.4;
+    SetLength(Kernel, FKernelWidth);
+    CalculateSincKernel(@Kernel[0], Ratio, FKernelWidth, FFilterWindow);
+  end;
+
+  procedure TACSRateConverter.Flush;
+  begin
+    FreeMem(Tail);
+    FInput.Flush;
+    if Finput.Channels = 1  then
+    begin
+      FreeMem(InBufM);
+      FreeMem(OutBufM);
+    end else
+    begin
+      FreeMem(InBufS);
+      FreeMem(OutBufS);
+    end;
+    FBusy := False;
+  end;
+
+  function TACSRateConverter.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
+  var
+    l : Integer;
+    InSize : Integer;
+    P : PACSBuffer8;
+  begin
+    if not Busy then  raise EACSException.Create(strStreamnotopen);
+    if BufStart > BufEnd then
+    begin
+      if EndOfInput then
+      begin
+        Result := 0;
+        Exit;
+      end;
+      BufStart := 1;
+      if FInput.Channels = 1 then P := Pointer(InBufM)
+      else P := Pointer(InBufS);
+      while InputLock do;
+      InputLock := True;
+      l := Finput.GetData(@P[0], WantedSize);
+      InputLock := False;
+      if l = 0 then
+      begin
+        Result := 0;
+        Exit;
+      end;
+      InSize := l;
+      while (l<>0) and (InSize < WantedSize) do
+      begin
+        while InputLock do;
+        InputLock := True;
+        l := Finput.GetData(@P[InSize], WantedSize - InSize);
+        InputLock := False;
+        Inc(InSize, l);
+      end;
+      if l = 0 then
+      begin
+        EndOfInput := True;
+        if InSize < FKernelWidth*2 then
+        begin // stop buffer corruption?
+          Result := 0;
+          Exit;
+        end;
+      end;
+      if Self.Channels = 1 then
+      begin
+        BufEnd := ConvertFreqs16Mono(InSize);
+      end else
+      begin
+        BufEnd := ConvertFreqs16Stereo(InSize);
+      end;
+    end;
+    if BufferSize < (BufEnd - BufStart + 1)
+    then Result := BufferSize
+    else Result := BufEnd - BufStart + 1;
+    if FInput.Channels = 1 then P := Pointer(OutBufM)
+    else P := Pointer(OutBufS);
+    Move(P[BufStart-1], Buffer^, Result);
+    Inc(BufStart, Result);
+//    FPosition := Round(FInput.Position*(FSize/FInput.Size));
+    Inc(FPosition, Result);
+  end;
+
+  constructor TACSMSConverter.Create;
+  begin
+    inherited Create(AOwner);
+  end;
+
+  destructor TACSMSConverter.Destroy;
+  begin
+    inherited Destroy;
+  end;
+
+  function TACSMSConverter.GetBPS : Integer;
+  begin
+    Result := 16;
+  end;
+
+  function TACSMSConverter.GetCh : Integer;
+  begin
+    if not Assigned(FInput) then
+    raise EACSException.Create(strInputnotAssigned);
+    if FInput.Channels = 1 then Result := 2
+    else Result := 1;
+  end;
+
+  function TACSMSConverter.GetSR : Integer;
+  begin
+    if not Assigned(FInput) then
+    raise EACSException.Create(strInputnotAssigned);
+    Result := FInput.SampleRate;
+  end;
+
+  procedure TACSMSConverter.Init;
+  begin
+    if not Assigned(FInput) then
+    raise EACSException.Create(strInputnotAssigned);
+    FInput.Init;
+    FBusy := True;
+    FPosition := 0;
+    BufStart := 1;
+    BufEnd := 0;
+    InputLock := False;
+    EndOfInput := False;
+    if FInput.Channels = 2 then WantedSize := BUF_SIZE else
+    WantedSize := BUF_SIZE shr 1;
+    if FInput.Channels = 2 then
+    FSize := FInput.Size shr 1
+    else FSize := FInput.Size shl 1;
+  end;
+
+  procedure TACSMSConverter.Flush;
+  begin
+    FInput.Flush;
+    FBusy := False;
+  end;
+
+  function TACSMSConverter.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
+  var
+    l : Integer;
+    InSize : Integer;
+  begin
+    if not Busy then  raise EACSException.Create(strStreamnotopen);
+    if BufStart > BufEnd then
+    begin
+      if EndOfInput then
+      begin
+        Result := 0;
+        Exit;
+      end;
+      BufStart := 1;
+      while InputLock do;
+      InputLock := True;
+      l := Finput.GetData(@InOutBuf[1], WantedSize);
+      InputLock := False;
+      if l = 0 then
+      begin
+        Result := 0;
+        Exit;
+      end;
+      InSize := l;
+      while (l<>0) and (InSize < WantedSize) do
+      begin
+        while InputLock do;
+        InputLock := True;
+        l := Finput.GetData(@InOutBuf[InSize+1], WantedSize - InSize);
+        InputLock := False;
+        Inc(InSize, l);
+      end;
+      if l = 0 then EndOfInput := True;
+      if FInput.Channels = 2 then
+      begin
+        ConvertStereoToMono16(@InOutBuf[1], InSize);
+        BufEnd := InSize shr 1;
+      end else
+      begin
+        ConvertMonoToStereo16(@InOutBuf[1], InSize, FMode);
+        BufEnd := InSize shl 1;
+      end;
+    end;
+    if BufferSize < (BufEnd - BufStart + 1)
+    then Result := BufferSize
+    else Result := BufEnd - BufStart + 1;
+    Move(InOutBuf[BufStart], Buffer^, Result);
+    Inc(BufStart, Result);
+//    FPosition := Round(FInput.Position*(FSize/FInput.Size));
+    Inc(FPosition, Result);
+  end;
+
+  constructor TACSSampleConverter.Create;
+  begin
+    inherited Create(AOwner);
+  end;
+
+  destructor TACSSampleConverter.Destroy;
+  begin
+    inherited Destroy;
+  end;
+
+  function TACSSampleConverter.GetBPS : Integer;
+  begin
+    if not Assigned(FInput) then
+    raise EACSException.Create(strInputnotAssigned);
+    if FInput.BitsPerSample = 16 then Result := 8
+    else Result := 16;
+  end;
+
+  function TACSSampleConverter.GetCh : Integer;
+  begin
+    if not Assigned(FInput) then
+    raise EACSException.Create(strInputnotAssigned);
+    Result:= FInput.Channels;
+  end;
+
+  function TACSSampleConverter.GetSR : Integer;
+  begin
+    if not Assigned(FInput) then
+    raise EACSException.Create(strInputnotAssigned);
+    Result := FInput.SampleRate;
+  end;
+
+  procedure TACSSampleConverter.Init;
+  begin
+    if not Assigned(FInput) then
+    raise EACSException.Create(strInputnotAssigned);
+    FInput.Init;
+    FBusy := True;
+    FPosition := 0;
+    BufStart := 1;
+    BufEnd := 0;
+    InputLock := False;
+    EndOfInput := False;
+    if FInput.BitsPerSample = 16 then WantedSize := BUF_SIZE else
+    WantedSize := BUF_SIZE shr 1;
+    if FInput.BitsPerSample = 16 then
+    FSize := FInput.Size shr 1
+    else FSize := FInput.Size shl 1;
+  end;
+
+  procedure TACSSampleConverter.Flush;
+  begin
+    FInput.Flush;
+    FBusy := False;
+  end;
+
+  function TACSSampleConverter.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
+  var
+    l : Integer;
+    InSize : Integer;
+  begin
+    if not Busy then  raise EACSException.Create(strStreamnotopen);
+    if BufStart > BufEnd then
+    begin
+      if EndOfInput then
+      begin
+        Result := 0;
+        Exit;
+      end;
+      BufStart := 1;
+      while InputLock do;
+      InputLock := True;
+      l := Finput.GetData(@InOutBuf[1], WantedSize);
+      InputLock := False;
+      if l = 0 then
+      begin
+        Result := 0;
+        Exit;
+      end;
+      InSize := l;
+      while (l<>0) and (InSize < WantedSize) do
+      begin
+        while InputLock do;
+        InputLock := True;
+        l := Finput.GetData(@InOutBuf[InSize+1], WantedSize - InSize);
+        InputLock := False;
+        Inc(InSize, l);
+      end;
+      if l = 0 then EndOfInput := True;
+      if FInput.BitsPerSample = 16 then
+      begin
+        Convert16To8(@InOutBuf[1], InSize);
+        BufEnd := InSize shr 1;
+      end else
+      begin
+        Convert8To16(@InOutBuf[1], InSize);
+        BufEnd := InSize shl 1;
+      end;
+    end;
+    if BufferSize < (BufEnd - BufStart + 1)
+    then Result := BufferSize
+    else Result := BufEnd - BufStart + 1;
+    Move(InOutBuf[BufStart], Buffer^, Result);
+    Inc(BufStart, Result);
+    FPosition := Round(FInput.Position*(FSize/FInput.Size));
+ //   Inc(FPosition, Result);
+  end;
+
+  procedure TACSRateConverter.SetOutSampleRate(aSR : Integer);
+  begin
+    if (aSR > 0) {and (not Busy)} then FOutSampleRate := aSR;
+  end;
+
+  procedure TACSRateConverter.SetKernelWidth;
+  begin
+    if (aKW > 1) and (not Busy) then FKernelWidth := aKW;
+  end;
+
+  constructor TACSStereoBalance.Create;
+  begin
+    inherited Create(AOwner);
+    FBalance := 0.5;
+  end;
+
+  destructor TACSStereoBalance.Destroy;
+  begin
+    inherited Destroy;
+  end;
+
+  procedure TACSStereoBalance.SetBalance;
+  begin
+    if (a >= 0) and (a <=1) then FBalance := a;
+  end;
+
+  function TACSStereoBalance.GetBPS : Integer;
+  begin
+    if not Assigned(FInput) then
+    raise EACSException.Create(strInputnotAssigned);
+    Result := FInput.BitsPerSample;
+  end;
+
+  function TACSStereoBalance.GetCh : Integer;
+  begin
+    if not Assigned(FInput) then
+    raise EACSException.Create(strInputnotAssigned);
+    Result := 2;
+  end;
+
+  function TACSStereoBalance.GetSR : Integer;
+  begin
+    if not Assigned(FInput) then
+    raise EACSException.Create(strInputnotAssigned);
+    Result := FInput.SampleRate;
+  end;
+
+  procedure TACSStereoBalance.Init;
+  begin
+    if not Assigned(FInput) then
+    raise EACSException.Create(strInputnotAssigned);
+    FInput.Init;
+    FBusy := True;
+    if FInput.Channels = 2 then FSize := FInput.Size
+    else FSize := FInput.Size*2;
+    FPosition := 0;
+    InputLock := False;
+  end;
+
+  procedure TACSStereoBalance.Flush;
+  begin
+    FInput.Flush;
+    FBusy := False;
+  end;
+
+  function TACSStereoBalance.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
+  var
+    WantedSize, i : Integer;
+    P16 : PACSBuffer16;
+    P8 : PACSBuffer8;
+    Diff : Double;
+  begin
+    if not Busy then  raise EACSException.Create(strStreamnotopen);
+    while InputLock do;
+    InputLock := True;
+    if FInput.Channels = 2 then WantedSize := BufferSize
+    else WantedSize := BufferSize shr 1;
+    Result := Finput.GetData(Buffer, WantedSize);
+    InputLock := False;
+    if Result = 0 then Exit;
+    if FInput.Channels = 1 then
+    begin
+      if FInput.BitsPerSample = 8 then
+      begin
+        P8 := Buffer;
+        for i := Result*2-1 downto 1 do P8[i] := P8[i shr 1];
+      end else
+      begin
+        P16 := Buffer;
+        for i := Result-1 downto 1 do
+        P16[i] := P16[i shr 1];
+      end;
+      Result := Result*2;
+    end;
+    if FInput.BitsPerSample = 8 then
+    begin
+      P8 := Buffer;
+      if FBalance > 0.5 then
+      begin
+        Diff := 1-Balance;
+        for i := 0 to (Result shr 1) -1 do
+        P8[i*2] := Round(P8[i*2]*Diff);
+      end else
+      begin
+        for i := 0 to (Result shr 1) -1 do
+        P8[i*2+1] := Round(P8[i*2+1]*FBalance);
+      end;
+    end else
+    begin
+      P16 := Buffer;
+      if FBalance > 0.5 then
+      begin
+        Diff := 1-Balance;
+        for i := 0 to (Result shr 2) -1 do
+        P16[i*2] := Round(P16[i*2]*Diff);
+      end else
+      begin
+        for i := 0 to (Result shr 2) -1 do
+        P16[i*2+1] := Round(P16[i*2+1]*FBalance);
+      end;
+    end;
+    FPosition := Round(FSize/FInput.Size)*FInput.Position;
+  end;
+
+end.

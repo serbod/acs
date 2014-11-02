@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectOptions>
+    <Version Value="9"/>
+    <PathDelim Value="\"/>
+    <General>
+      <Flags>
+        <LRSInOutputDirectory Value="False"/>
+      </Flags>
+      <MainUnit Value="0"/>
+      <ActiveWindowIndexAtStart Value="0"/>
+    </General>
+    <BuildModes Count="1">
+      <Item1 Name="default" Default="True"/>
+    </BuildModes>
+    <PublishOptions>
+      <Version Value="2"/>
+      <IgnoreBinaries Value="False"/>
+      <IncludeFileFilter Value="*.(pas|pp|inc|lfm|lpr|lrs|lpi|lpk|sh|xml)"/>
+      <ExcludeFileFilter Value="*.(bak|ppu|ppw|o|so);*~;backup"/>
+    </PublishOptions>
+    <RunParams>
+      <local>
+        <FormatVersion Value="1"/>
+        <LaunchingApplication PathPlusParams="\usr\X11R6\bin\xterm -T 'Lazarus Run Output' -e $(LazarusDir)\tools\runwait.sh $(TargetCmdLine)"/>
+      </local>
+    </RunParams>
+    <RequiredPackages Count="2">
+      <Item1>
+        <PackageName Value="LCL"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="LAZ_ACS"/>
+        <MinVersion Major="2" Minor="4" Valid="True"/>
+      </Item2>
+    </RequiredPackages>
+    <Units Count="17">
+      <Unit0>
+        <Filename Value="cdripper.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="cdripper"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="1"/>
+        <CursorPos X="31" Y="17"/>
+        <UsageCount Value="22"/>
+        <Loaded Value="True"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="umain.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="fMain"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="uMain"/>
+        <EditorIndex Value="0"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="1"/>
+        <CursorPos X="12" Y="9"/>
+        <UsageCount Value="22"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="D:\LKomponenten\acs\Src\classes\ACS_CDROM.pas"/>
+        <UnitName Value="ACS_CDROM"/>
+        <TopLine Value="176"/>
+        <CursorPos X="10" Y="190"/>
+        <UsageCount Value="10"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="D:\LKomponenten\acs\Src\classes\ACS_Classes.pas"/>
+        <UnitName Value="ACS_Classes"/>
+        <TopLine Value="671"/>
+        <CursorPos X="1" Y="688"/>
+        <UsageCount Value="10"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="D:\lazarus\lcl\include\control.inc"/>
+        <TopLine Value="2176"/>
+        <CursorPos X="1" Y="2193"/>
+        <UsageCount Value="10"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="D:\lazarus\lcl\include\listitems.inc"/>
+        <TopLine Value="38"/>
+        <CursorPos X="1" Y="55"/>
+        <UsageCount Value="10"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="D:\lazarus\lcl\include\listitem.inc"/>
+        <TopLine Value="444"/>
+        <CursorPos X="1" Y="461"/>
+        <UsageCount Value="10"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="D:\LKomponenten\acs\Src\classes\ACS_File.pas"/>
+        <UnitName Value="ACS_File"/>
+        <TopLine Value="491"/>
+        <CursorPos X="1" Y="508"/>
+        <UsageCount Value="10"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="D:\LKomponenten\acs\Src\fileformats\ACS_Vorbis.pas"/>
+        <UnitName Value="ACS_Vorbis"/>
+        <TopLine Value="242"/>
+        <CursorPos X="1" Y="257"/>
+        <UsageCount Value="10"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="D:\LKomponenten\acs\Src\fileformats\general\VorbisFile.pas"/>
+        <UnitName Value="VorbisFile"/>
+        <TopLine Value="226"/>
+        <CursorPos X="29" Y="255"/>
+        <UsageCount Value="10"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="D:\LKomponenten\acs\Src\classes\ACS_Audio.pas"/>
+        <UnitName Value="ACS_Audio"/>
+        <TopLine Value="1"/>
+        <CursorPos X="19" Y="176"/>
+        <UsageCount Value="10"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="D:\LKomponenten\acs\Src\classes\ACS_Strings.pas"/>
+        <UnitName Value="ACS_Strings"/>
+        <TopLine Value="12"/>
+        <CursorPos X="78" Y="27"/>
+        <UsageCount Value="10"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="D:\LKomponenten\acs\Src\classes\windows\ACS_CDROM.inc"/>
+        <TopLine Value="181"/>
+        <CursorPos X="31" Y="200"/>
+        <UsageCount Value="10"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="D:\LKomponenten\acs\Src\fileformats\ACS_Wave.pas"/>
+        <UnitName Value="ACS_Wave"/>
+        <TopLine Value="1411"/>
+        <CursorPos X="1" Y="1428"/>
+        <UsageCount Value="10"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="D:\lazarus\lcl\lresources.pp"/>
+        <UnitName Value="LResources"/>
+        <TopLine Value="1986"/>
+        <CursorPos X="14" Y="1995"/>
+        <UsageCount Value="10"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="D:\lazarus\lcl\include\application.inc"/>
+        <TopLine Value="1487"/>
+        <CursorPos X="1" Y="1490"/>
+        <UsageCount Value="10"/>
+      </Unit15>
+      <Unit16>
+        <Filename Value="umain.lfm"/>
+        <TopLine Value="86"/>
+        <CursorPos X="20" Y="118"/>
+        <SyntaxHighlighter Value="LFM"/>
+        <UsageCount Value="10"/>
+      </Unit16>
+    </Units>
+    <JumpHistory Count="0" HistoryIndex="-1"/>
+  </ProjectOptions>
+  <CompilerOptions>
+    <Version Value="11"/>
+    <PathDelim Value="\"/>
+    <SearchPaths>
+      <SrcPath Value="$(LazarusDir)\lcl;$(LazarusDir)\lcl\interfaces\$(LCLWidgetType)"/>
+    </SearchPaths>
+    <Parsing>
+      <SyntaxOptions>
+        <UseAnsiStrings Value="False"/>
+      </SyntaxOptions>
+    </Parsing>
+    <Linking>
+      <Options>
+        <Win32>
+          <GraphicApplication Value="True"/>
+        </Win32>
+      </Options>
+    </Linking>
+    <Other>
+      <CompilerPath Value="$(CompPath)"/>
+    </Other>
+  </CompilerOptions>
+  <Debugging>
+    <BreakPoints Count="2">
+      <Item1>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsGlobal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="D:\LKomponenten\acs\Src\classes\ACS_File.pas"/>
+        <Line Value="378"/>
+      </Item1>
+      <Item2>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsGlobal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="D:\LKomponenten\acs\Src\classes\ACS_Classes.pas"/>
+        <Line Value="607"/>
+      </Item2>
+    </BreakPoints>
+    <Watches Count="2">
+      <Item1>
+        <Expression Value="HandleMultiSelect"/>
+      </Item1>
+      <Item2>
+        <Expression Value="FDelayMax"/>
+      </Item2>
+    </Watches>
+  </Debugging>
+  <EditorMacros Count="0"/>
+</CONFIG>

@@ -1,0 +1,32 @@
+{ This is an automatically generated lazarus resource file }
+
+LazarusResources.Add('TfMain','FORMDATA',[
+  'TPF0'#6'TfMain'#5'fMain'#13'ActiveControl'#7#8'lvTracks'#7'Caption'#6#9'CD R'
+  +'ipper'#12'ClientHeight'#3','#1#11'ClientWidth'#3#144#1#8'OnCreate'#7#10'For'
+  +'mCreate'#13'PixelsPerInch'#2'K'#18'HorzScrollBar.Page'#3#143#1#18'VertScrol'
+  +'lBar.Page'#3'+'#1#4'Left'#3#15#1#6'Height'#3','#1#3'Top'#3#150#0#5'Width'#3
+  +#144#1#0#6'TLabel'#6'Label1'#7'Caption'#6#5'Drive'#5'Color'#7#6'clNone'#11'P'
+  +'arentColor'#8#4'Left'#2#8#6'Height'#2#13#3'Top'#2#7#5'Width'#2#31#0#0#6'TLa'
+  +'bel'#6'Label2'#7'Caption'#6#13'Output Format'#5'Color'#7#6'clNone'#11'Paren'
+  +'tColor'#8#4'Left'#3#9#1#6'Height'#2#13#3'Top'#2#7#5'Width'#2'P'#0#0#9'TList'
+  +'View'#8'lvTracks'#7'Anchors'#11#5'akTop'#6'akLeft'#7'akRight'#8'akBottom'#0
+  +#7'Columns'#14#1#7'Caption'#6#5'Track'#5'Width'#2#10#0#1#7'Caption'#6#10'Tra'
+  +'cktitle'#5'Width'#2#10#0#1#7'Caption'#6#6'Length'#5'Width'#2#10#0#0#11'Mult'
+  +'iSelect'#9#9'RowSelect'#9#9'ViewStyle'#7#8'vsReport'#6'Height'#3#250#0#3'To'
+  +'p'#2'"'#5'Width'#3#144#1#0#0#9'TComboBox'#8'cbDrives'#9'MaxLength'#2#0#8'On'
+  +'Change'#7#14'cbDrivesChange'#5'Style'#7#14'csDropDownList'#8'TabOrder'#2#1#4
+  +'Left'#2'('#6'Height'#2#21#3'Top'#2#4#5'Width'#3#132#0#0#0#7'TButton'#4'bRip'
+  +#25'BorderSpacing.InnerBorder'#2#2#7'Caption'#6#12'Rip selected'#7'OnClick'#7
+  +#12'Button1Click'#8'TabOrder'#2#2#4'Left'#3#184#0#6'Height'#2#21#3'Top'#2#4#5
+  +'Width'#2'K'#0#0#9'TComboBox'#8'cbFormat'#9'ItemIndex'#2#2#13'Items.Strings'
+  +#1#6#3'ogg'#6#3'mp3'#6#3'wav'#0#9'MaxLength'#2#0#5'Style'#7#14'csDropDownLis'
+  +'t'#8'TabOrder'#2#3#4'Text'#6#3'wav'#4'Left'#3'T'#1#6'Height'#2#21#3'Top'#2#4
+  +#5'Width'#2'='#0#0#12'TProgressBar'#11'ProgressBar'#5'Align'#7#8'alBottom'#3
+  +'Max'#2'd'#6'Height'#2#12#3'Top'#3' '#1#5'Width'#3#144#1#0#0#6'TTimer'#5'Tim'
+  +'er'#7'OnTimer'#7#10'TimerTimer'#4'left'#2'L'#3'top'#2#4#0#0#22'TSelectDirec'
+  +'toryDialog'#21'SelectDirectoryDialog'#5'Title'#6#16'Select Directory'#11'Fi'
+  +'lterIndex'#2#0#5'Title'#6#16'Select Directory'#4'left'#3#144#0#3'top'#2#4#0
+  +#0#11'TACSFileOut'#7'FileOut'#5'Input'#7#4'CDIn'#6'OnDone'#7#11'FileOutDone'
+  +#4'left'#2'p'#3'top'#2#4#0#0#8'TACSCDIn'#4'CDIn'#4'left'#2','#3'top'#2#4#0#0
+  +#0
+]);

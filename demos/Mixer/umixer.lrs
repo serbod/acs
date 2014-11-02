@@ -1,0 +1,20 @@
+LazarusResources.Add('TfMixer','FORMDATA',[
+  'TPF0'#7'TfMixer'#6'fMixer'#13'ActiveControl'#7#8'cbDevice'#7'Caption'#6#5'Mi'
+  +'xer'#12'ClientHeight'#3#212#0#11'ClientWidth'#3#144#1#8'OnCreate'#7#10'Form'
+  +'Create'#6'OnHide'#7#8'FormHide'#6'OnShow'#7#8'FormShow'#13'PixelsPerInch'#2
+  +'K'#18'HorzScrollBar.Page'#3#143#1#18'VertScrollBar.Page'#3#211#0#4'Left'#3
+  +'{'#1#6'Height'#3#212#0#3'Top'#3'['#1#5'Width'#3#144#1#0#6'TPanel'#8'TopPane'
+  +'l'#5'Align'#7#5'alTop'#10'BevelOuter'#7#6'bvNone'#12'ClientHeight'#2' '#11
+  +'ClientWidth'#3#144#1#11'FullRepaint'#8#8'TabOrder'#2#0#6'Height'#2' '#5'Wid'
+  +'th'#3#144#1#0#6'TLabel'#7'lDevice'#9'Alignment'#7#8'taCenter'#7'Caption'#6#6
+  +'Ger'#195#164't'#5'Color'#7#6'clNone'#11'ParentColor'#8#6'Height'#2#13#3'Top'
+  +#2#8#5'Width'#2#21#0#0#6'TLabel'#6'Label3'#5'Align'#7#7'alRight'#9'Alignment'
+  +#7#8'taCenter'#7'Caption'#6#5'Mixer'#5'Color'#7#9'clBtnFace'#10'Font.Color'#7
+  +#17'clInactiveCaption'#11'Font.Height'#2#231#10'Font.Style'#11#6'fsBold'#0#11
+  +'ParentColor'#8#4'Left'#3'K'#1#6'Height'#2' '#5'Width'#2'E'#0#0#9'TComboBox'
+  +#8'cbDevice'#9'MaxLength'#2#0#8'OnChange'#7#14'cbDeviceChange'#5'Style'#7#14
+  +'csDropDownList'#8'TabOrder'#2#0#4'Left'#2'0'#6'Height'#2#21#3'Top'#2#4#5'Wi'
+  +'dth'#3#136#0#0#0#0#9'TACSMixer'#5'Mixer'#3'top'#3'p'#1#0#0#6'TTimer'#5'Time'
+  +'r'#7'Enabled'#8#8'Interval'#3#200#0#7'OnTimer'#7#10'TimerTimer'#3'top'#3'P'
+  +#1#0#0#0
+]);

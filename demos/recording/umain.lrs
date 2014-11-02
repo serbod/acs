@@ -1,0 +1,22 @@
+{ Dies ist eine automatisch erzeugte Lazarus-Ressourcendatei }
+
+LazarusResources.Add('TfMain','FORMDATA',[
+  'TPF0'#6'TfMain'#5'fMain'#11'BorderStyle'#7#12'bsToolWindow'#7'Caption'#6#15
+  +'Sound Indicator'#12'ClientHeight'#2'5'#11'ClientWidth'#3#144#1#6'OnShow'#7#8
+  +'FormShow'#13'PixelsPerInch'#2'`'#18'HorzScrollBar.Page'#3#143#1#18'VertScro'
+  +'llBar.Page'#2'4'#4'Left'#3#20#1#6'Height'#2'5'#3'Top'#3#155#0#5'Width'#3#144
+  +#1#0#6'TLabel'#6'Label1'#7'Caption'#6#11'Input Level'#5'Color'#7#6'clNone'#11
+  +'ParentColor'#8#4'Left'#2#8#6'Height'#2#14#3'Top'#2#2#5'Width'#2'7'#0#0#6'TL'
+  +'abel'#6'Label2'#7'Caption'#6#5'-3 db'#5'Color'#7#6'clNone'#11'ParentColor'#8
+  +#4'Left'#3#192#0#6'Height'#2#14#3'Top'#2'$'#5'Width'#2#26#0#0#6'TLabel'#6'La'
+  +'bel3'#7'Caption'#6#6'-96 db'#5'Color'#7#6'clNone'#11'ParentColor'#8#4'Left'
+  +#2#8#6'Height'#2#14#3'Top'#2'$'#5'Width'#2' '#0#0#12'TProgressBar'#11'Progre'
+  +'ssBar'#3'Max'#3#200#0#4'Left'#2#8#6'Height'#2#16#3'Top'#2#16#5'Width'#3'x'#1
+  +#0#0#11'TACSAudioIn'#8'AudioIn1'#6'Driver'#6#10'Wavemapper'#15'InBitsPerSamp'
+  +'le'#2#8#10'InChannels'#2#1#12'InSampleRate'#3'@'#31#7'RecTime'#2#255#4'left'
+  +#2#9#3'top'#3'('#1#0#0#11'TACSNULLOut'#8'NULLOut1'#5'Input'#7#11'VolumeQuery'
+  +#15'SuspendWhenIdle'#9#4'left'#2#9#3'top'#3'p'#1#0#0#15'TACSVolumeQuery'#11
+  +'VolumeQuery'#5'Input'#7#8'AudioIn1'#4'left'#2#9#3'top'#3'L'#1#0#0#6'TTimer'
+  +#6'Timer1'#8'Interval'#2'd'#7'OnTimer'#7#11'Timer1Timer'#4'left'#2#9#3'top'#3
+  +#8#1#0#0#0
+]);
