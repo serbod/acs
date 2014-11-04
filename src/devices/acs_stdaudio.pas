@@ -36,7 +36,7 @@ type
 
   { TStdAudioOut }
 
-  TStdAudioOut = class(TACSBaseAudioOut)
+  TStdAudioOut = class(TAcsBaseAudioOut)
   private
     {$IFDEF MSWINDOWS}
     BlockChain: PWaveHdr;
@@ -52,7 +52,7 @@ type
   protected
     function GetDeviceCount: Integer; override;
     procedure SetDevice(Ch: Integer); override;
-    function GetDeviceInfo: TACSDeviceInfo; override;
+    function GetDeviceInfo: TAcsDeviceInfo; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -61,7 +61,7 @@ type
     function DoOutput(Abort: Boolean): Boolean; override;
   end;
 
-  TStdAudioIn = class(TACSBaseAudioIn)
+  TStdAudioIn = class(TAcsBaseAudioIn)
   private
     {$IFDEF MSWINDOWS}
     BlockChain: PWaveHdr;
@@ -83,7 +83,7 @@ type
     function GetCh: Integer; override;
     function GetSR: Integer; override;
     procedure SetDevice(Ch: Integer); override;
-    function GetDeviceInfo: TACSDeviceInfo; override;
+    function GetDeviceInfo: TAcsDeviceInfo; override;
     function GetTotalTime: Real; override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -97,7 +97,7 @@ var
   InputChannelsCount: Integer;
   OutputChannelsCount: Integer;
 
-function GetAudioDeviceInfo(DevID: Integer; OutputDev: Boolean): TACSDeviceInfo;
+function GetAudioDeviceInfo(DevID: Integer; OutputDev: Boolean): TAcsDeviceInfo;
 
 implementation
 
@@ -110,12 +110,12 @@ var
 {$I linux\acs_audio.inc}
 {$ENDIF}
 
-function TStdAudioOut.GetDeviceInfo: TACSDeviceInfo;
+function TStdAudioOut.GetDeviceInfo: TAcsDeviceInfo;
 begin
   Result:=GetAudioDeviceInfo(FBaseChannel, True);
 end;
 
-function TStdAudioIn.GetDeviceInfo: TACSDeviceInfo;
+function TStdAudioIn.GetDeviceInfo: TAcsDeviceInfo;
 begin
   Result:=GetAudioDeviceInfo(FBaseChannel, False);
 end;

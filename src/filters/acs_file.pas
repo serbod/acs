@@ -176,35 +176,35 @@ function TACSFileIn.GetBPS: Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.BitsPerSample;
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 function TACSFileIn.GetCh: Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.Channels;
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 function TACSFileIn.GetSR: Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.SampleRate;
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 function TACSFileIn.GetTime: Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.Time;
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 function TACSFileIn.GetValid: Boolean;
 begin
   Result:=False;
   if Assigned(FInput) then Result:=FInput.Valid;
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 function TACSFileIn.GetTotalTime: Real;
@@ -280,41 +280,41 @@ end;
 procedure TACSFileIn.Init;
 begin
   if Assigned(FInput) then FInput.Init;
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 function TACSFileIn.Seek(SampleNum: Integer): Boolean;
 begin
   Result:=False;
   if Assigned(FInput) then Result:=FInput.Seek(SampleNum);
-    //EACSException.Create(strnoFileOpened);
+    //EAcsException.Create(strnoFileOpened);
 end;
 
 function TACSFileIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.GetData(Buffer, BufferSize);
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 function TACSFileIn.SetStartTime(Minutes, Seconds: Integer): Boolean;
 begin
   Result:=False;
   if Assigned(FInput) then Result:=FInput.SetStartTime(Minutes, Seconds);
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 function TACSFileIn.SetEndTime(Minutes, Seconds: Integer): Boolean;
 begin
   Result:=False;
   if Assigned(FInput) then Result:=FInput.SetEndTime(Minutes, Seconds);
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 procedure TACSFileIn.Jump(Offs: Real);
 begin
   if Assigned(FInput) then FInput.Jump(Offs);
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 { TACSFileOut }
@@ -346,67 +346,67 @@ end;
 procedure TACSFileOut.Done;
 begin
   if Assigned(FOutput) then FOutput.Done;
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 function TACSFileOut.DoOutput(Abort: Boolean): Boolean;
 begin
   Result:=False;
   if not Assigned(FOutput) then Result:=FOutput.DoOutput(Abort);
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 procedure TACSFileOut.Prepare;
 begin
   if Assigned(FOutput) then FOutput.Prepare;
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 function TACSFileOut.GetDelay: Integer;
 begin
   Result:=0;
   if not Assigned(FOutput) then Result:=FOutput.Delay;
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 function TACSFileOut.GetPriority: TTPriority;
 begin
   Result:=TTPriority.tpNormal;
   if not Assigned(FOutput) then Result:=FOutput.ThreadPriority;
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 function TACSFileOut.GetProgress: Real;
 begin
   Result:=0;
   if Assigned(FOutput) then Result:=FOutput.Progress;
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 function TACSFileOut.GetStatus: TACSOutputStatus;
 begin
   Result:=TACSOutputStatus.tosUndefined;
   if Assigned(FOutput) then Result:=FOutput.Status;
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 function TACSFileOut.GetTE: Integer;
 begin
   Result:=0;
   if Assigned(FOutput) then Result:=FOutput.TimeElapsed;
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 procedure TACSFileOut.SetDelay(const AValue: Integer);
 begin
   if Assigned(FOutput) then FOutput.Delay:=AValue;
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 procedure TACSFileOut.SetPriority(const AValue: TTPriority);
 begin
   if Assigned(FOutput) then FOutput.ThreadPriority:=AValue;
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 procedure TACSFileOut.ThreadException(Sender: TComponent; E: Exception);
@@ -465,19 +465,19 @@ end;
 procedure TACSFileOut.Pause;
 begin
   if Assigned(FOutput) then FOutput.Pause;
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 procedure TACSFileOut.Resume;
 begin
   if Assigned(FOutput) then FOutput.Resume;
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 procedure TACSFileOut.Run;
 begin
   if Assigned(FOutput) then FOutput.Run;
-    //raise EACSException.Create(strNoFileOpened);
+    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 procedure TACSFileOut.Stop;
@@ -547,7 +547,7 @@ begin
   System.Delete(Ext, 1, 1);
   Result:=FindExt(Ext, Typs);
   if not Assigned(Result) then
-    raise EACSException.CreateFmt(strUnknownExtension, [Ext]);
+    raise EAcsException.CreateFmt(strUnknownExtension, [Ext]);
 end;
 
 procedure TACSFileFormatsList.Remove(AClass: TACSFormatClass);

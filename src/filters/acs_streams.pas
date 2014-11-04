@@ -63,7 +63,7 @@ implementation
 procedure TACSStreamOut.Prepare;
 begin
   if not FStreamAssigned then
-    raise EACSException.Create(strStreamObjectnotassigned);
+    raise EAcsException.Create(strStreamObjectnotassigned);
   FInput.Init;
 end;
 
@@ -126,9 +126,9 @@ end;
 procedure TACSStreamIn.Init;
 begin
   if Busy then
-    raise EACSException.Create(strBusy);
+    raise EAcsException.Create(strBusy);
   if not Assigned(FStream) then
-    raise EACSException.Create(strStreamObjectnotassigned);
+    raise EAcsException.Create(strStreamObjectnotassigned);
   FPosition:=FStream.Position;
   FBusy:=True;
   FSize:=FStream.Size;
@@ -151,21 +151,21 @@ end;
 function TACSStreamOut.GetSR: Integer;
 begin
   if not Assigned(Input) then
-    raise EACSException.Create(strInputnotassigned);
+    raise EAcsException.Create(strInputnotassigned);
   Result:=FInput.SampleRate;
 end;
 
 function TACSStreamOut.GetBPS: Integer;
 begin
   if not Assigned(Input) then
-    raise EACSException.Create(strInputnotassigned);
+    raise EAcsException.Create(strInputnotassigned);
   Result:=FInput.BitsPerSample;
 end;
 
 function TACSStreamOut.GetCh: Integer;
 begin
   if not Assigned(Input) then
-    raise EACSException.Create(strInputnotassigned);
+    raise EAcsException.Create(strInputnotassigned);
   Result:=FInput.Channels;
 end;
 

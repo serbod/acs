@@ -17,15 +17,15 @@ implementation
 
 procedure Register();
 begin
-  RegisterComponents('Audio I/O', [TACSAudioIn, TACSAudioOut, TACSMixer,
+  RegisterComponents('Audio I/O', [TAcsAudioIn, TAcsAudioOut, TACSMixer,
   TACSCDIn, TACSInputList, TACSMemoryIn, TACSFileIn, TACSFileOut, TACSStreamIn, TACSStreamOut, TACSNULLOut]);
 
   RegisterComponents('Audio Processing', [TACSAudioMixer, TACSMultiMixer, TACSSampleConverter, TACSRateConverter,
   TACSMSConverter, TACSAudioProcessor, TACSBWFilter, TACSSincFilter, TACSSoundIndicator, TACSStereoBalance, TACSConvolver, TACSVolumeQuery]);
 
   { serbod@ }
-  RegisterPropertyEditor(TypeInfo(string), TACSAudioIn, 'Driver', TAcsAudioInDriverPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TACSAudioOut, 'Driver', TAcsAudioOutDriverPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TAcsAudioIn, 'Driver', TAcsAudioInDriverPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TAcsAudioOut, 'Driver', TAcsAudioOutDriverPropertyEditor);
 end;
 
 initialization

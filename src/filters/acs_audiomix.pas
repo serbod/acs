@@ -99,7 +99,7 @@ type
   
 implementation  
 
-procedure MixChannels16(Buf1, Buf2: PACSBuffer16; Vol1, Vol2, InSize: Integer);
+procedure MixChannels16(Buf1, Buf2: PAcsBuffer16; Vol1, Vol2, InSize: Integer);
 var      // optimized by leozhang
   i: Integer;
   V1, V2: Real;
@@ -143,21 +143,21 @@ function TACSAudioMixer.GetBPS: Integer;
 begin
   if Assigned(FInput1) then Result:=FInput1.BitsPerSample
   else Result:=inherited GetBPS;
-  //raise EACSException.Create(strInputnotAssigned);
+  //raise EAcsException.Create(strInputnotAssigned);
 end;
 
 function TACSAudioMixer.GetCh: Integer;
 begin
   if Assigned(FInput1) then Result:=FInput1.Channels
   else Result:=inherited GetCh;
-  //raise EACSException.Create(strInputnotAssigned);
+  //raise EAcsException.Create(strInputnotAssigned);
 end;
 
 function TACSAudioMixer.GetSR: Integer;
 begin
   if Assigned(FInput1) then Result:=FInput1.SampleRate
   else Result:=inherited GetSR;
-  //raise EACSException.Create(strInputnotAssigned);
+  //raise EAcsException.Create(strInputnotAssigned);
 end;
 
 procedure TACSAudioMixer.Init;
@@ -171,7 +171,7 @@ begin
   EndOfInput1:=False;
   EndOfInput2:=False;
   if not Assigned(FInput1) then Exit;
-    //raise EACSException.Create(strInputnotAssigned);
+    //raise EAcsException.Create(strInputnotAssigned);
   if FMode=amRTMix then
   begin
     FInput1.Init;
@@ -188,7 +188,7 @@ begin
   else
   begin
     if not Assigned(FInput2) then Exit;
-    //raise EACSException.Create(strInputnotAssigned);
+    //raise EAcsException.Create(strInputnotAssigned);
     FInput1.Init;
     FInput2.Init;
     case FMode of
@@ -231,7 +231,7 @@ var
 begin
   Result:=0;
   if not Busy then
-    raise EACSException.Create(strStreamnotopen);
+    raise EAcsException.Create(strStreamnotopen);
   if BufStart > BufEnd then
   begin
     if EndOfInput1 and EndOfInput2 then Exit;
@@ -396,7 +396,7 @@ end;
 procedure TACSAudioMixer.SetInput1(AInput: TACSCustomInput);
 begin
   if Busy then
-    raise EACSException.Create(strBusy);
+    raise EAcsException.Create(strBusy);
   FInput1:=AInput;
 end;
 
@@ -420,7 +420,7 @@ begin
       EndOfInput2:=False;
     end
     else
-      raise EACSException.Create(strNotinFBMode);
+      raise EAcsException.Create(strNotinFBMode);
   end;
 end;
 

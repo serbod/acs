@@ -1,5 +1,5 @@
 
-function GetAudioDeviceInfo(DevID: Integer; OutputDev: Boolean): TACSDeviceInfo;
+function GetAudioDeviceInfo(DevID: Integer; OutputDev: Boolean): TAcsDeviceInfo;
 var
   WIC: TWaveInCaps;
   i: Integer;
@@ -7,12 +7,12 @@ begin
   if OutputDev then
   begin
     if DevID >= OutputChannelsCount then
-      raise EACSException.Create(Format(strChannelnotavailable, [DevId]));
+      raise EAcsException.Create(Format(strChannelnotavailable, [DevId]));
   end
   else
   begin
     if DevID >= InputChannelsCount then
-      raise EACSException.Create(Format(strChannelnotavailable, [DevId]));
+      raise EAcsException.Create(Format(strChannelnotavailable, [DevId]));
   end;
   if OutputDev then
     waveOutGetDevCaps(DevID, @WIC, SizeOf(WIC))
@@ -76,14 +76,14 @@ end;
 procedure TStdAudioOut.SetDevice;
 begin
   if Busy then
-    raise EACSException.Create(strBusy);
+    raise EAcsException.Create(strBusy);
   if OutputChannelsCount = 0 then
     FBaseChannel:=0
   else
     if Ch < OutputChannelsCount then
       FBaseChannel:=Ch
     else
-      raise EACSException.Create(Format(strChannelnotavailable, [Ch]));
+      raise EAcsException.Create(Format(strChannelnotavailable, [Ch]));
 end;
 
 procedure TStdAudioOut.Prepare;
@@ -135,8 +135,8 @@ function TStdAudioOut.DoOutput(Abort: Boolean): Boolean;
 var
   Len, i, k, vCoef: Integer;
   P: Pointer;
-  P1: PACSBuffer8;
-  P2: PACSBuffer16;
+  P1: PAcsBuffer8;
+  P2: PAcsBuffer16;
   Tmp: PWaveHdr;
 begin
   // No exceptions Here
@@ -260,7 +260,7 @@ end;
 procedure TStdAudioIn.Init;
 begin
   if Busy then
-    raise EACSException.Create(strBusy);
+    raise EAcsException.Create(strBusy);
   BufEnd:=0;
   BufStart:=1;
   FPosition:=0;
@@ -297,10 +297,10 @@ end;
 procedure TStdAudioIn.SetDevice;
 begin
   if Busy then
-    raise EACSException.Create(strBusy);
+    raise EAcsException.Create(strBusy);
   if Ch < InputChannelsCount then FBaseChannel:=Ch
   else
-    raise EACSException.Create(Format(strChannelnotavailable, [Ch]));
+    raise EAcsException.Create(Format(strChannelnotavailable, [Ch]));
 end;
 
 function TStdAudioIn.GetData(Buffer: Pointer; oBufferSize: Integer): Integer;
@@ -309,7 +309,7 @@ var
 begin
   Result:=0;
   if not Busy then
-    raise EACSException.Create(strStreamnotopen);
+    raise EAcsException.Create(strStreamnotopen);
   if FRecBytes >= 0 then
     if (FPosition >= FRecBytes) then Exit;
 

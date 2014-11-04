@@ -28,24 +28,24 @@ type
     For example, af4S16 corresponds to 44100 Hz stereo 16 bit format.
   }
 
-  TACSAudioFormat = (af1M08, af1M16, af1S08, af1S16, af2M08, af2M16, af2S08, af2S16,
+  TAcsAudioFormat = (af1M08, af1M16, af1S08, af1S16, af2M08, af2M16, af2S08, af2S16,
                   af4M08, af4M16, af4S08, af4S16);
-  TACSAudioFormats = set of TACSAudioFormat;
-  TACSBaseAudioOut = class;
-  TACSBaseAudioIn = class;
+  TAcsAudioFormats = set of TAcsAudioFormat;
+  TAcsBaseAudioOut = class;
+  TAcsBaseAudioIn = class;
 
   { This record is used to get an deviceinfo from the Drivers
   }
-  TACSDeviceInfo = record
+  TAcsDeviceInfo = record
     DeviceName: String;
     DrvVersion: LongWord;
-    Formats: TACSAudioFormats;
+    Formats: TAcsAudioFormats;
     Stereo: Boolean;
   end;
   
 
-  { TACSAudioOut }
-  TACSAudioOut = class(TComponent)
+  { TAcsAudioOut }
+  TAcsAudioOut = class(TComponent)
   private
     FDriver: string;
     FOutput: TACSBaseAudioOut;
@@ -78,7 +78,7 @@ type
     procedure SetInput(Input: TACSCustomInput);
 
     procedure SetDevice(Ch: Integer); virtual;
-    function GetDeviceInfo: TACSDeviceInfo; virtual;
+    function GetDeviceInfo: TAcsDeviceInfo; virtual;
     function GetDeviceCount: Integer; virtual;
     procedure SetDriver(Driver: string); virtual;
     procedure SetDefaultDriver();
@@ -96,7 +96,7 @@ type
       just set device property from 0 to DeviceCount-1 and read deviceInfo to
       enumerate all Devices from current Driver
     }
-    property DeviceInfo: TACSDeviceInfo read GetDeviceInfo;
+    property DeviceInfo: TAcsDeviceInfo read GetDeviceInfo;
     { Returns the count of devices supported by actual driver
     }
     property DeviceCount: Integer read GetDeviceCount;
@@ -167,14 +167,14 @@ type
     property OnThreadException: TACSThreadExceptionEvent read FOnThreadException write FOnThreadException;
   end;
 
-  { TACSAudioIn component }
+  { TAcsAudioIn component }
 
-  TACSAudioIn = class(TACSCustomInput)
+  TAcsAudioIn = class(TACSCustomInput)
   private
     FInput: TACSBaseAudioIn;
     FDriver: string;
     procedure SetDevice(Ch: Integer);
-    function GetDeviceInfo: TACSDeviceInfo;
+    function GetDeviceInfo: TAcsDeviceInfo;
     function GetDriverName(idx: Integer): string;
     function GetDriversCount: Integer;
     procedure SetDriver(Driver: string);
@@ -198,7 +198,7 @@ type
       just set device property from 0 to DeviceCount-1 and read deviceInfo to
       enumerate all Devices from current Driver
     }
-    property DeviceInfo: TACSDeviceInfo read GetDeviceInfo;
+    property DeviceInfo: TAcsDeviceInfo read GetDeviceInfo;
     { This can be used to enumerate the Drivers
       just use Driverscount as index it returns the DriverName
     }
@@ -239,19 +239,19 @@ type
 
     This class is an abstract base class for the drivers
   }
-  TACSBaseAudioOut = class(TACSCustomOutput)
+  TAcsBaseAudioOut = class(TACSCustomOutput)
   protected
     FDriver: string;
-    FOutput: TACSAudioOut;
+    FOutput: TAcsAudioOut;
     FBaseChannel: Integer;
     FVolume: Byte;
     procedure SetDevice(Ch: Integer); virtual; abstract;
-    function GetDeviceInfo: TACSDeviceInfo; virtual; abstract;
+    function GetDeviceInfo: TAcsDeviceInfo; virtual; abstract;
     function GetDeviceCount: Integer; virtual; abstract;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    property DeviceInfo: TACSDeviceInfo read GetDeviceInfo;
+    property DeviceInfo: TAcsDeviceInfo read GetDeviceInfo;
     property DeviceCount: Integer read GetDeviceCount;
     property BufferSize: Integer read FBufferSize write FBufferSize;
   published
@@ -260,13 +260,13 @@ type
   end;
 
 
-  { TACSBaseAudioIn
+  { TAcsBaseAudioIn
 
     This class is an abstract base class for the drivers
   }
-  TACSBaseAudioIn = class(TACSCustomInput)
+  TAcsBaseAudioIn = class(TACSCustomInput)
   protected
-    FInput: TACSAudioIn;
+    FInput: TAcsAudioIn;
     FDriver: string;
     FBPS: Integer;
     FChan: Integer;
@@ -274,54 +274,76 @@ type
     FRecTime: Integer;
     FBaseChannel: Integer;
     procedure SetDevice(Ch: Integer); virtual; abstract;
-    function GetDeviceInfo: TACSDeviceInfo; virtual; abstract;
+    function GetDeviceInfo: TAcsDeviceInfo; virtual; abstract;
     function GetDeviceCount: Integer; virtual; abstract;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    property DeviceInfo: TACSDeviceInfo read GetDeviceInfo;
+    property DeviceInfo: TAcsDeviceInfo read GetDeviceInfo;
   published
-    property Device: Integer read FBaseChannel write SetDevice stored True;
-    property InBitsPerSample: Integer read GetBPS write FBPS stored True;
-    property InChannels: Integer read GetCh write FChan stored True;
-    property InSampleRate: Integer read GetSR write FFreq stored True;
-    property RecTime: Integer read FRecTime write FRecTime stored True;
+    (* Property: DeviceNumber
+         Use this property to select the recording device by number. The
+         property default value is 0 which corresponds to the default audio
+         input device in your system. Valid numbers range from 0 to
+         <DeviceCount> - 1. *)
+    property Device: Integer read FBaseChannel write SetDevice;
+    (* Property: InBitsPerSample
+        Use this property to set the number of bits per sample in the audio
+        stream the component will provide. Possible values are 8, 16, and 24
+        (the last one depends on the capabilities of your hardware). *)
+    property InBitsPerSample: Integer read GetBPS write FBPS;
+    (* Property: InChannels
+        Use this property to set the number of channels in the audio stream
+        the component will provide. Possible values are 1 (mono), and 2
+        (stereo). *)
+    property InChannels: Integer read GetCh write FChan;
+    (* Property: InSampleRate
+        Use this property to set the sample rate of the audio stream the
+        component will provide. Possible values range from 4000 to 128000
+        (depends on the capabilities of your hardware). *)
+    property InSampleRate: Integer read GetSR write FFreq;
+    (* Property: RecTime
+         Use this property to set the recording duration (in seconds). If set,
+         this property overrides the value of <BytesToRead>. If you set this
+         property value to -1 (the default) the component will be endlessly
+         recording until you stop it. *)
+    property RecTime: Integer read FRecTime write FRecTime;
   end;
 
-  TACSAudioOutClass = class of TACSBaseAudioOut;
-  TACSAudioInClass = class of TACSBaseAudioIn;
+  TAcsAudioOutClass = class of TAcsBaseAudioOut;
+  TAcsAudioInClass = class of TAcsBaseAudioIn;
 
-  TACSOutDriverinfo = record
+  TAcsOutDriverInfo = record
     DriverName: string;
     Latency: Integer;
-    DrvClass: TACSAudioOutClass;
+    DrvClass: TAcsAudioOutClass;
   end;
 
-  TACSInDriverinfo = record
+  TAcsInDriverInfo = record
     DriverName: string;
     Latency: Integer;
-    DrvClass: TACSAudioInClass;
+    DrvClass: TAcsAudioInClass;
   end;
 
   { This procedure must be used to register drivers to the system
     just call them at initialization of the driver main unit
   }
-  procedure RegisterAudioOut(DrvName: string; OutClass: TACSAudioOutClass; Latency: Integer);
+  procedure RegisterAudioOut(DrvName: string; OutClass: TAcsAudioOutClass; Latency: Integer);
 
   { This procedure must be used to register drivers to the system
     just call them at initialization of the driver main unit
   }
-  procedure RegisterAudioIn(DrvName: string; InClass: TACSAudioInClass; Latency: Integer);
+  procedure RegisterAudioIn(DrvName: string; InClass: TAcsAudioInClass; Latency: Integer);
 
 var
-  OutDriverInfos: array of TACSOutDriverInfo;
-  InDriverInfos: array of TACSInDriverInfo;
+  OutDriverInfos: array of TAcsOutDriverInfo;
+  InDriverInfos: array of TAcsInDriverInfo;
 
 implementation
 
 { TAudioOut }
 
-function TACSAudioOut.GetDelay: Integer;
+function TAcsAudioOut.GetDelay: Integer;
 begin
   if Assigned(FOutput) then
     Result:=FOutput.GetDelay
@@ -329,7 +351,7 @@ begin
     Result:=-1;
 end;
 
-function TACSAudioOut.GetBufferSize: Integer;
+function TAcsAudioOut.GetBufferSize: Integer;
 begin
   if Assigned(FOutput) then
     Result:=FOutput.BufferSize
@@ -337,7 +359,7 @@ begin
     Result:=-1;
 end;
 
-function TACSAudioOut.GetBusy: Boolean;
+function TAcsAudioOut.GetBusy: Boolean;
 begin
   if Assigned(FOutput) then
     Result:=FOutput.Busy
@@ -345,25 +367,25 @@ begin
     Result:=False;
 end;
 
-function TACSAudioOut.GetPriority: TTPriority;
+function TAcsAudioOut.GetPriority: TTPriority;
 begin
   if Assigned(FOutput) then
     Result:=FOutput.GetPriority
   else
     Result:=tpNormal;
-    //raise EACSException(strNoDriverselected);
+    //raise EAcsException(strNoDriverselected);
 end;
 
-function TACSAudioOut.GetProgress: real;
+function TAcsAudioOut.GetProgress: real;
 begin
   if Assigned(FOutput) then
     Result:=FOutput.GetProgress
   else
     Result:=0;
-    //raise EACSException.Create(strNoDriverselected);
+    //raise EAcsException.Create(strNoDriverselected);
 end;
 
-function TACSAudioOut.GetStatus: TACSOutputStatus;
+function TAcsAudioOut.GetStatus: TACSOutputStatus;
 begin
   if Assigned(FOutput) then
     Result:=FOutput.Status
@@ -371,7 +393,7 @@ begin
     Result:=tosUndefined;
 end;
 
-function TACSAudioOut.GetSuspend: Boolean;
+function TAcsAudioOut.GetSuspend: Boolean;
 begin
   if Assigned(FOutput) then
     Result:=FOutput.GetSuspend
@@ -379,79 +401,79 @@ begin
     Result:=False;
 end;
 
-function TACSAudioOut.GetTE: Integer;
+function TAcsAudioOut.GetTE: Integer;
 begin
   if Assigned(FOutput) then
     Result:=FOutput.GetTE
   else
     Result:=0;
-  //  raise EACSException.Create(strNoDriverselected);
+  //  raise EAcsException.Create(strNoDriverselected);
 end;
 
-procedure TACSAudioOut.SetBufferSize(const AValue: Integer);
+procedure TAcsAudioOut.SetBufferSize(const AValue: Integer);
 begin
   if Assigned(FOutput) then FOutput.BufferSize:=AValue;
   if AValue>0 then FBufferSize:=AValue;
 end;
 
-procedure TACSAudioOut.SetDelay(const AValue: Integer);
+procedure TAcsAudioOut.SetDelay(const AValue: Integer);
 begin
   if Assigned(FOutput) then FOutput.SetDelay(AValue);
 end;
 
-procedure TACSAudioOut.SetPriority(const AValue: TTPriority);
+procedure TAcsAudioOut.SetPriority(const AValue: TTPriority);
 begin
   if Assigned(FOutput) then FOutput.SetPriority(AValue);
 end;
 
-procedure TACSAudioOut.SetSuspend(const AValue: Boolean);
+procedure TAcsAudioOut.SetSuspend(const AValue: Boolean);
 begin
   if Assigned(FOutput) then FOutput.SetSuspend(AValue);
 end;
 
-procedure TACSAudioOut.ThreadException(Sender: TComponent; E: Exception);
+procedure TAcsAudioOut.ThreadException(Sender: TComponent; E: Exception);
 begin
   if Assigned(FOnThreadException) then
     FOnThreadException(Sender,E);
 end;
 
-procedure TACSAudioOut.OutputDone(Sender: TComponent);
+procedure TAcsAudioOut.OutputDone(Sender: TComponent);
 begin
   if Assigned(FOnDone) then FOnDone(Sender);
 end;
 
-procedure TACSAudioOut.OutputProgress(Sender: TComponent);
+procedure TAcsAudioOut.OutputProgress(Sender: TComponent);
 begin
   if Assigned(FOnProgress) then FOnProgress(Sender);
 end;
 
-procedure TACSAudioOut.SetInput(Input: TACSCustomInput);
+procedure TAcsAudioOut.SetInput(Input: TACSCustomInput);
 begin
   FInput:=Input;
   if Assigned(FOutput) then FOutput.Input:=Input;
 end;
 
-procedure TACSAudioOut.SetDevice(Ch: Integer);
+procedure TAcsAudioOut.SetDevice(Ch: Integer);
 begin
   FBaseChannel:=Ch;
   if Assigned(FOutput) then FOutput.SetDevice(Ch);
 end;
 
-function TACSAudioOut.GetDeviceInfo: TACSDeviceInfo;
+function TAcsAudioOut.GetDeviceInfo: TAcsDeviceInfo;
 begin
   if Assigned(FOutput) then Result:=FOutput.DeviceInfo;
 end;
 
-function TACSAudioOut.GetDeviceCount: Integer;
+function TAcsAudioOut.GetDeviceCount: Integer;
 begin
   if Assigned(FOutput) then
     Result:=FOutput.GetDeviceCount
   else
     Result:=0;
-    //raise EACSException.Create(strNoDriverselected);
+    //raise EAcsException.Create(strNoDriverselected);
 end;
 
-procedure TACSAudioOut.SetDriver(Driver: string);
+procedure TAcsAudioOut.SetDriver(Driver: string);
 var
   i: Integer;
 begin
@@ -483,7 +505,7 @@ begin
   end;
 end;
 
-procedure TACSAudioOut.SetDefaultDriver;
+procedure TAcsAudioOut.SetDefaultDriver;
 var
   lowestindex, lowest, minlat, i: Integer;
   Done: Boolean;
@@ -517,40 +539,40 @@ begin
   end;
 end;
 
-function TACSAudioOut.GetDriverName(idx: Integer): string;
+function TAcsAudioOut.GetDriverName(idx: Integer): string;
 begin
   Result:='';
   if (idx < 0) or (idx > length(OutDriverInfos)-1) then Exit;
   Result:=OutDriverInfos[idx].DriverName;
 end;
 
-function TACSAudioOut.GetDriversCount: Integer;
+function TAcsAudioOut.GetDriversCount: Integer;
 begin
   Result:=Length(OutDriverInfos);
 end;
 
-procedure TACSAudioOut.Done;
+procedure TAcsAudioOut.Done;
 begin
   if Assigned(FOutput) then Foutput.Done;
-    //raise EACSException.Create(strNoDriverselected);
+    //raise EAcsException.Create(strNoDriverselected);
 end;
 
-function TACSAudioOut.DoOutput(Abort: Boolean): Boolean;
+function TAcsAudioOut.DoOutput(Abort: Boolean): Boolean;
 begin
   if not Assigned(FOutput) then
     Result:=FOutput.DoOutput(Abort)
   else
     Result:=False;
-  //  raise EACSException.Create(strNoDriverselected);
+  //  raise EAcsException.Create(strNoDriverselected);
 end;
 
-procedure TACSAudioOut.Prepare;
+procedure TAcsAudioOut.Prepare;
 begin
   if Assigned(FOutput) then FOutput.Prepare;
-  //  raise EACSException.Create(strNoDriverselected);
+  //  raise EAcsException.Create(strNoDriverselected);
 end;
 
-constructor TACSAudioOut.Create(AOwner: TComponent);
+constructor TAcsAudioOut.Create(AOwner: TComponent);
 //var
   //lowestindex, lowest, minlat, i: Integer;
   //exc: Boolean;
@@ -591,92 +613,92 @@ retry:
   }
 end;
 
-destructor TACSAudioOut.Destroy;
+destructor TAcsAudioOut.Destroy;
 begin
   FreeAndNil(FOutput);
   inherited Destroy;
 end;
 
-procedure TACSAudioOut.Pause;
+procedure TAcsAudioOut.Pause;
 begin
   if Assigned(FOutput) then FOutput.Pause;
 end;
 
-procedure TACSAudioOut.Resume;
+procedure TAcsAudioOut.Resume;
 begin
   if Assigned(FOutput) then FOutput.Resume;
 end;
 
-procedure TACSAudioOut.Run;
+procedure TAcsAudioOut.Run;
 begin
   if not Assigned(FOutput) then SetDefaultDriver();
   if Assigned(FOutput) then FOutput.Run;
 end;
 
-procedure TACSAudioOut.Stop;
+procedure TAcsAudioOut.Stop;
 begin
   if Assigned(FOutput) then FOutput.Stop;
 end;
 
-{ TACSAudioIn }
+{ TAcsAudioIn }
 
-function TACSAudioIn.GetBPS: Integer;
+function TAcsAudioIn.GetBPS: Integer;
 begin
   if Assigned(FInput) then Result:=FInput.GetBPS
   else Result:=inherited GetBPS;
 end;
 
-function TACSAudioIn.GetCh: Integer;
+function TAcsAudioIn.GetCh: Integer;
 begin
   if Assigned(FInput) then Result:=FInput.GetCh
   else Result:=inherited GetCh;
-  //  raise EACSException.Create(strNoDriverselected);
+  //  raise EAcsException.Create(strNoDriverselected);
 end;
 
-function TACSAudioIn.GetSR: Integer;
+function TAcsAudioIn.GetSR: Integer;
 begin
   if Assigned(FInput) then Result := FInput.GetSR
   else Result:=inherited GetSR;
-  //  raise EACSException.Create(strNoDriverselected);
+  //  raise EAcsException.Create(strNoDriverselected);
 end;
 
-procedure TACSAudioIn.SetDevice(Ch: Integer);
+procedure TAcsAudioIn.SetDevice(Ch: Integer);
 begin
   if Assigned(FInput) then FInput.SetDevice(Ch);
-  //  raise EACSException.Create(strNoDriverselected);
+  //  raise EAcsException.Create(strNoDriverselected);
 end;
 
-function TACSAudioIn.GetDeviceInfo: TACSDeviceInfo;
+function TAcsAudioIn.GetDeviceInfo: TAcsDeviceInfo;
 begin
   Result.DeviceName:='';
   Result.DrvVersion:=0;
   Result.Formats:=[];
   Result.Stereo:=False;
   if not Assigned(FInput) then Exit;
-  //  raise EACSException.Create(strNoDriverselected);
+  //  raise EAcsException.Create(strNoDriverselected);
   //TODO: Complete
 end;
 
-function TACSAudioIn.GetTotalTime: Real;
+function TAcsAudioIn.GetTotalTime: Real;
 begin
   if Assigned(FInput) then Result:=FInput.GetTotalTime
   else Result:=inherited GetTotalTime;
-  //  raise EACSException.Create(strNoDriverselected);
+  //  raise EAcsException.Create(strNoDriverselected);
 end;
 
-function TACSAudioIn.GetDriverName(idx: Integer): string;
+function TAcsAudioIn.GetDriverName(idx: Integer): string;
 begin
   Result:='';
   if (idx < 0) or (idx > length(InDriverInfos)-1) then Exit;
   Result:=InDriverInfos[idx].DriverName;
 end;
 
-function TACSAudioIn.GetDriversCount: Integer;
+function TAcsAudioIn.GetDriversCount: Integer;
 begin
   Result:=Length(InDriverInfos);
 end;
 
-procedure TACSAudioIn.SetDriver(Driver: string);
+procedure TAcsAudioIn.SetDriver(Driver: string);
 var
   i: Integer;
 begin
@@ -693,7 +715,7 @@ begin
   end;
 end;
 
-constructor TACSAudioIn.Create(AOwner: TComponent);
+constructor TAcsAudioIn.Create(AOwner: TComponent);
 {
 var
   lowestindex, lowest, i: Integer;
@@ -733,31 +755,31 @@ retry:
   }
 end;
 
-destructor TACSAudioIn.Destroy;
+destructor TAcsAudioIn.Destroy;
 begin
   inherited Destroy;
 end;
 
-function TACSAudioIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsAudioIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.GetData(Buffer,BufferSize);
-    //raise EACSException.Create(strNoDriverselected);
+    //raise EAcsException.Create(strNoDriverselected);
 end;
 
-procedure TACSAudioIn.Init;
+procedure TAcsAudioIn.Init;
 begin
   if Assigned(FInput) then FInput.Init;
-    //raise EACSException.Create(strNoDriverselected);
+    //raise EAcsException.Create(strNoDriverselected);
 end;
 
-procedure TACSAudioIn.Flush;
+procedure TAcsAudioIn.Flush;
 begin
   if not Assigned(FInput) then FInput.Flush;
-    //raise EACSException.Create(strNoDriverselected);
+    //raise EAcsException.Create(strNoDriverselected);
 end;
 
-procedure RegisterAudioOut(DrvName: string; OutClass: TACSAudioOutClass; Latency: Integer);
+procedure RegisterAudioOut(DrvName: string; OutClass: TAcsAudioOutClass; Latency: Integer);
 begin
   SetLength(OutDriverInfos, Length(OutDriverInfos)+1);
   OutDriverInfos[Length(OutDriverInfos)-1].DriverName:=DrvName;
@@ -765,7 +787,7 @@ begin
   OutDriverInfos[Length(OutDriverInfos)-1].DrvClass:=OutClass;
 end;
 
-procedure RegisterAudioIn(DrvName: string; InClass: TACSAudioInClass; Latency: Integer);
+procedure RegisterAudioIn(DrvName: string; InClass: TAcsAudioInClass; Latency: Integer);
 begin
   SetLength(InDriverInfos, Length(InDriverInfos)+1);
   InDriverInfos[Length(InDriverInfos)-1].DriverName:=DrvName;
@@ -773,30 +795,30 @@ begin
   InDriverInfos[Length(InDriverInfos)-1].DrvClass:=InClass;
 end;
 
-{ TACSBaseAudioOut }
+{ TAcsBaseAudioOut }
 
-constructor TACSBaseAudioOut.Create(AOwner: TComponent);
+constructor TAcsBaseAudioOut.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FDriver:='';
   FOutput:=nil;
 end;
 
-destructor TACSBaseAudioOut.Destroy;
+destructor TAcsBaseAudioOut.Destroy;
 begin
   inherited Destroy;
 end;
 
 { TBaseAudioIn }
 
-constructor TACSBaseAudioIn.Create(AOwner: TComponent);
+constructor TAcsBaseAudioIn.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FDriver:='';
   FInput:=nil;
 end;
 
-destructor TACSBaseAudioIn.Destroy;
+destructor TAcsBaseAudioIn.Destroy;
 begin
   inherited Destroy;
 end;

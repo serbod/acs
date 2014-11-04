@@ -161,7 +161,7 @@ implementation
 
     if not (csDesigning in ComponentState) then
     if not LameLoaded then
-    raise EACSException.Create(LAME_PATH + ' library could not be loaded.');
+    raise EAcsException.Create(LAME_PATH + ' library could not be loaded.');
   end;
 
   destructor TMP3Out.Destroy;
@@ -177,7 +177,7 @@ implementation
     GetMem(FBuffer,FBufferSize);
     if not FStreamAssigned then
     begin
-      if FFileName = '' then raise EACSException.Create('File name is not assigned.');
+      if FFileName = '' then raise EAcsException.Create('File name is not assigned.');
       FStream := TFileStream.Create(FFileName, fmCreate or fmShareExclusive, FAccessMask);
     end;
     FInput.Init;

@@ -135,7 +135,7 @@ begin
   if not (csDesigning in ComponentState) then
   begin
     if not MACLoaded then
-      raise EACSException.Create(MACPath + ' library could not be loaded.');
+      raise EAcsException.Create(MACPath + ' library could not be loaded.');
   end;
 end;
 
@@ -151,7 +151,7 @@ var
   r: Integer;
 begin
   GetMem(FBuffer,FBufferSize);
-  if FFileName = '' then raise EACSException.Create('File name is not assigned.');
+  if FFileName = '' then raise EAcsException.Create('File name is not assigned.');
   FInput.Init;
   EndOfStream := False;
 
@@ -170,7 +170,7 @@ begin
   CanOutput := (r = 0);
 
   if r <> 0 then
-  raise EACSException.Create('Error starting APECompress.' + #13#10 +
+  raise EAcsException.Create('Error starting APECompress.' + #13#10 +
       macErrorExplanation(r));
 end;
 
@@ -222,7 +222,7 @@ begin
 
       nRetVal := APECompress.UnlockBuffer(nNoiseBytes, TRUE);
       if (nRetVal <> 0) then
-        raise EACSException.Create('APECompress.UnlockBuffer Error: ' + inttostr(nRetVal));
+        raise EAcsException.Create('APECompress.UnlockBuffer Error: ' + inttostr(nRetVal));
 
       dec(nAudioBytesLeft, nNoiseBytes);
     end
@@ -239,7 +239,7 @@ begin
   if not (csDesigning in ComponentState) then
   begin
     if not MACLoaded then
-      raise EACSException.Create(MACPath + ' library could not be loaded.');
+      raise EAcsException.Create(MACPath + ' library could not be loaded.');
   end;
 end;
 
@@ -293,7 +293,7 @@ var
   blocks: Integer;
   tmp: Double;
 begin
-  if not Busy then raise EACSException.Create('The Stream is not opened');
+  if not Busy then raise EAcsException.Create('The Stream is not opened');
   if BufStart > BufEnd then
   begin
     if FOffset <> 0 then

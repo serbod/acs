@@ -126,7 +126,7 @@ var
   nOffs: Integer;
 begin
   Result:=0;
-  if not Busy then raise EACSException.Create('The Stream is not opened');
+  if not Busy then raise EAcsException.Create('The Stream is not opened');
   if BufStart > BufEnd then
   begin
     if FOffset <> 0 then
@@ -278,7 +278,7 @@ begin
           s:=String(s2);
       end;
     end;
-//    raise EACSException.Create(s);
+//    raise EAcsException.Create(s);
   end;
 end ;
 
