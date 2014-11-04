@@ -73,7 +73,7 @@ begin
   Dec(aBlock);
 end;
 
-procedure TStdAudioOut.SetDevice;
+procedure TStdAudioOut.SetDevice(Ch: Integer);
 begin
   if Busy then
     raise EAcsException.Create(strBusy);
@@ -192,7 +192,7 @@ begin
   end;
 end;
 
-constructor TStdAudioOut.Create;
+constructor TStdAudioOut.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FBaseChannel:=0;
@@ -221,7 +221,7 @@ var
 begin
   WF.wf.wFormatTag:=WAVE_FORMAT_PCM;
   WF.wf.nChannels:=FChan;
-  WF.wf.nSamplesPerSec:=FFreq;
+  WF.wf.nSamplesPerSec:=FSampleRate;
   WF.wBitsPerSample:=FBPS;
   WF.wf.nAvgBytesPerSec:=WF.wf.nSamplesPerSec*(WF.wBitsPerSample div 8);
   WF.wf.nBlockAlign:=WF.wf.nChannels*(WF.wBitsPerSample div 8);
@@ -254,7 +254,7 @@ end;
 
 function TStdAudioIn.GetSR: Integer;
 begin
-  Result:=FFreq;
+  Result:=FSampleRate;
 end;
 
 procedure TStdAudioIn.Init;
@@ -294,7 +294,7 @@ begin
   FBusy:=False;
 end;
 
-procedure TStdAudioIn.SetDevice;
+procedure TStdAudioIn.SetDevice(Ch: Integer);
 begin
   if Busy then
     raise EAcsException.Create(strBusy);
@@ -336,7 +336,7 @@ begin
   Inc(FPosition, Result);
 end;
 
-procedure TStdAudioOut.WriteBlock;
+procedure TStdAudioOut.WriteBlock(P: Pointer; Len: Integer);
 var
   WH: PWaveHdr;
 begin

@@ -31,13 +31,12 @@ type
   TAcsAudioFormat = (af1M08, af1M16, af1S08, af1S16, af2M08, af2M16, af2S08, af2S16,
                   af4M08, af4M16, af4S08, af4S16);
   TAcsAudioFormats = set of TAcsAudioFormat;
-  TAcsBaseAudioOut = class;
-  TAcsBaseAudioIn = class;
+  TAcsAudioOutDriver = class;
+  TAcsAudioInDriver = class;
 
-  { This record is used to get an deviceinfo from the Drivers
-  }
+  { This record is used to get an deviceinfo from the Drivers }
   TAcsDeviceInfo = record
-    DeviceName: String;
+    DeviceName: string;
     DrvVersion: LongWord;
     Formats: TAcsAudioFormats;
     Stereo: Boolean;
@@ -47,8 +46,8 @@ type
   { TAcsAudioOut }
   TAcsAudioOut = class(TComponent)
   private
-    FDriver: string;
-    FOutput: TACSBaseAudioOut;
+    FDriverName: string;
+    FOutput: TAcsAudioOutDriver;
     FInput: TACSCustomInput;
     FOnDone: TACSOutputDoneEvent;
     FOnProgress: TACSOutputProgressEvent;
@@ -78,13 +77,13 @@ type
     procedure SetInput(Input: TACSCustomInput);
 
     procedure SetDevice(Ch: Integer); virtual;
-    function GetDeviceInfo: TAcsDeviceInfo; virtual;
     function GetDeviceCount: Integer; virtual;
-    procedure SetDriver(Driver: string); virtual;
-    procedure SetDefaultDriver();
+    function GetDeviceInfo(ADeviceNumber: Integer): TAcsDeviceInfo; virtual;
 
-    function GetDriverName(idx: Integer): string;
     function GetDriversCount: Integer;
+    function GetDriverName(idx: Integer): string;
+    procedure SetDriver(ADriver: string); virtual;
+    procedure SetDefaultDriver();
 
     procedure Done;
     function DoOutput(Abort: Boolean):Boolean;
@@ -94,40 +93,30 @@ type
     destructor Destroy; override;
     { The result returns an deviceinfo record that can be used to enumerate devices
       just set device property from 0 to DeviceCount-1 and read deviceInfo to
-      enumerate all Devices from current Driver
-    }
-    property DeviceInfo: TAcsDeviceInfo read GetDeviceInfo;
-    { Returns the count of devices supported by actual driver
-    }
+      enumerate all Devices from current Driver }
+    property DeviceInfo[ADeviceNumber: Integer]: TAcsDeviceInfo read GetDeviceInfo;
+    { Returns the count of devices supported by actual driver }
     property DeviceCount: Integer read GetDeviceCount;
     { This can be used to enumerate the Drivers
-      just use Driverscount as index it returns the DriverName
-    }
+      just use Driverscount as index it returns the DriverName }
     property Drivers[idx: Integer]: string read GetDriverName;
-    { Returns the total count of avalible drivers
-    }
+    { Returns the total count of avalible drivers }
     property DriversCount: Integer read GetDriversCount;
-    { pauses the output.
-    }
+    { pauses the output. }
     procedure Pause; virtual;
-    { Resumes previously paused output.
-    }
+    { Resumes previously paused output. }
     procedure Resume; virtual;
     { This is the most important method in the output components.
-      After an input component has been assigned, call Run to start audio-processing chain.
-    }
+      After an input component has been assigned, call Run to start audio-processing chain. }
     procedure Run;
-    { Stops the running output process.
-    }
+    { Stops the running output process. }
     procedure Stop;
     { Output components perform output in their own threads.
-      Use this property to set the priority for the thread.
-    }
+      Use this property to set the priority for the thread. }
     property ThreadPriority:  TTPriority read GetPriority write SetPriority;
     { Read Progress to get the output progress in percents.
       This value is meaningful only after the input component has been set
-      and only if the input component can tell the size of its stream.
-    }
+      and only if the input component can tell the size of its stream. }
     property Progress: Real read GetProgress;
     { This property indicates the output component's current status. Possible values are:
 
@@ -135,21 +124,17 @@ type
 
       tosPaused: the component is paused (the Pause method was called);
 
-      tosIdle: the component is idle;
-    }
+      tosIdle: the component is idle; }
     property Status: TACSOutputStatus read GetStatus;
     property TimeElapsed: Integer read GetTE;
     property Latency: Integer read FLatency;
   published
-    { The output buffer size in bytes default is 4000
-    }
+    { The output buffer size in bytes default is 4000 }
     property BufferSize: Integer read GetBufferSize write SetBufferSize;
     { use this property to set an driver, on create of this component the driver
-      with lowest latency is used for default
-    }
-    property Driver: string read FDriver write SetDriver;
-    { Use this property to set the output device
-    }
+      with lowest latency is used for default }
+    property Driver: string read FDriverName write SetDriver;
+    { Use this property to set the output device }
     property Busy: Boolean read GetBusy;
     property Device: Integer read FBaseChannel write SetDevice;
     property Volume: Byte read FVolume write FVolume;
@@ -158,8 +143,7 @@ type
       This property allows the user to reduce the stress the output thread puts
       on the CPU (especially under Windows).
       Be careful with this property when using TAudioOut component.
-      Assigning too large values to it can cause dropouts in audio playback.
-    }
+      Assigning too large values to it can cause dropouts in audio playback. }
     property Delay: Integer read GetDelay write SetDelay;
     property SuspendWhenIdle: Boolean read GetSuspend write SetSuspend;
     property OnDone: TACSOutputDoneEvent read FOnDone write FOndone;
@@ -171,61 +155,58 @@ type
 
   TAcsAudioIn = class(TACSCustomInput)
   private
-    FInput: TACSBaseAudioIn;
-    FDriver: string;
-    procedure SetDevice(Ch: Integer);
-    function GetDeviceInfo: TAcsDeviceInfo;
-    function GetDriverName(idx: Integer): string;
-    function GetDriversCount: Integer;
-    procedure SetDriver(Driver: string);
+    FInput: TAcsAudioInDriver;
+    FDriverName: string;
   protected
     FBPS: Integer;
     FChan: Integer;
-    FFreq: Integer;
+    FSampleRate: Integer;
     FRecTime: Integer;
     FBaseChannel: Integer;
     function GetBPS: Integer; override;
     function GetCh: Integer; override;
     function GetSR: Integer; override;
     function GetTotalTime: Real; override;
+
+    function GetDriversCount: Integer;
+    function GetDriverName(idx: Integer): string;
+    procedure SetDriver(Driver: string);
+
+    function GetDeviceCount: Integer; virtual;
+    function GetDeviceInfo(ADeviceNumber: Integer): TAcsDeviceInfo; virtual;
+    procedure SetDevice(Ch: Integer);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
     procedure Init; override;
     procedure Flush; override;
+    { Returns the total count of avalible devices from current Driver }
+    property DeviceCount: Integer read GetDeviceCount;
     { The result returns an deviceinfo record that can be used to enumerate devices
       just set device property from 0 to DeviceCount-1 and read deviceInfo to
-      enumerate all Devices from current Driver
-    }
-    property DeviceInfo: TAcsDeviceInfo read GetDeviceInfo;
-    { This can be used to enumerate the Drivers
-      just use Driverscount as index it returns the DriverName
-    }
-    property Drivers[idx: Integer]: string read GetDriverName;
-    { Returns the total count of avalible drivers
-    }
+      enumerate all Devices from current Driver }
+    property DeviceInfo[ADeviceNumber: Integer]: TAcsDeviceInfo read GetDeviceInfo;
+    { Returns the total count of avalible drivers }
     property DriversCount: Integer read GetDriversCount;
+    { This can be used to enumerate the Drivers
+      just use DriversCount as index it returns the DriverName }
+    property Drivers[idx: Integer]: string read GetDriverName;
   published
     { use this property to set an driver, on create of this component the driver
-      with lowest latency is used for default
-    }
-    property Driver: string read FDriver write SetDriver stored True;
-    { Use this property to set the output device
-    }
+      with lowest latency is used for default }
+    property Driver: string read FDriverName write SetDriver stored True;
+    { Use this property to set the input device }
     property Device: Integer read FBaseChannel write SetDevice stored True;
     { Use this property to set the number of bits per sample for the input audio stream.
-      Possible values are 8 and 16.
-    }
+      Possible values are 8 and 16. }
     property InBitsPerSample: Integer read GetBPS write FBPS stored True;
     { Use this property to set the number of channels for the input audio stream.
-      Possible values are 1 (mono) and 2 (stereo).
-    }
+      Possible values are 1 (mono) and 2 (stereo). }
     property InChannels: Integer read GetCh write FChan stored True;
     { Use this property to set the sample rate for the input audio stream.
-      Possible values are determined by the soundcard hardware.
-    }
-    property InSampleRate: Integer read GetSR write FFreq stored True;
+      Possible values are determined by the soundcard hardware. }
+    property InSampleRate: Integer read GetSR write FSampleRate stored True;
     { This property allow you to set the record duration time in seconds.
       If you assign -1 to this property TAudioIn will never stop recording by itself.
       In both cases you can stop recording at any time by calling Stop method of
@@ -235,51 +216,55 @@ type
   end;
 
 
-  { TBaseAudioOut
-
-    This class is an abstract base class for the drivers
-  }
-  TAcsBaseAudioOut = class(TACSCustomOutput)
+  { TAcsAudioOutDriver }
+  { This class is an abstract base class for the drivers }
+  TAcsAudioOutDriver = class(TACSCustomOutput)
   protected
-    FDriver: string;
     FOutput: TAcsAudioOut;
     FBaseChannel: Integer;
     FVolume: Byte;
+    FDeviceInfoArray: array of TAcsDeviceInfo;
     procedure SetDevice(Ch: Integer); virtual; abstract;
-    function GetDeviceInfo: TAcsDeviceInfo; virtual; abstract;
-    function GetDeviceCount: Integer; virtual; abstract;
+    function GetDeviceCount: Integer; virtual;
+    function GetDeviceName(ADeviceNumber: Integer): string; virtual;
+    function GetDeviceInfo(ADeviceNumber: Integer): TAcsDeviceInfo; virtual;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    property DeviceInfo: TAcsDeviceInfo read GetDeviceInfo;
     property DeviceCount: Integer read GetDeviceCount;
-    property BufferSize: Integer read FBufferSize write FBufferSize;
+    property DeviceName[ADeviceNumber: Integer]: string read GetDeviceName;
+    property DeviceInfo[ADeviceNumber: Integer]: TAcsDeviceInfo read GetDeviceInfo;
   published
     property Device: Integer read FBaseChannel write SetDevice stored True;
     property Volume: Byte read FVolume write FVolume;
   end;
 
 
-  { TAcsBaseAudioIn
-
-    This class is an abstract base class for the drivers
-  }
-  TAcsBaseAudioIn = class(TACSCustomInput)
+  { TAcsAudioInDriver }
+  { This class is an abstract base class for the drivers }
+  TAcsAudioInDriver = class(TACSCustomInput)
+  private
   protected
     FInput: TAcsAudioIn;
-    FDriver: string;
     FBPS: Integer;
     FChan: Integer;
-    FFreq: Integer;
+    FSampleRate: Integer;
     FRecTime: Integer;
     FBaseChannel: Integer;
+    FDeviceInfoArray: array of TAcsDeviceInfo;
+    function GetBPS: Integer; virtual;
+    function GetCh: Integer; virtual;
+    function GetSR: Integer; virtual;
     procedure SetDevice(Ch: Integer); virtual; abstract;
-    function GetDeviceInfo: TAcsDeviceInfo; virtual; abstract;
-    function GetDeviceCount: Integer; virtual; abstract;
+    function GetDeviceCount: Integer; virtual;
+    function GetDeviceName(ADeviceNumber: Integer): string; virtual;
+    function GetDeviceInfo(ADeviceNumber: Integer): TAcsDeviceInfo; virtual;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    property DeviceInfo: TAcsDeviceInfo read GetDeviceInfo;
+    property DeviceCount: Integer read GetDeviceCount;
+    property DeviceName[ADeviceNumber: Integer]: string read GetDeviceName;
+    property DeviceInfo[ADeviceNumber: Integer]: TAcsDeviceInfo read GetDeviceInfo;
   published
     (* Property: DeviceNumber
          Use this property to select the recording device by number. The
@@ -301,7 +286,7 @@ type
         Use this property to set the sample rate of the audio stream the
         component will provide. Possible values range from 4000 to 128000
         (depends on the capabilities of your hardware). *)
-    property InSampleRate: Integer read GetSR write FFreq;
+    property InSampleRate: Integer read GetSR write FSampleRate;
     (* Property: RecTime
          Use this property to set the recording duration (in seconds). If set,
          this property overrides the value of <BytesToRead>. If you set this
@@ -310,30 +295,30 @@ type
     property RecTime: Integer read FRecTime write FRecTime;
   end;
 
-  TAcsAudioOutClass = class of TAcsBaseAudioOut;
-  TAcsAudioInClass = class of TAcsBaseAudioIn;
+  TAcsAudioOutDriverClass = class of TAcsAudioOutDriver;
+  TAcsAudioInDriverClass = class of TAcsAudioInDriver;
 
   TAcsOutDriverInfo = record
     DriverName: string;
     Latency: Integer;
-    DrvClass: TAcsAudioOutClass;
+    DrvClass: TAcsAudioOutDriverClass;
   end;
 
   TAcsInDriverInfo = record
     DriverName: string;
     Latency: Integer;
-    DrvClass: TAcsAudioInClass;
+    DrvClass: TAcsAudioInDriverClass;
   end;
 
   { This procedure must be used to register drivers to the system
     just call them at initialization of the driver main unit
   }
-  procedure RegisterAudioOut(DrvName: string; OutClass: TAcsAudioOutClass; Latency: Integer);
+  procedure RegisterAudioOut(DrvName: string; OutClass: TAcsAudioOutDriverClass; Latency: Integer);
 
   { This procedure must be used to register drivers to the system
     just call them at initialization of the driver main unit
   }
-  procedure RegisterAudioIn(DrvName: string; InClass: TAcsAudioInClass; Latency: Integer);
+  procedure RegisterAudioIn(DrvName: string; InClass: TAcsAudioInDriverClass; Latency: Integer);
 
 var
   OutDriverInfos: array of TAcsOutDriverInfo;
@@ -459,9 +444,9 @@ begin
   if Assigned(FOutput) then FOutput.SetDevice(Ch);
 end;
 
-function TAcsAudioOut.GetDeviceInfo: TAcsDeviceInfo;
+function TAcsAudioOut.GetDeviceInfo(ADeviceNumber: Integer): TAcsDeviceInfo;
 begin
-  if Assigned(FOutput) then Result:=FOutput.DeviceInfo;
+  if Assigned(FOutput) then Result:=FOutput.DeviceInfo[ADeviceNumber];
 end;
 
 function TAcsAudioOut.GetDeviceCount: Integer;
@@ -473,11 +458,11 @@ begin
     //raise EAcsException.Create(strNoDriverselected);
 end;
 
-procedure TAcsAudioOut.SetDriver(Driver: string);
+procedure TAcsAudioOut.SetDriver(ADriver: string);
 var
   i: Integer;
 begin
-  if Driver = '' then
+  if ADriver = '' then
   begin
     // get default driver
     Exit;
@@ -485,7 +470,7 @@ begin
   if Assigned(FOutput) then FreeAndNil(FOutput);
   for i:=0 to Length(OutDriverInfos)-1 do
   begin
-    if OutDriverInfos[i].DriverName = Driver then
+    if OutDriverInfos[i].DriverName = ADriver then
     begin
       FOutput:=OutDriverInfos[i].DrvClass.Create(nil);
       try
@@ -493,7 +478,7 @@ begin
       except
         FOutput.SetDevice(0);
       end;
-      FDriver:=OutDriverInfos[i].DriverName;
+      FDriverName:=OutDriverInfos[i].DriverName;
       FLatency:=OutDriverInfos[i].Latency;
       if Assigned(FInput) then FOutput.Input:=FInput;
       FOutput.OnDone:=OutputDone;
@@ -513,7 +498,7 @@ begin
   minlat:=0;
   Done:=False;
 
-  FDriver := 'No Driver';
+  FDriverName := 'No Driver';
   while not Done do
   begin
     lowest:=99999;
@@ -579,7 +564,7 @@ constructor TAcsAudioOut.Create(AOwner: TComponent);
 //label retry;
 begin
   inherited Create(AOwner);
-  FDriver:='';
+  FDriverName:='';
   FOutput:=nil;
   FInput:=nil;
   { // serbod 2014-10-05
@@ -609,7 +594,7 @@ retry:
       goto retry;
   end
   else
-    FDriver := 'No Driver';
+    FDriverName := 'No Driver';
   }
 end;
 
@@ -662,21 +647,27 @@ begin
   //  raise EAcsException.Create(strNoDriverselected);
 end;
 
-procedure TAcsAudioIn.SetDevice(Ch: Integer);
+function TAcsAudioIn.GetDeviceCount: Integer;
 begin
-  if Assigned(FInput) then FInput.SetDevice(Ch);
-  //  raise EAcsException.Create(strNoDriverselected);
+  Result:=0;
+  if not Assigned(FInput) then Exit;
+  Result:=FInput.GetDeviceCount;
 end;
 
-function TAcsAudioIn.GetDeviceInfo: TAcsDeviceInfo;
+function TAcsAudioIn.GetDeviceInfo(ADeviceNumber: Integer): TAcsDeviceInfo;
 begin
   Result.DeviceName:='';
   Result.DrvVersion:=0;
   Result.Formats:=[];
   Result.Stereo:=False;
   if not Assigned(FInput) then Exit;
+  Result:=FInput.GetDeviceInfo(ADeviceNumber);
+end;
+
+procedure TAcsAudioIn.SetDevice(Ch: Integer);
+begin
+  if Assigned(FInput) then FInput.SetDevice(Ch);
   //  raise EAcsException.Create(strNoDriverselected);
-  //TODO: Complete
 end;
 
 function TAcsAudioIn.GetTotalTime: Real;
@@ -707,7 +698,7 @@ begin
   begin
     if InDriverInfos[i].DriverName = Driver then
     begin
-      FDriver:=InDriverInfos[i].DriverName;
+      FDriverName:=InDriverInfos[i].DriverName;
       FInput:=InDriverInfos[i].DrvClass.Create(nil);
       FInput.SetDevice(FBaseChannel);
       Exit;
@@ -726,7 +717,7 @@ label retry;
 begin
   inherited Create(AOwner);
   FInput:=nil;
-  FDriver:='';
+  FDriverName:='';
   { // serbod 2014-10-05
     // dangerous code for constructor
   minlat:=0;
@@ -751,7 +742,7 @@ retry:
       goto retry;
   end
   else
-    FDriver := 'No Driver';
+    FDriverName := 'No Driver';
   }
 end;
 
@@ -779,7 +770,7 @@ begin
     //raise EAcsException.Create(strNoDriverselected);
 end;
 
-procedure RegisterAudioOut(DrvName: string; OutClass: TAcsAudioOutClass; Latency: Integer);
+procedure RegisterAudioOut(DrvName: string; OutClass: TAcsAudioOutDriverClass; Latency: Integer);
 begin
   SetLength(OutDriverInfos, Length(OutDriverInfos)+1);
   OutDriverInfos[Length(OutDriverInfos)-1].DriverName:=DrvName;
@@ -787,7 +778,7 @@ begin
   OutDriverInfos[Length(OutDriverInfos)-1].DrvClass:=OutClass;
 end;
 
-procedure RegisterAudioIn(DrvName: string; InClass: TAcsAudioInClass; Latency: Integer);
+procedure RegisterAudioIn(DrvName: string; InClass: TAcsAudioInDriverClass; Latency: Integer);
 begin
   SetLength(InDriverInfos, Length(InDriverInfos)+1);
   InDriverInfos[Length(InDriverInfos)-1].DriverName:=DrvName;
@@ -795,30 +786,83 @@ begin
   InDriverInfos[Length(InDriverInfos)-1].DrvClass:=InClass;
 end;
 
-{ TAcsBaseAudioOut }
+{ TAcsAudioOutDriver }
 
-constructor TAcsBaseAudioOut.Create(AOwner: TComponent);
+function TAcsAudioOutDriver.GetDeviceCount: Integer;
 begin
-  inherited Create(AOwner);
-  FDriver:='';
-  FOutput:=nil;
+  Result:=Length(FDeviceInfoArray);
 end;
 
-destructor TAcsBaseAudioOut.Destroy;
+function TAcsAudioOutDriver.GetDeviceName(ADeviceNumber: Integer): string;
+begin
+  Result:='';
+  if (ADeviceNumber < 0) or (ADeviceNumber >= GetDeviceCount) then Exit;
+  Result:=FDeviceInfoArray[ADeviceNumber].DeviceName;
+end;
+
+function TAcsAudioOutDriver.GetDeviceInfo(ADeviceNumber: Integer
+  ): TAcsDeviceInfo;
+begin
+  if (ADeviceNumber < 0) or (ADeviceNumber >= GetDeviceCount) then Exit;
+  Result:=FDeviceInfoArray[ADeviceNumber];
+end;
+
+constructor TAcsAudioOutDriver.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FOutput:=nil;
+  SetLength(FDeviceInfoArray, 0);
+end;
+
+destructor TAcsAudioOutDriver.Destroy;
 begin
   inherited Destroy;
 end;
 
-{ TBaseAudioIn }
+{ TAcsAudioInDriver }
 
-constructor TAcsBaseAudioIn.Create(AOwner: TComponent);
+function TAcsAudioInDriver.GetBPS: Integer;
 begin
-  inherited Create(AOwner);
-  FDriver:='';
-  FInput:=nil;
+  Result:=FBPS;
 end;
 
-destructor TAcsBaseAudioIn.Destroy;
+function TAcsAudioInDriver.GetCh: Integer;
+begin
+  Result:=FChan;
+end;
+
+function TAcsAudioInDriver.GetSR: Integer;
+begin
+  Result:=FSampleRate;
+end;
+
+function TAcsAudioInDriver.GetDeviceCount: Integer;
+begin
+  Result:=Length(FDeviceInfoArray);
+end;
+
+function TAcsAudioInDriver.GetDeviceName(ADeviceNumber: Integer): string;
+begin
+  Result:='';
+  if (ADeviceNumber < 0) or (ADeviceNumber >= GetDeviceCount) then Exit;
+  Result:=FDeviceInfoArray[ADeviceNumber].DeviceName;
+end;
+
+function TAcsAudioInDriver.GetDeviceInfo(ADeviceNumber: Integer
+  ): TAcsDeviceInfo;
+begin
+  if (ADeviceNumber < 0) or (ADeviceNumber >= GetDeviceCount) then Exit;
+  Result:=FDeviceInfoArray[ADeviceNumber];
+end;
+
+constructor TAcsAudioInDriver.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FInput:=nil;
+  SetLength(FDeviceInfoArray, 0);
+end;
+
+destructor TAcsAudioInDriver.Destroy;
 begin
   inherited Destroy;
 end;

@@ -90,8 +90,7 @@ type
 
 
   { TACSCustomInput }
-  { TACSInput is the base class for all input and converter components.
-  }
+  { TACSInput is the base class for all input and converter components. }
   TAcsCustomInput = class(TComponent)
   protected
     FPosition: Integer;
@@ -171,8 +170,7 @@ type
 
 
   { TACSCustomOutput }
-  { TACSOutput is the base class for all ACS output components.
-  }
+  { TACSOutput is the base class for all ACS output components. }
   TACSCustomOutput = class(TComponent)
   protected
     CanOutput: Boolean;

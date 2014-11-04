@@ -67,14 +67,13 @@ type
 
   { TALSAAudioIn }
 
-  TALSAAudioIn = class(TACSBaseAudioIn)
+  TALSAAudioIn = class(TAcsAudioInDriver)
   private
-    FDevice : String;
+    FDeviceName: string;
     FPeriodSize, FPeriodNum : Integer;
     _audio_handle : Psnd_pcm_t;
     _hw_params : Psnd_pcm_hw_params_t;
     Busy : Boolean;
-    FBPS, FChan, FFreq : Integer;
     BufStart, BufEnd : Integer;
     FOpened : Integer;
     FRecTime : Integer;
@@ -86,17 +85,14 @@ type
     procedure CloseAudio;
 //    function GetDriverState : Integer;
   protected
-    function GetBPS : Integer; override;
-    function GetCh : Integer; override;
-    function GetSR : Integer; override;
-
     procedure SetDevice(Ch : Integer);override;
-    function GetDeviceInfo : TACSDeviceInfo;override;
     function GetTotalTime : real; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function GetData(Buffer : Pointer; BufferSize : Integer): Integer; override;
+    (* As the actual input process begins, ALSAAudioIn may return a bit different
+       value of the samplerate that is actually set by the ALSA drivers.*)
     procedure Init; override;
     procedure Flush; override;
     property DriverState : Integer read GetDriverState;
@@ -110,15 +106,14 @@ type
 
   { TALSAAudioOut }
 
-  TALSAAudioOut = class(TACSBaseAudioOut)
+  TALSAAudioOut = class(TAcsAudioOutDriver)
 
   private
-    FDevice : String;
+    FDeviceName : String;
     FPeriodSize, FPeriodNum : Integer;
     _audio_handle : Psnd_pcm_t;
     _hw_params : Psnd_pcm_hw_params_t;
     FBufferSize : Integer;
-    FVolume : Byte;
     _audio_fd : Integer;
     Buffer : array [0..BUF_SIZE-1] of Byte;
     FLatency : Double;
@@ -129,7 +124,6 @@ type
     function DoOutput(Abort : Boolean):Boolean; override;
     procedure Prepare; override;
     procedure SetDevice(Ch : Integer);override;
-    function GetDeviceInfo : TACSDeviceInfo;override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -137,16 +131,16 @@ type
     property Latency : Double read FLatency;
   published
     property BufferSize : Integer read FBufferSize write FBufferSize;
-    property Device : String read FDevice write FDevice stored True;
+    property Device : String read FDeviceName write FDeviceName stored True;
     property PeriodSize : Integer read FPeriodSize write FPeriodSize;
     property PeriodNum : Integer read FPeriodNum write FPeriodNum;
     property SilentOnUnderrun : Boolean read FSilentOnUnderrun write FSilentOnUnderrun;
-    property Volume : Byte read FVolume write FVolume stored True;
+    property Volume;
   end;
 
 implementation
 
-  constructor TALSAAudioIn.Create;
+    constructor TALSAAudioIn.Create(AOwner: TComponent);
   begin
     inherited Create(AOwner);
     if not (csDesigning	in ComponentState) then
@@ -154,10 +148,10 @@ implementation
     raise EACSException.Create(Format(strcoudntloadLib,[asoundlib_path]));
     FBPS := 8;
     FChan := 1;
-    FFreq := 8000;
+    FSampleRate := 8000;
     FSize := -1;
     FRecTime := 600;
-    FDevice := 'default';
+    FDeviceName := 'default';
     BufferSize := 32768;
     FSilentOnOverrun := True;
   end;
@@ -174,9 +168,9 @@ implementation
   begin
     if FOpened = 0 then
     begin
-      Res := snd_pcm_open(_audio_handle, @FDevice[1], SND_PCM_STREAM_CAPTURE, 0);
+      Res := snd_pcm_open(_audio_handle, @FDeviceName[1], SND_PCM_STREAM_CAPTURE, 0);
       if Res < 0 then
-        raise EACSException.Create(Format(strcoudntopendevice,[FDevice]));
+        raise EACSException.Create(Format(strcoudntopendevice,[FDeviceName]));
    //   snd_pcm_reset(_audio_handle);
     end;
     Inc(FOpened);
@@ -192,33 +186,9 @@ implementation
     if FOpened > 0 then Dec(FOpened);
   end;
 
-(* Note on the following three methods.
-   These methods simply return the values passed by the user.
-   As the actual input process begins, ALSAAudioIn may return a bit different
-   value of the samplerate that is actually set by the ALSA drivers.*)
-
-function TALSAAudioIn.GetBPS : Integer;
-begin
-  Result := FBPS;
-end;
-
-function TALSAAudioIn.GetCh : Integer;
-begin
-  Result := FChan;
-end;
-
-function TALSAAudioIn.GetSR : Integer;
-begin
-  Result := FFreq;
-end;
-
 procedure TALSAAudioIn.SetDevice(Ch: Integer);
 begin
-  FDevice := IntToStr(ch);
-end;
-
-function TALSAAudioIn.GetDeviceInfo: TACSDeviceInfo;
-begin
+  FDeviceName := IntToStr(ch);
 end;
 
 procedure TALSAAudioIn.Init;
@@ -236,7 +206,7 @@ begin
   snd_pcm_hw_params_set_access(_audio_handle, _hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
   if FBPS = 8 then snd_pcm_hw_params_set_format(_audio_handle, _hw_params, SND_PCM_FORMAT_U8)
   else snd_pcm_hw_params_set_format(_audio_handle, _hw_params, SND_PCM_FORMAT_S16_LE);
-  Self.FFreq := snd_pcm_hw_params_set_rate_near(_audio_handle, _hw_params, FFreq, 0);
+  Self.FSampleRate := snd_pcm_hw_params_set_rate_near(_audio_handle, _hw_params, FSampleRate, 0);
   snd_pcm_hw_params_set_channels(_audio_handle, _hw_params, FChan);
   if (FPeriodSize <> 0) and (FPeriodNum <> 0) then
   begin
@@ -255,7 +225,7 @@ begin
   end;
   try
   FLatency := snd_pcm_hw_params_get_period_size(_audio_handle, 0) *
-              snd_pcm_hw_params_get_periods(_audio_handle, 0)/(FFreq * FChan * (FBPS shr 3));
+              snd_pcm_hw_params_get_periods(_audio_handle, 0)/(FSampleRate * FChan * (FBPS shr 3));
   except
   end;
   FRecBytes := FRecTime * (GetBPS div 8) * GetCh * GetSR;
@@ -323,15 +293,15 @@ begin
 end;
 
 
-constructor TALSAAudioOut.Create;
+constructor TALSAAudioOut.Create(AOwner: TComponent);
 
 begin
   inherited Create(AOwner);
-  if not (csDesigning	in ComponentState) then
+  if not (csDesigning in ComponentState) then
   if not AsoundlibLoaded then
-  raise EACSException.Create(Format(strCoudntloadLib,[asoundlib_path]));
+  raise EACSException.Create(Format(strCoudntloadLib, [asoundlib_path]));
   FVolume := 255;
-  FDevice := 'default';
+  FDeviceName := 'default';
   FBufferSize := 32768;
   FSilentOnUnderrun := True;
 end;
@@ -351,9 +321,9 @@ var
   Res, aBufSize : Integer;
 begin
   FInput.Init;
-  Res := snd_pcm_open(_audio_handle, @FDevice[1], SND_PCM_STREAM_PLAYBACK, 0);
+  Res := snd_pcm_open(_audio_handle, @FDeviceName[1], SND_PCM_STREAM_PLAYBACK, 0);
   if Res < 0 then
-     raise EACSException.Create(Format(strCoudntopendeviceOut,[FDevice]));
+     raise EACSException.Create(Format(strCoudntopendeviceOut, [FDeviceName]));
   //snd_pcm_reset(_audio_handle);
   snd_pcm_hw_params_malloc(_hw_params);
   snd_pcm_hw_params_any(_audio_handle, _hw_params);
@@ -387,11 +357,7 @@ end;
 
 procedure TALSAAudioOut.SetDevice(Ch: Integer);
 begin
-//  FDevice := IntToStr(ch);
-end;
-
-function TALSAAudioOut.GetDeviceInfo: TACSDeviceInfo;
-begin
+//  FDeviceName := IntToStr(ch);
 end;
 
 procedure TALSAAudioOut.Done;
@@ -474,8 +440,8 @@ end;
 initialization
   if AsoundlibLoaded then
     begin
-      RegisterAudioOut('Alsa',TAlsaAudioOut,LATENCY);
-      RegisterAudioIn('Alsa',TAlsaAudioIn,LATENCY);
+      RegisterAudioOut('Alsa', TAlsaAudioOut, LATENCY);
+      RegisterAudioIn('Alsa', TAlsaAudioIn, LATENCY);
     end;
 
 end.
