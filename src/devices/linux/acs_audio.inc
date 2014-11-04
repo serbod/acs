@@ -171,9 +171,9 @@ var
   SR : Integer;
 begin
   OpenAudio;
-  SR := FFreq;
+  SR := FSampleRate;
   ioctl(_audio_fd, SNDCTL_DSP_SPEED, @SR);
-  FFreq := SR;
+  FSampleRate := SR;
   Result := SR;
   CloseAudio;
 end;

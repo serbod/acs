@@ -20,17 +20,16 @@ const
 type
 
   TACSStreamOut = class(TACSStreamedOutput)
-  private
+  protected
     function GetBPS: Integer;
     function GetCh: Integer;
     function GetSR: Integer;
-  protected
-    procedure Done; override;
-    function DoOutput(Abort: Boolean): Boolean; override;
-    procedure Prepare; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure Done; override;
+    function DoOutput(Abort: Boolean): Boolean; override;
+    procedure Prepare; override;
     property OutSampleRate: Integer read GetSR;
     property OutBitsPerSample: Integer read GetBPS;
     property OutChannles: Integer read GetCh;
@@ -40,7 +39,7 @@ type
   private
     FBPS: Integer;
     FChan: Integer;
-    FFreq: Integer;
+    FSampleRate: Integer;
   protected
     function GetBPS: Integer; override;
     function GetCh: Integer; override;
@@ -54,7 +53,7 @@ type
   published
     property InBitsPerSample: Integer read FBPS write FBPS;
     property InChannels: Integer read FChan write FChan;
-    property InSampleRate: Integer read FFreq write FFreq;
+    property InSampleRate: Integer read FSampleRate write FSampleRate;
   end;
 
 
@@ -114,7 +113,7 @@ begin
   inherited Create(AOwner);
   FBPS:=8;
   FChan:=1;
-  FFreq:=8000;
+  FSampleRate:=8000;
   FSize:=-1;
 end;
 
@@ -181,7 +180,7 @@ end;
 
 function TACSStreamIn.GetSR: Integer;
 begin
-  Result:=Self.FFreq;
+  Result:=Self.FSampleRate;
 end;
 
 

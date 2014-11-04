@@ -29,11 +29,11 @@ type
   { TDXAudioOut }
   (* Class: TDXAudioOut
     Performs audio playback using the DirectX API.
-    Descends from <TAcsBaseAudioOut>.
+    Descends from <TAcsAudioOutDriver>.
     TDXAudioOut component buffers its output in order to make it more smooth. This buffering introduces some delay at the beginning of the audio playback with TDXAudioOut.
     You can decrease the delay by decreasing the size of the TDXAudioOut buffer. The size of this buffer is set up by the DS_BUFFER_SIZE constant in the ACS_DxAudio.pas file.
     If you decrease the buffer size you may also want to decrease the DS_POLLING_INTERVAL value which determines how often the component requests data from its input. *)
-  TDXAudioOut = class(TAcsBaseAudioOut)
+  TDXAudioOut = class(TAcsAudioOutDriver)
   private
     Freed: Boolean;
     FLatency: LongWord;
@@ -44,7 +44,7 @@ type
     Chan, SR, BPS: LongWord;
     EndOfInput, StartInput: Boolean;
     FDeviceNumber: Integer; // FBaseChannel
-    FDeviceCount: Integer;
+    //FDeviceCount: Integer;
     //_BufSize: Integer; // FBufSize
     FillByte: Byte;
     FUnderruns, _TmpUnderruns: LongWord;
@@ -55,14 +55,11 @@ type
     procedure Usleep(Interval: Word; Prefetch: Boolean);
   protected
     procedure SetDeviceNumber(i : Integer);
-    function GetDeviceName(Number: Integer): String;
     function GetVolumeEx: Integer;
     procedure SetVolumeEx(Value: Integer);
     procedure SetFramesInBuffer(Value: LongWord);
     // old
     procedure SetDevice(Ch: Integer); override;
-    function GetDeviceInfo: TAcsDeviceInfo; override;
-    function GetDeviceCount: Integer; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -73,12 +70,12 @@ type
     procedure Resume; override;
     (* Property: DeviceCount
          This read only property returns the number of logical output DirectSound devices. *)
-    property DeviceCount: Integer read FDeviceCount;
+    property DeviceCount: Integer read GetDeviceCount;
     (* Property: DeviceName
          This read only array property returns the name of the device
          specified by its number. Valid numbers range from 0 to
          <DeviceCount> - 1. *)
-    property DeviceName[Number: Integer]: String read GetDeviceName;
+    property DeviceName[Number: Integer]: string read GetDeviceName;
     (* Property: Underruns
          This read only property returns the number of internal buffer
          underruns that have occurred during playback. *)
@@ -135,8 +132,8 @@ type
   { TDXAudioIn }
   (* Class: TDXAudioIn
       Performs audio recording from a sound card using the DirectX API.
-      Descends from <TAcsBaseAudioIn>. *)
-  TDXAudioIn = class(TAcsBaseAudioIn)
+      Descends from <TAcsAudioInDriver>. *)
+  TDXAudioIn = class(TAcsAudioInDriver)
   private
     DSW: DSoundWrapper;
     FLatency: LongWord;
@@ -144,7 +141,7 @@ type
     FFramesInBuffer: LongWord;
     FPollingInterval: LongWord;
     FDeviceNumber: Integer;
-    FDeviceCount: Integer;
+    //FDeviceCount: Integer;
     FOpened: Integer;
     FSamplesToRead: Int64;
     FRecTime: Integer;
@@ -156,17 +153,14 @@ type
     // old
     FBytesToRead : Integer;
     procedure SetDeviceNumber(i: Integer);
-    function GetDeviceName(Number: Integer): String;
     procedure OpenAudio;
     procedure CloseAudio;
     procedure SetRecTime(aRecTime: Integer);
     procedure SetFramesInBuffer(Value: LongWord);
   protected
     procedure SetDevice(i: Integer); override;
-    function GetBPS: Integer; override;
-    function GetCh: Integer; override;
-    function GetSR: Integer; override;
     function GetTotalTime: Real; override;
+    function GetDeviceName(ADeviceNumber: Integer): string; override;
 
     //function GetTotalTime : LongWord; override;
     //function GetTotalSamples: Int64; override;
@@ -186,7 +180,7 @@ type
     (* Property: DeviceCount
          This read only property returns the number of logical DirectSound
          input devices. *)
-    property DeviceCount: Integer read FDeviceCount;
+    property DeviceCount: Integer read GetDeviceCount;
     (* Property: DeviceName[Number : Integer]
          This read only array property returns the name of the device
          specified by its number. Valid numbers range from 0 to
@@ -244,7 +238,7 @@ var
   FormatExt: TWaveFormatExtensible;
 begin
   Freed := False;
-  if (FDeviceNumber >= FDeviceCount) then
+  if (FDeviceNumber >= DeviceCount) then
     raise EAcsException.Create(Format(strChannelnotavailable, [FDeviceNumber]));
   FInput.Init;
   FBuffer:=AllocMem(FBufferSize);
@@ -456,6 +450,8 @@ begin
 end;
 
 constructor TDXAudioOut.Create(AOwner: TComponent);
+var
+  i: Integer;
 begin
   inherited Create(AOwner);
   FSpeedFactor:=1;
@@ -464,14 +460,25 @@ begin
   FLatency:=100;
   FVolume:=0; //DW
   FPrefetchData := True;
-  FDeviceCount:=0;
+  //FDeviceCount:=0;
   BufferSize := $40000;
 
   if not (csDesigning in ComponentState) then
   begin
     DSW_EnumerateOutputDevices(@Devices);
-    FDeviceCount:=Devices.devcount;
+    //FDeviceCount:=Devices.devcount;
     Thread.Priority:=tpHighest;
+
+    // fill device info
+    SetLength(FDeviceInfoArray, Devices.devcount);
+    for i:=0 to Devices.devcount-1 do
+    begin
+      {$ifdef FPC}
+      FDeviceInfoArray[i].DeviceName:=AnsiToUtf8(Devices.dinfo[i].name);
+      {$else}
+      FDeviceInfoArray[i].DeviceName:=Devices.dinfo[i].name;
+      {$endif}
+    end;
   end;
 end;
 
@@ -518,12 +525,6 @@ begin
   FDeviceNumber:=i
 end;
 
-function TDXAudioOut.GetDeviceName(Number: Integer): String;
-begin
-  Result:='';
-  if (Number < FDeviceCount) then Result:=PChar(@(Devices.dinfo[Number].Name[0]));
-end;
-
 function TDXAudioOut.GetVolumeEx: Integer;
 begin
   DSW_GetVolume(DSW, Result);
@@ -545,42 +546,43 @@ end;
 
 procedure TDXAudioOut.SetDevice(Ch: Integer);
 begin
-  if (Ch < 0) or (Ch >= FDeviceCount) then Exit;
+  if (Ch < 0) or (Ch >= DeviceCount) then Exit;
   FDeviceNumber:=Ch;
   FBaseChannel:=Ch;
 end;
 
-function TDXAudioOut.GetDeviceInfo: TAcsDeviceInfo;
-begin
-  if (FBaseChannel >= FDeviceCount) then
-    Exit;
-  Result.DeviceName:=PChar(@(Devices.dinfo[FBaseChannel].Name[0]));
-end;
-
-function TDXAudioOut.GetDeviceCount: Integer;
-begin
-  Result:=FDeviceCount;
-end;
 
 { TDXAudioIn }
 
 constructor TDXAudioIn.Create(AOwner: TComponent);
+var
+  i: Integer;
 begin
   inherited Create(AOwner);
   FLatency:=100;
   FBPS:=8;
   FChan:=1;
-  FFreq:=8000;
+  FSampleRate:=8000;
   FSize:=-1;
   FRecTime:=-1;
   FSamplesToRead:=-1;
   FFramesInBuffer:=$6000;
   FPollingInterval:=100;
-  FDeviceCount:=0;
+  //FDeviceCount:=0;
   if not (csDesigning in ComponentState) then
   begin
     DSW_EnumerateInputDevices(@Devices);
-    FDeviceCount:=Devices.devcount;
+    //FDeviceCount:=Devices.devcount;
+    // fill device info
+    SetLength(FDeviceInfoArray, Devices.devcount);
+    for i:=0 to Devices.devcount-1 do
+    begin
+      {$ifdef FPC}
+      FDeviceInfoArray[i].DeviceName:=AnsiToUtf8(Devices.dinfo[i].name);
+      {$else}
+      FDeviceInfoArray[i].DeviceName:=Devices.dinfo[i].name;
+      {$endif}
+    end;
   end;
 end;
 
@@ -600,7 +602,7 @@ begin
     if FLatency > 0 then
     begin
       if FLatency < 10 then Flatency:=10;
-      FFramesInBuffer:=(FLatency*FFreq div 1000);
+      FFramesInBuffer:=(FLatency*FSampleRate div 1000);
       FPollingInterval:=(FLatency div 2); //4)*3;
     end;
 
@@ -624,7 +626,7 @@ begin
     end;
 
     Self.BufferSize:=FFramesInBuffer*(FBPS shr 3)*FChan;
-    Res:=DSW_InitInputBuffer(DSW, FBPS, FFreq, FChan, BufferSize);
+    Res:=DSW_InitInputBuffer(DSW, FBPS, FSampleRate, FChan, BufferSize);
     if Res <> 0 then raise EAcsException.Create(strFailedtoCreateDSbuf);
   end;
   Inc(FOpened);
@@ -640,31 +642,16 @@ begin
   if FOpened > 0 then Dec(FOpened);
 end;
 
-function TDXAudioIn.GetBPS: Integer;
-begin
-  Result:=FBPS;
-end;
-
-function TDXAudioIn.GetCh: Integer;
-begin
-  Result:=FChan;
-end;
-
-function TDXAudioIn.GetSR: Integer;
-begin
-  Result:=FFreq;
-end;
-
 procedure TDXAudioIn.Init;
 begin
   if Busy then
     raise EAcsException.Create(strBusy);
-  if (FDeviceNumber >= FDeviceCount) then
+  if (FDeviceNumber >= DeviceCount) then
     raise EAcsException.Create(Format(strChannelnotavailable, [FDeviceNumber]));
   if FRecTime > 0 then
   begin
-    FSamplesToRead:=FRecTime*FFreq;
-    FBytesToRead:=FRecTime*FFreq*FChan*(FBPS div 8);
+    FSamplesToRead:=FRecTime*FSampleRate;
+    FBytesToRead:=FRecTime*FSampleRate*FChan*(FBPS div 8);
   end;
   BufEnd:=0;
   BufStart:=1;
@@ -680,7 +667,7 @@ begin
   begin
     if DSW_InitOutputDevice(DSW, @(Devices.dinfo[FDeviceNumber].guid)) = DS_OK then
     begin
-      DSW_InitOutputBuffer(DSW, 0, FBPS, FFreq, FChan, BufferSize);
+      DSW_InitOutputBuffer(DSW, 0, FBPS, FSampleRate, FChan, BufferSize);
       DSW_StartOutput(DSW);
     end
     else
@@ -763,8 +750,8 @@ begin
   FRecTime:=aRecTime;
   if FRecTime > 0 then
   begin
-    FBytesToRead:=FRecTime*FFreq*FChan*(FBPS div 8);
-    FSamplesToRead:=FRecTime*FFreq;
+    FBytesToRead:=FRecTime*FSampleRate*FChan*(FBPS div 8);
+    FSamplesToRead:=FRecTime*FSampleRate;
   end
   else
   begin
@@ -788,17 +775,17 @@ begin
   FDeviceNumber:=i;
 end;
 
-function TDXAudioIn.GetDeviceName(Number: Integer) : String;
+function TDXAudioIn.GetDeviceName(ADeviceNumber: Integer): string;
 begin
   Result:='';
-  if (Number < FDeviceCount) then Result:=PChar(@(Devices.dinfo[Number].Name[0]));
+  if (ADeviceNumber < DeviceCount) then Result:=PChar(@(Devices.dinfo[ADeviceNumber].Name[0]));
 end;
 
 function TDXAudioIn.GetTotalTime: Real;
 var
   BytesPerSec: Integer;
 begin
-  BytesPerSec:=FFreq*FChan*(FBPS div 8);
+  BytesPerSec:=FSampleRate*FChan*(FBPS div 8);
   Result:=FBytesToRead/BytesPerSec;
 end;
 

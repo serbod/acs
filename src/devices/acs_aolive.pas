@@ -33,7 +33,7 @@ type
 
   { TAOLiveAudioOut }
 
-  TAOLiveAudioOut = class(TACSBaseAudioOut)
+  TAOLiveAudioOut = class(TAcsAudioOutDriver)
   private
     _device : PAODevice;
     FVolume : Byte;
@@ -46,7 +46,6 @@ type
     function DoOutput(Abort : Boolean):Boolean; override;
     procedure Prepare; override;
     procedure SetDevice(Ch : Integer);override;
-    function GetDeviceInfo : TACSDeviceInfo;override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -123,16 +122,12 @@ begin
       FCurrentDriver := FDrivers[ch];
 end;
 
-function TAOLiveAudioOut.GetDeviceInfo: TACSDeviceInfo;
+procedure TAOLiveAudioOut.Done;
 begin
+  Finput.Flush;
+  if _device <> nil then
+  ao_close(_device);
 end;
-
-  procedure TAOLiveAudioOut.Done;
-  begin
-    Finput.Flush;
-    if _device <> nil then
-    ao_close(_device);
-  end;
 
 function TAOLiveAudioOut.DoOutput(Abort : Boolean):Boolean;
 var
