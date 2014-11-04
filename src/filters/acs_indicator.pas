@@ -58,9 +58,9 @@ end;
 procedure TACSSoundIndicator.CalculateSpectrum(PSampleWindow: Pointer;
   SamplesCount: integer; var AValues: array of Double);
 var
-  pSample: PACSDoubleArray;
-  pWindow: PACSDoubleArray;
-  pCA: PACSComplexArray;
+  pSample: PAcsDoubleArray;
+  pWindow: PAcsDoubleArray;
+  pCA: PAcsComplexArray;
   i, ii, n, nn: integer;
   sum: Double;
 begin
@@ -77,7 +77,7 @@ begin
   Freemem(pWindow);
 
   // create ComplexArr
-  i:=SizeOf(TACSComplex)*SamplesCount;
+  i:=SizeOf(TAcsComplex)*SamplesCount;
   pCA:=GetMem(i);
 
   // apply FFT
@@ -114,21 +114,21 @@ end;
 function TACSSoundIndicator.GetBPS: Integer;
 begin
   if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotassigned);
+    raise EAcsException.Create(strInputnotassigned);
   Result:=FInput.BitsPerSample;
 end;
 
 function TACSSoundIndicator.GetCh: Integer;
 begin
   if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotassigned);
+    raise EAcsException.Create(strInputnotassigned);
   Result:=FInput.Channels;
 end;
 
 function TACSSoundIndicator.GetSR: Integer;
 begin
   if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotassigned);
+    raise EAcsException.Create(strInputnotassigned);
   Result:=FInput.SampleRate;
 end;
 
@@ -140,7 +140,7 @@ end;
 procedure TACSSoundIndicator.Init;
 begin
   if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotassigned);
+    raise EAcsException.Create(strInputnotassigned);
   FBusy:=True;
   FInput.Init;
   FSize:=FInput.Size;
@@ -160,7 +160,7 @@ end;
 function TACSSoundIndicator.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
 begin
   if not Busy then
-    raise EACSException.Create(strStreamnotopen);
+    raise EAcsException.Create(strStreamnotopen);
   while InputLock do;
   InputLock:=True;
   Result:=FInput.GetData(Buffer, BufferSize);
@@ -178,7 +178,7 @@ begin
 procedure TACSSoundIndicator.GetValues(var Values: array of Double);
 var
   i, NumSamples: Integer;
-  pSample: PACSDoubleArray;
+  pSample: PAcsDoubleArray;
   P: Pointer;
 begin
   while FLocked do;
@@ -202,16 +202,16 @@ begin
   if FInput.BitsPerSample=8 then
   begin
     if FInput.Channels=1 then
-      for i:=0 to NumSamples-1 do pSample[i]:=PACSBuffer8(P)[i]
+      for i:=0 to NumSamples-1 do pSample[i]:=PAcsBuffer8(P)[i]
     else
-      for i:=0 to NumSamples-1 do pSample[i]:=(PACSStereoBuffer8(P)[i].Left + PACSStereoBuffer8(P)[i].Right)/2;
+      for i:=0 to NumSamples-1 do pSample[i]:=(PAcsStereoBuffer8(P)[i].Left + PAcsStereoBuffer8(P)[i].Right)/2;
     end
   else
   begin
     if FInput.Channels=1 then
-      for i:=0 to NumSamples-1 do pSample[i]:=PACSBuffer16(P)[i]
+      for i:=0 to NumSamples-1 do pSample[i]:=PAcsBuffer16(P)[i]
     else
-      for i:=0 to NumSamples-1 do pSample[i]:=(PACSStereoBuffer16(P)[i].Left + PACSStereoBuffer16(P)[i].Right)/2;
+      for i:=0 to NumSamples-1 do pSample[i]:=(PAcsStereoBuffer16(P)[i].Left + PAcsStereoBuffer16(P)[i].Right)/2;
   end;
   {$R+}
 

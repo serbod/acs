@@ -101,7 +101,7 @@ type
 
   TFLACIn = class(TACSCustomFileIn)
   private
-    Buff : PACSBuffer8;
+    Buff : PAcsBuffer8;
     _decoder : PFLAC__SeekableStreamDecoder;
     FBlockSize: Integer;
     BytesPerBlock : Integer;
@@ -241,7 +241,7 @@ type
     Header : PFLAC__FrameHeader;
     buffer1 : PFLACIntBuf;
     buffer2 : PFLACIntBuf;
-    B16 : PACSBuffer16;
+    B16 : PAcsBuffer16;
     i : Integer;
   begin
     FLACIn := TFLACIn(client_data);
@@ -252,7 +252,7 @@ type
 //    FillChar(FLACIn.Buff[0], FLACIn.BytesPerBlock, 255);
     if FLACIn.FBPS = 16 then
     begin
-      B16 := PACSBuffer16(FLACIn.Buff);
+      B16 := PAcsBuffer16(FLACIn.Buff);
       if FLACIn.FChan = 1 then
       begin
        buffer1 := buffer[0];
@@ -338,7 +338,7 @@ type
     FEnableMidSideStereo := True;
     if not (csDesigning	in ComponentState) then
     if not LibFLACLoaded then
-    raise EACSException.Create(LibFLACPath + ' library could not be loaded.');
+    raise EAcsException.Create(LibFLACPath + ' library could not be loaded.');
   end;
 
   destructor TFLACOut.Destroy;
@@ -350,7 +350,7 @@ type
   begin
     if not FStreamAssigned then
     begin
-      if FFileName = '' then raise EACSException.Create('File name is not assigned.');
+      if FFileName = '' then raise EAcsException.Create('File name is not assigned.');
       if (not FileExists(FFileName)) or (FFileMode = foRewrite) then
       FStream := TFileStream.Create(FFileName, fmCreate or fmShareExclusive, FAccessMask)
       else FStream := TFileStream.Create(FFileName, fmOpenReadWrite or fmShareExclusive, FAccessMask);
@@ -358,7 +358,7 @@ type
     EndOfInput := False;
     _encoder := FLAC__seekable_stream_encoder_new;
     if _encoder = nil then
-    raise EACSException.Create('Failed to initialize FLAC encoder.');
+    raise EAcsException.Create('Failed to initialize FLAC encoder.');
     FInput.Init;
     FLAC__seekable_stream_encoder_set_verify(_encoder, FVerify);
     FLAC__seekable_stream_encoder_set_channels(_encoder, FInput.Channels);
@@ -386,7 +386,7 @@ type
     FLAC__SEEKABLE_STREAM_ENCODER_OK then
     begin
       FInput.Flush;
-      raise EACSException.Create('Failed to initialize FLAC encoder.');
+      raise EAcsException.Create('Failed to initialize FLAC encoder.');
     end;
     //TODO: Recreate this stuff with uffersize more equal to FBufferSize
     FBufSize := FBufferSize div FBlockSize;
@@ -410,7 +410,7 @@ type
   var
     Len, i, l, samples : Integer;
     FB : PFLACBuf;
-    B16 : PACSBuffer16;
+    B16 : PAcsBuffer16;
   begin
     Result := True;
     if not CanOutput then Exit;
@@ -447,7 +447,7 @@ type
     end else
     for i := 0 to samples - 1 do FB[i] := FBuffer[i];
     if not FLAC__seekable_stream_encoder_process_interleaved(_encoder, @FB[0], samples div FInput.Channels) then
-    raise EACSException.Create('Failed to encode data.');
+    raise EAcsException.Create('Failed to encode data.');
     FreeMem(FB);
   end;
 
@@ -472,7 +472,7 @@ type
     inherited Create(AOwner);
     if not (csDesigning	in ComponentState) then
     if not LibFLACLoaded then
-    raise EACSException.Create(LibFLACPath + ' library could not be loaded.');
+    raise EAcsException.Create(LibFLACPath + ' library could not be loaded.');
   end;
 
   destructor TFLACIn.Destroy;
@@ -487,12 +487,12 @@ type
     if FOpened = 1 then
     begin
       if (not FStreamAssigned) and (FFileName = '') then
-      raise EACSException.Create('File name is not assigned');
+      raise EAcsException.Create('File name is not assigned');
       if not FStreamAssigned then FStream := TFileStream.Create(FFileName, fmOpenRead, fmShareDenyNone);
       FValid := True;
       _decoder := FLAC__seekable_stream_decoder_new;
       if _decoder = nil then
-      raise EACSException.Create('Failed to initialize FLAC decoder.');
+      raise EAcsException.Create('Failed to initialize FLAC decoder.');
 //      FLAC__seekable_stream_decoder_set_metadata_ignore_all(_decoder);
       FLAC__seekable_stream_decoder_set_read_callback(_decoder, DecReadCBFunc);
       FLAC__seekable_stream_decoder_set_seek_callback(_decoder, DecSeekCBFunc);
@@ -504,7 +504,7 @@ type
       FLAC__seekable_stream_decoder_set_error_callback(_decoder, DecErrorCBProc);
       FLAC__seekable_stream_decoder_set_client_data(_decoder, Self);
       if FLAC__seekable_stream_decoder_init(_decoder) <> FLAC__SEEKABLE_STREAM_DECODER_OK then
-      raise EACSException.Create('Failed to initialize FLAC decoder.');
+      raise EAcsException.Create('Failed to initialize FLAC decoder.');
       if not FLAC__seekable_stream_decoder_process_until_end_of_metadata(_decoder) then
       FValid := False;
       EndOfStream := False;
@@ -534,7 +534,7 @@ type
   var
     dec_state, offs : Integer;
   begin
-    if not Busy then  raise EACSException.Create('The Stream is not opened');
+    if not Busy then  raise EAcsException.Create('The Stream is not opened');
     if BufStart >= BufEnd then
     begin
       if FOffset <> 0 then
@@ -572,7 +572,7 @@ type
           Result := 0;
           Exit;
         end  
-        else raise EACSException.Create('Error reading FLAC file');
+        else raise EAcsException.Create('Error reading FLAC file');
       end else BufEnd := Self.BytesPerBlock;
     end;
     if BufferSize < (BufEnd - BufStart)

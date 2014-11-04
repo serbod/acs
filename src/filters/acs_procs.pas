@@ -23,21 +23,21 @@ type
 
   // Fast Fourier Transformation for Complex array
   // Direction = 1 - forward FFT, Direction = -1 - inverse FFT.
-  procedure ComplexFFT(PData: PACSComplexArray; DataSize, Direction: Integer);
+  procedure ComplexFFT(PData: PAcsComplexArray; DataSize, Direction: Integer);
 
-  procedure HannWindow(OutData: PACSDoubleArray; Width: Integer; Symmetric: Boolean);
+  procedure HannWindow(OutData: PAcsDoubleArray; Width: Integer; Symmetric: Boolean);
 
-  procedure HammingWindow(OutData: PACSDoubleArray; Width: Integer; Symmetric: Boolean);
+  procedure HammingWindow(OutData: PAcsDoubleArray; Width: Integer; Symmetric: Boolean);
 
-  procedure BlackmanWindow(OutData: PACSDoubleArray; Width: Integer; Symmetric: Boolean);
+  procedure BlackmanWindow(OutData: PAcsDoubleArray; Width: Integer; Symmetric: Boolean);
 
-  procedure CalculateSincKernel(OutData: PACSDoubleArray; CutOff: Double; Width: Integer; WType: TACSFilterWindowType);
+  procedure CalculateSincKernel(OutData: PAcsDoubleArray; CutOff: Double; Width: Integer; WType: TACSFilterWindowType);
 
   // not used
   procedure SmallIntArrayToDouble(InData: PSmallInt; OutData: PDouble; DataSize: Integer);
 
   // not used
-  procedure SmallIntArrayToComplex(InData: PSmallInt; OutData: PACSComplex; DataSize: Integer);
+  procedure SmallIntArrayToComplex(InData: PSmallInt; OutData: PAcsComplex; DataSize: Integer);
 
 
   // Computes Op2[i] = Op1[i]*Op2[i], i = [0..DataSize-1]
@@ -52,7 +52,7 @@ type
                    \
     i = [0..DataSize-1]
   *)
-  procedure LgMagnitude(InData: PACSComplex; OutData: PDouble; DataSize, Shift: Integer);
+  procedure LgMagnitude(InData: PAcsComplex; OutData: PDouble; DataSize, Shift: Integer);
 
 implementation
 
@@ -90,11 +90,11 @@ end;
 
 (* This routine is converted from the original C code by P. Burke
  Direction = 1 - forward FFT, Direction = -1 - inverse FFT. *)
-procedure ComplexFFT(PData: PACSComplexArray; DataSize, Direction: Integer);
+procedure ComplexFFT(PData: PAcsComplexArray; DataSize, Direction: Integer);
 var
   i, i1, j, k, i2, l, l1, l2, Log2n: Integer;
   c1, c2, tx, ty, t1, t2, u1, u2, z: Double;
-  Data: PACSComplexArray;
+  Data: PAcsComplexArray;
 begin
   Data:=PData;
   {$R-}
@@ -164,7 +164,7 @@ begin
   {$R+}
 end;
 
-procedure HannWindow(OutData: PACSDoubleArray; Width: Integer; Symmetric: Boolean);
+procedure HannWindow(OutData: PAcsDoubleArray; Width: Integer; Symmetric: Boolean);
 var
   i, n: Integer;
 begin
@@ -174,7 +174,7 @@ begin
   {$R+}
 end;
 
-procedure HammingWindow(OutData: PACSDoubleArray; Width: Integer; Symmetric: Boolean);
+procedure HammingWindow(OutData: PAcsDoubleArray; Width: Integer; Symmetric: Boolean);
 var
   i, n: Integer;
 begin
@@ -184,7 +184,7 @@ begin
   {$R+}
 end;
 
-procedure BlackmanWindow(OutData: PACSDoubleArray; Width: Integer; Symmetric: Boolean);
+procedure BlackmanWindow(OutData: PAcsDoubleArray; Width: Integer; Symmetric: Boolean);
 var
   i, n: Integer;
 begin
@@ -194,7 +194,7 @@ begin
   {$R+}
 end;
 
-procedure CalculateSincKernel(OutData: PACSDoubleArray; CutOff: Double; Width: Integer; WType: TACSFilterWindowType);
+procedure CalculateSincKernel(OutData: PAcsDoubleArray; CutOff: Double; Width: Integer; WType: TACSFilterWindowType);
 var
   i: Integer;
   S: Double;
@@ -240,7 +240,7 @@ begin
   {$ENDIF}
 end;
 
-procedure SmallIntArrayToComplex(InData: PSmallInt; OutData: PACSComplex; DataSize: Integer);
+procedure SmallIntArrayToComplex(InData: PSmallInt; OutData: PAcsComplex; DataSize: Integer);
 begin
   {$IFDEF CPU32}
   asm
@@ -298,7 +298,7 @@ begin
 end;
 {$endif}
 
-procedure LgMagnitude(InData: PACSComplex; OutData: PDouble; DataSize, Shift: Integer);
+procedure LgMagnitude(InData: PAcsComplex; OutData: PDouble; DataSize, Shift: Integer);
 {$ifndef CPU386}
 var
   LogBase, num: Double;

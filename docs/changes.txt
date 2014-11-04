@@ -1,3 +1,7 @@
+2014-11-04  serbod
++ DSWrapper unit from NewAC, dswrapper.dll not needed
+* TDXAudioOut and TDXAudioIn updated from NewAC
+
 2014-10-10  serbod
 + property editors for Driver property (AudioIn, AudioOut)
 
@@ -67,6 +71,9 @@ start translate the documentation in the source for pasdoc
 
 2005/09/13 21:54:11  z0m3ie
 acs is localizeable now (ACS_Strings)
+
+2005/09/13 21:53:45  z0m3ie
+maked seperat driver (not complete jet)
 
 2005/09/13 20:14:52  z0m3ie
 driver handling classes (basic audio class)

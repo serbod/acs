@@ -153,9 +153,9 @@ type
     tmpmsf : TACSCDMSF;
   BEGIN
     IF Busy THEN
-      RAISE EACSException.Create(strBusy);
+      RAISE EAcsException.Create(strBusy);
     IF (vIndex IN [0..GetNumTracks-1]) = False THEN
-      RAISE EACSException.Create(strTrackoutofrange);
+      RAISE EAcsException.Create(strTrackoutofrange);
     IF (FToc.Tracks[vIndex].adr and $04) = 0 THEN
       Result.TrackType := ttAudio
     ELSE
@@ -169,7 +169,7 @@ type
 
   procedure TACSCDIn.SetST;
   begin
-    if Self.Busy then raise EACSException.Create(strBusy);
+    if Self.Busy then raise EAcsException.Create(strBusy);
     FStartTrack := Track;
     FStartPos.Track := FStartTrack;
     FillChar(FStartPos.MSF, SizeOf(FStartPos.MSF), 0);
@@ -177,7 +177,7 @@ type
 
   procedure TACSCDIn.SetET;
   begin
-    if Self.Busy then raise EACSException.Create(strBusy);
+    if Self.Busy then raise EAcsException.Create(strBusy);
     FEndTrack := Track;
     FEndPos.Track := FEndTrack+1;
     FillChar(FEndPos.MSF, SizeOf(FEndPos.MSF), 0);
@@ -185,13 +185,13 @@ type
 
   procedure TACSCDIn.SetSP;
   begin
-    if Self.Busy then raise EACSException.Create(strBusy);
+    if Self.Busy then raise EAcsException.Create(strBusy);
     FStartPos := Pos;
   end;
 
   procedure TACSCDIn.SetEP;
   begin
-    if Self.Busy then raise EACSException.Create(strBusy);
+    if Self.Busy then raise EAcsException.Create(strBusy);
     FEndPos := Pos;
     if Pos.Track = EndOfDisc.Track then FEndPos.Track := TracksCount + 1;
   end;
@@ -216,13 +216,13 @@ type
   var
     Sect1, Sect2 : Integer;
   begin
-    if Busy then raise EACSException.Create(strBusy);
+    if Busy then raise EAcsException.Create(strBusy);
     if Status = cdsNotReady then
-      raise EACSException.Create(strDrivenotready);
+      raise EAcsException.Create(strDrivenotready);
     if (FStartPos.Track in [0..GetNumTracks-1]) = False then
-      raise EACSException.Create(strTrackoutofRange);
+      raise EAcsException.Create(strTrackoutofRange);
     if Tracks[FStartPos.Track].TrackType = ttData then
-      raise EACSException.Create(strnoAudioTreck);
+      raise EAcsException.Create(strnoAudioTreck);
     OpenCD;
     FSize := GetSize;
     FBusy := True;
@@ -252,7 +252,7 @@ type
     Abort : LongBool;
     fnum : Integer;
   begin
-    if not Busy then  raise EACSException.Create(strStreamnotOpen);
+    if not Busy then  raise EAcsException.Create(strStreamnotOpen);
     if BufStart > BufEnd then //Buffer clear try to fill it
     begin
       BufStart := 1;
@@ -305,7 +305,7 @@ type
 
   procedure TACSCDIn.Eject;
   begin
-    if Busy then raise EACSException.Create(strBusy);
+    if Busy then raise EAcsException.Create(strBusy);
   end;
 
   procedure TACSCDIn.CloseTray;
@@ -320,7 +320,7 @@ type
     CDRIPInit(AppPath);
     if not (csDesigning in ComponentState) then
     if not CDRipLoaded then
-      raise EACSException.Create(akriplib + ' could not be loaded.');
+      raise EAcsException.Create(akriplib + ' could not be loaded.');
     FillChar(FCDList, SizeOf(FCDList),0);
     FCDList.max := MAXCDLIST;
     GetCDList(FCDList);

@@ -23,16 +23,16 @@ uses
 
 type
 
-  TACSOutputStatus = (tosUndefined, tosPlaying, tosPaused, tosIdle);
-  TACSFileOutputMode = (foRewrite = 0, foAppend);
-  TACSOutputFunc = function(Abort: Boolean): Boolean of object;
+  TAcsOutputStatus = (tosUndefined, tosPlaying, tosPaused, tosIdle);
+  TAcsFileOutputMode = (foRewrite = 0, foAppend);
+  TAcsOutputFunc = function(Abort: Boolean): Boolean of object;
 
   //TThreadDoneEvent = procedure of object;
 
-  TACSThreadExceptionEvent = procedure(Sender: TComponent; E: Exception) of object;
-  TACSHandleThreadException = procedure(E: Exception) of object;
-  TACSOutputDoneEvent = procedure(Sender: TComponent) of object;
-  TACSOutputProgressEvent = procedure(Sender: TComponent) of object;
+  TAcsThreadExceptionEvent = procedure(Sender: TComponent; E: Exception) of object;
+  TAcsHandleThreadException = procedure(E: Exception) of object;
+  TAcsOutputDoneEvent = procedure(Sender: TComponent) of object;
+  TAcsOutputProgressEvent = procedure(Sender: TComponent) of object;
   
 {$IFDEF LINUX}
 // File access mask constants
@@ -57,14 +57,14 @@ type
   TTPriority = TThreadPriority;
 {$ENDIF}
   {Basic exception class for ACS}
-  EACSException = class(Exception)
+  EAcsException = class(Exception)
   end;
 
   {Basic Thread class for ACS}
 
   { TACSThread }
 
-  TACSThread = class(TThread)
+  TAcsThread = class(TThread)
   private
     procedure CallOnProgress;
   public
@@ -80,7 +80,7 @@ type
     procedure Execute; override;
   end;
 
-  TACSVerySmallThread = class(TThread)
+  TAcsVerySmallThread = class(TThread)
   public
     FOnDone: TACSOutputDoneEvent;
     Sender: TComponent;
@@ -92,7 +92,7 @@ type
   { TACSCustomInput }
   { TACSInput is the base class for all input and converter components.
   }
-  TACSCustomInput = class(TComponent)
+  TAcsCustomInput = class(TComponent)
   protected
     FPosition: Integer;
     FSize: Integer;
@@ -185,11 +185,15 @@ type
     FOnThreadException: TACSThreadExceptionEvent;
     InputLock: Boolean;
     FBufferSize: Integer;
-    FBuffer: PACSBuffer8;
+    FBuffer: PAcsBuffer8;
     //FBuffer: array of Byte;
+
+    { Read data from Input into Buffer, return bytes read
+      AEndOfInput set to True if end of input buffer is reached }
+    function FillBufferFromInput(var AEndOfInput: Boolean): Integer;
     function GetPriority: TTPriority;
     function GetSuspend: Boolean;
-    function GetProgress: real;
+    function GetProgress: Real;
     procedure SetInput(AInput: TACSCustomInput); virtual;
     procedure SetPriority(Priority: TTPriority);
     procedure SetSuspend(v: Boolean);
@@ -202,11 +206,11 @@ type
     procedure HandleThreadException(E: Exception);
     procedure SetBufferSize(AValue: Integer);
   public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
     procedure Prepare; virtual; abstract; // Calls FInput.init
     function DoOutput(Abort: Boolean): Boolean; virtual; abstract;
     procedure Done; virtual; abstract; // Calls FInput.Flush
-    constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
     {$IFDEF MSWINDOWS}
     procedure Abort;
     {$ENDIF}
@@ -651,9 +655,9 @@ end;
 procedure TACSCustomOutput.Run;
 begin
   if Busy then
-    raise EACSException.Create(strBusy);
+    raise EAcsException.Create(strBusy);
   if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotAssigned);
+    raise EAcsException.Create(strInputnotAssigned);
   InputLock:=False;
   Thread.Suspended:=True;
   try
@@ -690,6 +694,25 @@ begin
   Thread.Priority:=Priority;
 end;
 
+function TACSCustomOutput.FillBufferFromInput(var AEndOfInput: Boolean
+  ): Integer;
+var
+  n: Integer;
+begin
+  Result:=0;
+  if not Assigned(FInput) then Exit;
+  while Result < FBufferSize do
+  begin
+    n:=FInput.GetData(@FBuffer^[Result], FBufferSize-Result);
+    if n = 0 then
+    begin
+      AEndOfInput:=True;
+      Break;
+    end;
+    Inc(Result, n);
+  end;
+end;
+
 function TACSCustomOutput.GetPriority: TTPriority;
 begin
   Result:=Thread.Priority;
@@ -714,7 +737,7 @@ begin
     FInput:=AInput;
 end;
 
-function TACSCustomOutput.GetProgress: real;
+function TACSCustomOutput.GetProgress: Real;
 begin
   if not Assigned(FInput) then
   begin
@@ -825,9 +848,9 @@ end;
 
 procedure TACSCustomFileIn.Init;
 begin
-  if Busy then raise EACSException.Create(strBusy);
+  if Busy then raise EAcsException.Create(strBusy);
   if not FStreamAssigned then
-    if FFileName = '' then raise EACSException.Create(strFilenamenotassigned);
+    if FFileName = '' then raise EAcsException.Create(strFilenamenotassigned);
   OpenFile;
   if StartSample <> 0 then Seek(StartSample);
   if (StartSample <> 0) or (FEndSample <> -1) then
@@ -898,7 +921,7 @@ end;
 procedure TACSCustomInput.SetBufferSize(AValue: Integer);
 begin
   if Busy then
-    raise EACSException.Create(strBusy);
+    raise EAcsException.Create(strBusy);
   if AValue >= 0 then SetLength(FBuffer, AValue);
 end;
 
@@ -973,7 +996,7 @@ end;
 procedure TACSCustomOutput.SetBufferSize(AValue: Integer);
 begin
   if Busy then
-    raise EACSException.Create(strBusy);
+    raise EAcsException.Create(strBusy);
   if AValue > 0 then FBufferSize:=AValue;
 end;
 
@@ -1253,14 +1276,14 @@ function TACSBufferStream.Seek(Offset: Longint; Origin: Word): Integer;
 begin
   if (Offset = 0) and (Origin = 0) then Result:=FBytesRead
   else Result:=0;
-  //raise EACSException.Create(strSeeknotimplemented);
+  //raise EAcsException.Create(strSeeknotimplemented);
 end;
 
 function TACSBufferStream.Seek(const Offset: Int64; Origin: TSeekOrigin): Int64;
 begin
   if (Offset = 0) and (Origin = soCurrent) then Result:=FBytesRead
   else Result:=0;
-  //raise EACSException.Create(strSeeknotimplemented);
+  //raise EAcsException.Create(strSeeknotimplemented);
 end;
 
 { TACSFileInfo }

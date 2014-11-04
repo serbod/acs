@@ -82,15 +82,15 @@ type
     WantedSize : Integer;
     EndOfInput : Boolean;
     remainder : Integer;
-    InBufM, OutBufM : PACSBuffer16;
-    InBufS, OutBufS : PACSStereoBuffer16;
+    InBufM, OutBufM : PAcsBuffer16;
+    InBufS, OutBufS : PAcsStereoBuffer16;
     DAM : array of Double;
-    DAS : array of TACSStereoSampleD;
+    DAS : array of TAcsStereoSampleD;
     Kernel : array of Double;
     FKernelWidth : Integer;
     FFilterWindow : TACSFilterWindowType;
     Tail : Pointer;
-    LBS : TACSStereoSample16;
+    LBS : TAcsStereoSample16;
     function ConvertFreqs16Mono(InSize : Integer): Integer;
     function ConvertFreqs16Stereo(InSize : Integer): Integer;
     procedure SetOutSampleRate(aSR : Integer);
@@ -172,8 +172,8 @@ implementation
   var
     i, step, j, k, s, m : Integer;
     D : Double;
-    TailMono : PACSBuffer16;
-    TailMonoD : PACSDoubleArray;
+    TailMono : PAcsBuffer16;
+    TailMonoD : PAcsDoubleArray;
   begin
     TailMono := Tail;
     s := InSize shr 1;
@@ -243,8 +243,8 @@ implementation
   var
     i, step, j, k, s, m1, m2 : Integer;
     D1, D2 : Double;
-    TailStereo : PACSStereoBuffer16;
-    TailStereoD : PACSStereoBufferD;
+    TailStereo : PAcsStereoBuffer16;
+    TailStereoD : PAcsStereoBufferD;
   begin
     TailStereo := Tail;
     s := InSize shr 2;
@@ -333,26 +333,26 @@ implementation
     Result := j shl 2;
   end;
 
-  procedure Convert16To8(InOutBuf : PACSBuffer8; InSize : Integer);
+  procedure Convert16To8(InOutBuf : PAcsBuffer8; InSize : Integer);
   var
     i : Integer;
-    P : PACSBuffer16;
+    P : PAcsBuffer16;
   begin
     P := @InOutBuf[0];
     for i := 0 to (Insize shr 1) -1 do
     InOutBuf[i] := Hi(P[i]+$8000);
   end;
 
-  procedure Convert8To16(InOutBuf : PACSBuffer8; InSize : Integer);
+  procedure Convert8To16(InOutBuf : PAcsBuffer8; InSize : Integer);
   var
     i : Integer;
-    P : PACSBuffer16;
+    P : PAcsBuffer16;
   begin
     P := @InOutBuf[0];
     for i := Insize - 1 downto 0 do P[i] := (InOutBuf[i] shl 8) - $8000;
   end;
 
-  procedure ConvertStereoToMono16(InOutBuf : PACSBuffer16; InSize : Integer);
+  procedure ConvertStereoToMono16(InOutBuf : PAcsBuffer16; InSize : Integer);
   var
     i : Integer;
   begin
@@ -363,7 +363,7 @@ implementation
   end;
 
 
-  procedure ConvertMonoToStereo16(InOutBuf : PACSBuffer16; InSize : Integer; Mode : TACSMSConverterMode);
+  procedure ConvertMonoToStereo16(InOutBuf : PAcsBuffer16; InSize : Integer; Mode : TACSMSConverterMode);
   var
     i : Integer;
   begin
@@ -429,7 +429,7 @@ implementation
   function TACSRateConverter.GetCh : Integer;
   begin
     if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotAssigned);
+    raise EAcsException.Create(strInputnotAssigned);
     Result := FInput.Channels;
   end;
 
@@ -444,7 +444,7 @@ implementation
     TailSize : Integer;
   begin
     if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotAssigned);
+    raise EAcsException.Create(strInputnotAssigned);
     FInput.Init;
     InputLock := False;
     FBusy := True;
@@ -510,9 +510,9 @@ implementation
   var
     l : Integer;
     InSize : Integer;
-    P : PACSBuffer8;
+    P : PAcsBuffer8;
   begin
-    if not Busy then  raise EACSException.Create(strStreamnotopen);
+    if not Busy then  raise EAcsException.Create(strStreamnotopen);
     if BufStart > BufEnd then
     begin
       if EndOfInput then
@@ -587,7 +587,7 @@ implementation
   function TACSMSConverter.GetCh : Integer;
   begin
     if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotAssigned);
+    raise EAcsException.Create(strInputnotAssigned);
     if FInput.Channels = 1 then Result := 2
     else Result := 1;
   end;
@@ -595,14 +595,14 @@ implementation
   function TACSMSConverter.GetSR : Integer;
   begin
     if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotAssigned);
+    raise EAcsException.Create(strInputnotAssigned);
     Result := FInput.SampleRate;
   end;
 
   procedure TACSMSConverter.Init;
   begin
     if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotAssigned);
+    raise EAcsException.Create(strInputnotAssigned);
     FInput.Init;
     FBusy := True;
     FPosition := 0;
@@ -628,7 +628,7 @@ implementation
     l : Integer;
     InSize : Integer;
   begin
-    if not Busy then  raise EACSException.Create(strStreamnotopen);
+    if not Busy then  raise EAcsException.Create(strStreamnotopen);
     if BufStart > BufEnd then
     begin
       if EndOfInput then
@@ -688,7 +688,7 @@ implementation
   function TACSSampleConverter.GetBPS : Integer;
   begin
     if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotAssigned);
+    raise EAcsException.Create(strInputnotAssigned);
     if FInput.BitsPerSample = 16 then Result := 8
     else Result := 16;
   end;
@@ -696,21 +696,21 @@ implementation
   function TACSSampleConverter.GetCh : Integer;
   begin
     if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotAssigned);
+    raise EAcsException.Create(strInputnotAssigned);
     Result:= FInput.Channels;
   end;
 
   function TACSSampleConverter.GetSR : Integer;
   begin
     if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotAssigned);
+    raise EAcsException.Create(strInputnotAssigned);
     Result := FInput.SampleRate;
   end;
 
   procedure TACSSampleConverter.Init;
   begin
     if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotAssigned);
+    raise EAcsException.Create(strInputnotAssigned);
     FInput.Init;
     FBusy := True;
     FPosition := 0;
@@ -736,7 +736,7 @@ implementation
     l : Integer;
     InSize : Integer;
   begin
-    if not Busy then  raise EACSException.Create(strStreamnotopen);
+    if not Busy then  raise EAcsException.Create(strStreamnotopen);
     if BufStart > BufEnd then
     begin
       if EndOfInput then
@@ -812,28 +812,28 @@ implementation
   function TACSStereoBalance.GetBPS : Integer;
   begin
     if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotAssigned);
+    raise EAcsException.Create(strInputnotAssigned);
     Result := FInput.BitsPerSample;
   end;
 
   function TACSStereoBalance.GetCh : Integer;
   begin
     if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotAssigned);
+    raise EAcsException.Create(strInputnotAssigned);
     Result := 2;
   end;
 
   function TACSStereoBalance.GetSR : Integer;
   begin
     if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotAssigned);
+    raise EAcsException.Create(strInputnotAssigned);
     Result := FInput.SampleRate;
   end;
 
   procedure TACSStereoBalance.Init;
   begin
     if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotAssigned);
+    raise EAcsException.Create(strInputnotAssigned);
     FInput.Init;
     FBusy := True;
     if FInput.Channels = 2 then FSize := FInput.Size
@@ -851,11 +851,11 @@ implementation
   function TACSStereoBalance.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
   var
     WantedSize, i : Integer;
-    P16 : PACSBuffer16;
-    P8 : PACSBuffer8;
+    P16 : PAcsBuffer16;
+    P8 : PAcsBuffer8;
     Diff : Double;
   begin
-    if not Busy then  raise EACSException.Create(strStreamnotopen);
+    if not Busy then  raise EAcsException.Create(strStreamnotopen);
     while InputLock do;
     InputLock := True;
     if FInput.Channels = 2 then WantedSize := BufferSize

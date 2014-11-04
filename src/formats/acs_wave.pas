@@ -202,10 +202,10 @@ type
     function ReadMSADPCMBlock(bData: Pointer): Boolean;
     function GetWavType: TWavType;
     procedure ReadRIFFHeader;
-    procedure DecodeDVIADPCMMono(InData: PACSBuffer8; OutData: PACSBuffer16; var Len: Integer);
-    procedure DecodeDVIADPCMStereo(InData: PACSBuffer8; OutData: PACSBuffer16; var Len: Integer);
-    procedure DecodeMSADPCMMono(InData: PACSBuffer8; OutData: PACSBuffer16; var Len: Integer);
-    procedure DecodeMSADPCMStereo(InData: PACSBuffer8; OutData: PACSBuffer16; var Len: Integer);
+    procedure DecodeDVIADPCMMono(InData: PAcsBuffer8; OutData: PAcsBuffer16; var Len: Integer);
+    procedure DecodeDVIADPCMStereo(InData: PAcsBuffer8; OutData: PAcsBuffer16; var Len: Integer);
+    procedure DecodeMSADPCMMono(InData: PAcsBuffer8; OutData: PAcsBuffer16; var Len: Integer);
+    procedure DecodeMSADPCMStereo(InData: PAcsBuffer8; OutData: PAcsBuffer16; var Len: Integer);
   protected
     procedure SetBufferSize(ASize: Integer); override;
     procedure OpenFile; override;
@@ -238,8 +238,8 @@ type
     procedure FillHeaderPCM(var Header: TWaveHeader);
     procedure FillHeaderDVIADPCM(var Header: TDVIADPCMHeader);
     procedure SetBlockSize(BS: Word);
-    procedure EncodeDVIADPCMMono(InData: PACSBuffer16; OutData: PACSBuffer8);
-    procedure EncodeDVIADPCMStereo(InData: PACSBuffer16; OutData: PACSBuffer8);
+    procedure EncodeDVIADPCMMono(InData: PAcsBuffer16; OutData: PAcsBuffer8);
+    procedure EncodeDVIADPCMStereo(InData: PAcsBuffer16; OutData: PAcsBuffer8);
   protected
     procedure SetFileMode(AMode: TACSFileOutputMode); override;
   public
@@ -306,7 +306,7 @@ const
 
 
 
-procedure TWaveIn.DecodeDVIADPCMMono(InData: PACSBuffer8; OutData: PACSBuffer16; var Len: Integer);
+procedure TWaveIn.DecodeDVIADPCMMono(InData: PAcsBuffer8; OutData: PAcsBuffer16; var Len: Integer);
 var
   i, j, SP: Integer;
   Diff, PSample: Integer;
@@ -346,7 +346,7 @@ begin
   Len:=SP+1;
 end;
 
-procedure TWaveIn.DecodeDVIADPCMStereo(InData: PACSBuffer8; OutData: PACSBuffer16; var Len: Integer);
+procedure TWaveIn.DecodeDVIADPCMStereo(InData: PAcsBuffer8; OutData: PAcsBuffer16; var Len: Integer);
 var
   i, j, SP: Integer;
   Diff, PSample: Integer;
@@ -423,7 +423,7 @@ begin
   Len:=(SP div 2)+1;
 end;
 
-procedure TWaveIn.DecodeMSADPCMMono(InData : PACSBuffer8; OutData : PACSBuffer16; var Len : Integer);
+procedure TWaveIn.DecodeMSADPCMMono(InData : PAcsBuffer8; OutData : PAcsBuffer16; var Len : Integer);
 var
   pos, i, PredSamp, ErrorDelta: Integer;
 begin
@@ -470,7 +470,7 @@ begin
   Len:=pos*2;
 end;
 
-  procedure TWaveIn.DecodeMSADPCMStereo(InData : PACSBuffer8; OutData : PACSBuffer16; var Len : Integer);
+  procedure TWaveIn.DecodeMSADPCMStereo(InData : PAcsBuffer8; OutData : PAcsBuffer16; var Len : Integer);
   var
     pos, i, PredSamp, ErrorDelta : Integer;
   begin
@@ -799,7 +799,7 @@ const
     offs : Integer;
     Data : Pointer;
   begin
-    if not Busy then  raise EACSException.Create(strStreamnotopen);
+    if not Busy then  raise EAcsException.Create(strStreamnotopen);
     if BufStart > BufEnd then
     begin
       case _WavType of
@@ -1071,7 +1071,7 @@ begin
   Header.DataLength := samples;
 end;
 
-procedure TWaveOut.EncodeDVIADPCMMono(InData : PACSBuffer16; OutData : PACSBuffer8);
+procedure TWaveOut.EncodeDVIADPCMMono(InData : PAcsBuffer16; OutData : PAcsBuffer8);
 var
   i, j, Diff, PredSamp, Index : Integer;
   Code : Byte;
@@ -1124,7 +1124,7 @@ begin
 //  State.PredSamp_l := PredSamp;
 end;
 
-procedure TWaveOut.EncodeDVIADPCMStereo(InData : PACSBuffer16; OutData : PACSBuffer8);
+procedure TWaveOut.EncodeDVIADPCMStereo(InData : PAcsBuffer16; OutData : PAcsBuffer8);
 var
   i, j, Diff, bPos, PredSamp, Index : Integer;
   Code : Byte;
@@ -1253,7 +1253,7 @@ end;
     EndOfInput := False;
     if not FStreamAssigned then
     begin
-      if FFileName = '' then raise EACSException.Create(strFilenamenotassigned);
+      if FFileName = '' then raise EAcsException.Create(strFilenamenotassigned);
       if (not FileExists(FFileName)) or (FFileMode = foRewrite) then
       FStream := TFileStream.Create(FFileName, fmCreate or fmShareExclusive, FAccessMask)
       else FStream := TFileStream.Create(FFileName, fmOpenReadWrite or fmShareExclusive, FAccessMask);
@@ -1270,7 +1270,7 @@ end;
           FStream.Free;
           FStream := nil;
         end;
-        raise EACSException.Create('Cannot append data to this .wav file.');
+        raise EAcsException.Create('Cannot append data to this .wav file.');
       end;
       FWavType := FPrevWavType;
     end;
@@ -1289,7 +1289,7 @@ end;
               FStream.Free;
               FStream := nil;
             end;
-            raise EACSException.Create('Cannot append data in different audio format.');
+            raise EAcsException.Create('Cannot append data in different audio format.');
           end;
           FStream.Seek(0, soFromEnd);
         end else
@@ -1308,7 +1308,7 @@ end;
             FStream.Free;
             FStream := nil;
           end;
-          raise EACSException.Create('Cannot encode 8 bit sound into ADPCM.');
+          raise EAcsException.Create('Cannot encode 8 bit sound into ADPCM.');
         end;
 //        FBlockAlign := 512;
         if (FFileMode = foAppend) and (FStream.Size <> 0) then
@@ -1322,7 +1322,7 @@ end;
               FStream.Free;
               FStream := nil;
             end;
-            raise EACSException.Create('Cannot append data in different audio format.');
+            raise EAcsException.Create('Cannot append data in different audio format.');
           end;
           FStream.Seek(0, soFromEnd);
         end else
@@ -1392,9 +1392,9 @@ end;
   function TWaveOut.DoOutput(Abort : Boolean):Boolean;
   var
     Len, l, m : Integer;
-    DVIInBuf : PACSBuffer16;
-    DVIOutBuf : PACSBuffer8;
-    P : PACSBuffer8;
+    DVIInBuf : PAcsBuffer16;
+    DVIOutBuf : PAcsBuffer8;
+    P : PAcsBuffer8;
     BlockDataSize : Integer;
   begin
     // No exceptions Here
@@ -1432,7 +1432,7 @@ end;
         BlockDataSize := (FBlockAlign - 4*FInput.Channels)*4 +2*FInput.Channels;
         GetMem(DVIInBuf, BlockDataSize);
         GetMem(DVIOutBuf, FBlockAlign);
-        P := PACSBuffer8(DVIInBuf);
+        P := PAcsBuffer8(DVIInBuf);
         try
           if FInput.Channels = 2 then
           begin

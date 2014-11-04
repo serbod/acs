@@ -83,8 +83,8 @@ type
   private
     Lock : Boolean;
     Kernel : array of Double;
-    DA : PACSDoubleArray;
-    DAS : PACSStereoBufferD;
+    DA : PAcsDoubleArray;
+    DAS : PAcsStereoBufferD;
     inBuf : array[1..BUF_SIZE] of Byte;
     FFilterType : TACSFilterType;
     FKernelWidth : Integer;
@@ -106,7 +106,7 @@ type
     function GetData(Buffer : Pointer; BufferSize : Integer): Integer; override;
     procedure Init; override;
     procedure Flush; override;
-    procedure GetKernel(var K : PACSDoubleArray);
+    procedure GetKernel(var K : PAcsDoubleArray);
   published
     property FilterType : TACSFilterType read FFilterType write SetFilterType;
     property HighFreq : Integer read FHighFreq write SetHighFreq;
@@ -119,8 +119,8 @@ type
   private
     Lock : Boolean;
     Kernel : array of Double;
-    DA : PACSDoubleArray;
-    DAS : PACSStereoBufferD;
+    DA : PAcsDoubleArray;
+    DAS : PAcsStereoBufferD;
     inBuf : array[1..BUF_SIZE] of Byte;
     FKernelWidth : Integer;
     FAllPass : Boolean;
@@ -135,7 +135,7 @@ type
     function GetData(Buffer : Pointer; BufferSize : Integer): Integer; override;
     procedure Init; override;
     procedure Flush; override;
-    procedure SetKernel(K : PACSDoubleArray; Inverted : Boolean);
+    procedure SetKernel(K : PAcsDoubleArray; Inverted : Boolean);
     property KrenelWidth : Integer read FKernelWidth write SetKernelWidth;
   published
     property AllPass : Boolean read FAllPass write FAllPass;
@@ -163,14 +163,14 @@ implementation
   function TACSBWFilter.GetCh : Integer;
   begin
     if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotAssigned);
+    raise EAcsException.Create(strInputnotAssigned);
     Result := FInput.Channels;
   end;
 
   function TACSBWFilter.GetSR : Integer;
   begin
     if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotAssigned);
+    raise EAcsException.Create(strInputnotAssigned);
     Result := FInput.SampleRate;
   end;
 
@@ -198,12 +198,12 @@ implementation
     C, D : Double;
   begin
     if not Assigned(FInput) then
-    raise EACSException.Create(strInputnotAssigned);
+    raise EAcsException.Create(strInputnotAssigned);
     FInput.Init;
     if ((FHighFreq - FlowFreq) < 0) or (((FHighFreq - FlowFreq) * 2) >= FInput.SampleRate) then
     begin
       FInput.Flush;
-      raise EACSException.Create(strIllegalFrequency);
+      raise EAcsException.Create(strIllegalFrequency);
     end;
     FBusy := True;
     FPosition := 0;
@@ -269,11 +269,11 @@ implementation
   function TACSBWFilter.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
   var
     i : Integer;
-    InBufMono : PACSBuffer16;
-    InBufStereo : PACSStereoBuffer16;
+    InBufMono : PAcsBuffer16;
+    InBufStereo : PAcsStereoBuffer16;
     arg, res : Double;
   begin
-    if not Busy then  raise EACSException.Create(strStreamnotopen);
+    if not Busy then  raise EAcsException.Create(strStreamnotopen);
     if BufStart > BufEnd then
     begin
       BufStart := 1;
@@ -362,7 +362,7 @@ implementation
     if csDesigning in ComponentState then Exit;
     if not Assigned(FInput) then Exit;
     if (FLowFreq > FInput.SampleRate/2) or (FHighFreq > FInput.SampleRate/2) then
-    raise EACSException.Create(strCutofftolow);
+    raise EAcsException.Create(strCutofftolow);
     while Lock do;
     Lock := True;
     case FilterType of
@@ -478,28 +478,28 @@ implementation
   function TACSSincFilter.GetBPS : Integer;
   begin
     if not Assigned(Input) then
-    raise EACSException.Create(strInputnotassigned);
+    raise EAcsException.Create(strInputnotassigned);
     Result := FInput.BitsPerSample;
   end;
 
   function TACSSincFilter.GetCh : Integer;
   begin
     if not Assigned(Input) then
-    raise EACSException.Create(strInputnotassigned);
+    raise EAcsException.Create(strInputnotassigned);
     Result := FInput.Channels;
   end;
 
   function TACSSincFilter.GetSR : Integer;
   begin
     if not Assigned(Input) then
-    raise EACSException.Create(strInputnotassigned);
+    raise EAcsException.Create(strInputnotassigned);
     Result := FInput.SampleRate;
   end;
 
   procedure TACSSincFilter.Init;
   begin
     if not Assigned(Input) then
-    raise EACSException.Create(strInputnotassigned);
+    raise EAcsException.Create(strInputnotassigned);
     Lock := False;
     InputLock := False;
     FBusy := True;
@@ -533,10 +533,10 @@ implementation
   function TACSSincFilter.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
   var
     i, j, NumSamples : Integer;
-    InBufMono : PACSBuffer16;
-    InBufStereo : PACSStereoBuffer16;
+    InBufMono : PAcsBuffer16;
+    InBufStereo : PAcsStereoBuffer16;
   begin
-    if not Busy then  raise EACSException.Create(strStreamnotopen);
+    if not Busy then  raise EAcsException.Create(strStreamnotopen);
     if BufStart > BufEnd then
     begin
       while Lock do;
@@ -631,28 +631,28 @@ implementation
   function TACSConvolver.GetBPS : Integer;
   begin
     if not Assigned(Input) then
-    raise EACSException.Create(strInputnotassigned);
+    raise EAcsException.Create(strInputnotassigned);
     Result := FInput.BitsPerSample;
   end;
 
   function TACSConvolver.GetCh : Integer;
   begin
     if not Assigned(Input) then
-    raise EACSException.Create(strInputnotassigned);
+    raise EAcsException.Create(strInputnotassigned);
     Result := FInput.Channels;
   end;
 
   function TACSConvolver.GetSR : Integer;
   begin
     if not Assigned(Input) then
-    raise EACSException.Create(strInputnotassigned);
+    raise EAcsException.Create(strInputnotassigned);
     Result := FInput.SampleRate;
   end;
 
   procedure TACSConvolver.Init;
   begin
     if not Assigned(Input) then
-    raise EACSException.Create(strInputnotassigned);
+    raise EAcsException.Create(strInputnotassigned);
     Lock := False;
     InputLock := False;
     FBusy := True;
@@ -685,10 +685,10 @@ implementation
   function TACSConvolver.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
   var
     i, j, NumSamples : Integer;
-    InBufMono : PACSBuffer16;
-    InBufStereo : PACSStereoBuffer16;
+    InBufMono : PAcsBuffer16;
+    InBufStereo : PAcsStereoBuffer16;
   begin
-    if not Busy then  raise EACSException.Create(strStreamNotopen);
+    if not Busy then  raise EAcsException.Create(strStreamNotopen);
     if BufStart > BufEnd then
     begin
       while Lock do;

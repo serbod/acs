@@ -32,7 +32,7 @@ type
 
   TACSMemoryIn = class(TACSCustomInput)
   private
-    FBuffer: PACSBuffer8;
+    FBuffer: PAcsBuffer8;
     FDataSize: Integer;
     FOnBufferDone: TACSOnBufferDone;
     Busy: Boolean;
@@ -213,7 +213,7 @@ end;
 function TACSMemoryIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
 begin
   Result:=0;
-  if not Busy then raise EACSException.Create(strStreamnotopen);
+  if not Busy then raise EAcsException.Create(strStreamnotopen);
   if not Assigned(FBuffer) then Exit;
   if BufStart > BufEnd then
   begin
@@ -242,13 +242,13 @@ end;
 
 procedure TACSMemoryIn.SetBuffer;
 begin
-  FBuffer:=PACSBuffer8(v);
+  FBuffer:=PAcsBuffer8(v);
 end;
 
 function TACSAudioProcessor.GetBPS: Integer;
 begin
   Result:=0;
-  //if not Assigned(FInput) then raise EACSException.Create(strInputnotAssigned);
+  //if not Assigned(FInput) then raise EAcsException.Create(strInputnotAssigned);
   if Assigned(FOnGetBitsPerSample) then
     FOnGetBitsPerSample(Self, Result)
   else
@@ -258,7 +258,7 @@ end;
 function TACSAudioProcessor.GetSR: Integer;
 begin
   Result:=0;
-  //if not Assigned(FInput) then raise EACSException.Create(strInputnotAssigned);
+  //if not Assigned(FInput) then raise EAcsException.Create(strInputnotAssigned);
   if Assigned(FOnGetSampleRate) then
     FOnGetSampleRate(Self, Result)
   else
@@ -268,7 +268,7 @@ end;
 function TACSAudioProcessor.GetCh: Integer;
 begin
   Result:=0;
-  //if not Assigned(FInput) then raise EACSException.Create(strInputnotAssigned);
+  //if not Assigned(FInput) then raise EAcsException.Create(strInputnotAssigned);
   if Assigned(FOnGetChannels) then
     FOnGetChannels(Self, Result)
   else
@@ -278,7 +278,7 @@ end;
 function TACSAudioProcessor.GetTotalTime: Real;
 begin
   Result:=0;
-  //if not Assigned(FInput) then raise EACSException.Create(strInputnotAssigned);
+  //if not Assigned(FInput) then raise EAcsException.Create(strInputnotAssigned);
   if Assigned(FOnGetTotalTime) then
     FOnGetTotalTime(Self, Result)
   else
@@ -287,7 +287,7 @@ end;
 
 function TACSAudioProcessor.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
 begin
-  //if not Assigned(FInput) then raise EACSException.Create(strInputnotAssigned);
+  //if not Assigned(FInput) then raise EAcsException.Create(strInputnotAssigned);
   if Assigned(FOnGetData) then
   begin
     Result:=BufferSize;
@@ -301,7 +301,7 @@ end;
 
 procedure TACSAudioProcessor.Init;
 begin
-  //if not Assigned(FInput) then raise EACSException.Create(strInputnotAssigned);
+  //if not Assigned(FInput) then raise EAcsException.Create(strInputnotAssigned);
   if Assigned(FOnInit) then FOnInit(Self, FSize)
   else
   begin
@@ -320,7 +320,7 @@ end;
 
 procedure TACSAudioProcessor.Flush;
 begin
-  //if not Assigned(FInput) then raise EACSException.Create(strInputnotAssigned);
+  //if not Assigned(FInput) then raise EAcsException.Create(strInputnotAssigned);
   if Assigned(FOnFlush) then
     FOnFlush(Self)
   else
@@ -330,7 +330,7 @@ end;
 
 procedure TACSNULLOut.Prepare;
 begin
-  //if not Assigned(FInput) then raise EACSException.Create(strInputnotAssigned);
+  //if not Assigned(FInput) then raise EAcsException.Create(strInputnotAssigned);
   if Assigned(FInput) then FInput.Init;
 end;
 
@@ -384,7 +384,7 @@ begin
   if AInput <> 0 then
   begin
     if (AInput < 0) or (AInput >= FInputItems.Count) then
-      raise EACSException.Create(Format(strListIndexOOB,[AInput]));
+      raise EAcsException.Create(Format(strListIndexOOB,[AInput]));
     if Busy then
     begin
       while Lock do;
@@ -465,12 +465,12 @@ var
   Item: TACSInputItem;
 begin
   if Busy then
-    raise EACSException.Create(strBusy);
+    raise EAcsException.Create(strBusy);
   if InputItems.Count = 0 then
-    raise EACSException.Create(strNoInputItems);
+    raise EAcsException.Create(strNoInputItems);
   Item:=TACSInputItem(InputItems.Items[FCurrentInput]);
   if not Assigned(Item.Input) then
-    raise EACSException.Create(Format(strNoInputAssigned,[FCurrentInput]));
+    raise EAcsException.Create(Format(strNoInputAssigned,[FCurrentInput]));
   FBusy:=True;
   Item.Input.Init;
   if FIndicateProgress then FSize:=Item.Input.Size else FSize:=-1;
@@ -512,7 +512,7 @@ begin
       begin
         Item:=TACSInputItem(InputItems.Items[FCurrentInput]);
         if not Assigned(Item.Input) then
-          raise EACSException.Create(Format(strNoInputAssigned, [FCurrentInput]));
+          raise EAcsException.Create(Format(strNoInputAssigned, [FCurrentInput]));
         Item.Input.Init;
         if FIndicateProgress then
           FSize:=Item.Input.Size

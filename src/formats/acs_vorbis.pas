@@ -240,13 +240,13 @@ implementation
     begin
       VORBISLoadLibrary;
       if not LiboggLoaded then
-      raise EACSException.Create(Format(strCoudntloadLib,[Liboggpath]));
+      raise EAcsException.Create(Format(strCoudntloadLib,[Liboggpath]));
       if not LibvorbisLoaded then
-      raise EACSException.Create(Format(strCoudntloadLib,[LibvorbisPath]));
+      raise EAcsException.Create(Format(strCoudntloadLib,[LibvorbisPath]));
       if not LibvorbisfileLoaded then
-      raise EACSException.Create(Format(strCoudntloadLib,[LibvorbisfilePath]));
+      raise EAcsException.Create(Format(strCoudntloadLib,[LibvorbisfilePath]));
       if not LibvorbisencLoaded then
-      raise EACSException.Create(Format(strCoudntloadLib,[LibvorbisencPath]));
+      raise EAcsException.Create(Format(strCoudntloadLib,[LibvorbisencPath]));
     end;
   end;
 
@@ -271,8 +271,8 @@ implementation
     if not FStreamAssigned then
     begin
       if not Assigned(FInput) then
-        raise EACSException.Create(strInputNotAssigned);
-      if FFileName = '' then raise EACSException.Create(strNoFileOpened);
+        raise EAcsException.Create(strInputNotAssigned);
+      if FFileName = '' then raise EAcsException.Create(strNoFileOpened);
       if (not FileExists(FFileName)) or (FFileMode = foRewrite) then
       FStream := TFileStream.Create(FFileName, fmCreate or fmShareExclusive, FAccessMask)
       else FStream := TFileStream.Create(FFileName, fmOpenReadWrite or fmShareExclusive, FAccessMask);
@@ -408,13 +408,13 @@ implementation
     begin
       VORBISLoadLibrary;
       if not LiboggLoaded then
-      raise EACSException.Create(Format(strCoudntloadLib,[LiboggPath]));
+      raise EAcsException.Create(Format(strCoudntloadLib,[LiboggPath]));
       if not LibvorbisLoaded then
-      raise EACSException.Create(Format(strCoudntloadLib,[LibvorbisPath]));
+      raise EAcsException.Create(Format(strCoudntloadLib,[LibvorbisPath]));
       if not LibvorbisfileLoaded then
-      raise EACSException.Create(Format(strCoudntloadLib,[LibvorbisfilePath]));
+      raise EAcsException.Create(Format(strCoudntloadLib,[LibvorbisfilePath]));
       if not LibvorbisencLoaded then
-      raise EACSException.Create(Format(strCoudntloadLib,[LibvorbisencPath]));
+      raise EAcsException.Create(Format(strCoudntloadLib,[LibvorbisencPath]));
     end;
   end;
 
@@ -490,7 +490,7 @@ implementation
   var
     l, offs : Integer;
   begin
-    if not Busy then  raise EACSException.Create('The Stream is not opened');
+    if not Busy then  raise EAcsException.Create('The Stream is not opened');
     if BufStart > BufEnd then
     begin
       if FOffset <> 0 then

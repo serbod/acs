@@ -11,44 +11,63 @@ interface
 
 type
 
-  TACSBuffer16 = array[0..0] of SmallInt;
-  PACSBuffer16 = ^TACSBuffer16;
+  // 32 bit
+  TAcsBuffer32 = array[0..0] of Longint;
+  PAcsBuffer32 = ^TAcsBuffer32;
 
-  TACSBuffer8 = array[0..0] of Byte;
-  PACSBuffer8 = ^TACSBuffer8;
-
-  TACSStereoSample16 = packed record
-    Left, Right : SmallInt;
+  TAcsStereoSample32 = packed record
+    Left: Longint;
+    Right: Longint;
   end;
 
-  TACSStereoBuffer16 = array[0..0] of TACSStereoSample16;
-  PACSStereoBuffer16 = ^TACSStereoBuffer16;
+  TAcsStereoBuffer32 = array[0..0] of TAcsStereoSample32;
+  PAcsStereoBuffer32 = ^TAcsStereoBuffer32;
 
-  TACSStereoSample8 = packed record
-    Left, Right: Byte;
+  // 16 bit
+  TAcsBuffer16 = array[0..0] of SmallInt;
+  PAcsBuffer16 = ^TAcsBuffer16;
+
+  TAcsStereoSample16 = packed record
+    Left: SmallInt;
+    Right: SmallInt;
   end;
 
-  TACSStereoBuffer8 = array[0..0] of TACSStereoSample8;
-  PACSStereoBuffer8 = ^TACSStereoBuffer8;
+  TAcsStereoBuffer16 = array[0..0] of TAcsStereoSample16;
+  PAcsStereoBuffer16 = ^TAcsStereoBuffer16;
 
-  TACSComplex = packed record
-    Re, Im: Double;
+  // 8 bit
+  TAcsBuffer8 = array[0..0] of Byte;
+  PAcsBuffer8 = ^TAcsBuffer8;
+
+  TAcsStereoSample8 = packed record
+    Left: Byte;
+    Right: Byte;
   end;
-  PACSComplex = ^TACSComplex;
 
-  TACSComplexArray = array[0..0] of TACSComplex;
-  PACSComplexArray = ^TACSComplexArray;
+  TAcsStereoBuffer8 = array[0..0] of TAcsStereoSample8;
+  PAcsStereoBuffer8 = ^TAcsStereoBuffer8;
 
-  TACSDoubleArray = array[0..0] of Double;
-  PACSDoubleArray = ^TACSDoubleArray;
+  // complex
+  TAcsComplex = packed record
+    Re: Double;
+    Im: Double;
+  end;
+  PAcsComplex = ^TAcsComplex;
 
-  TACSStereoSampleD = record
+  TAcsComplexArray = array[0..0] of TAcsComplex;
+  PAcsComplexArray = ^TAcsComplexArray;
+
+  // double
+  TAcsDoubleArray = array[0..0] of Double;
+  PAcsDoubleArray = ^TAcsDoubleArray;
+
+  TAcsStereoSampleD = record
     Left: Double;
     Right: Double;
   end;
 
-  TACSStereoBufferD = array[0..0] of TACSStereoSampleD;
-  PACSStereoBufferD = ^TACSStereoBufferD;
+  TAcsStereoBufferD = array[0..0] of TAcsStereoSampleD;
+  PAcsStereoBufferD = ^TAcsStereoBufferD;
 
 const
 

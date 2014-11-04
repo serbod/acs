@@ -245,9 +245,9 @@ implementation
   function TACSMultiMixer.GetData;
   var
     i, chan, ReadSize, BufSize: Integer;
-    InBuf16, OutBuf16: PACSBuffer16;
+    InBuf16, OutBuf16: PAcsBuffer16;
   begin
-    if not Buisy then raise EACSException.Create(strStreamnotopen);
+    if not Buisy then raise EAcsException.Create(strStreamnotopen);
     begin
       while Flock do sleep(0);
       Flock := True;
