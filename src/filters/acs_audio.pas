@@ -218,7 +218,7 @@ type
 
   { TAcsAudioOutDriver }
   { This class is an abstract base class for the drivers }
-  TAcsAudioOutDriver = class(TACSCustomOutput)
+  TAcsAudioOutDriver = class(TAcsCustomOutput)
   protected
     FOutput: TAcsAudioOut;
     FBaseChannel: Integer;

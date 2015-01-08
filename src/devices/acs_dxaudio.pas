@@ -64,6 +64,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Done; override;
+    { Called from Thread }
     function DoOutput(Abort: Boolean): Boolean; override;
     procedure Prepare; override;
     procedure Pause; override;
@@ -353,7 +354,7 @@ begin
     //FInput.FillBuffer(FBuffer, _BufSize, EndOfInput);
     Len:=Self.FillBufferFromInput(EndOfInput);
     DSW_WriteBlock(DSW, @FBuffer[0], Len);
-    Volume:=FVolume; //DW
+    VolumeEx:=FVolumeEx; //DW
     DSW_StartOutput(DSW);
     StartInput:=False;
   end;
@@ -458,7 +459,7 @@ begin
   FFramesInBuffer:=$6000;
   FPollingInterval:=100;
   FLatency:=100;
-  FVolume:=0; //DW
+  FVolumeEx:=0; //DW
   FPrefetchData := True;
   //FDeviceCount:=0;
   BufferSize := $40000;
