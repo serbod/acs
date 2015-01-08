@@ -91,7 +91,7 @@ type
     property OnInit: TACSAudioProcessorInitEvent read FOnInit write FOnInit;
   end;
 
-  TACSNULLOut = class(TACSCustomOutput)
+  TACSNULLOut = class(TAcsCustomOutput)
   private
     Buf: array[0..BUF_SIZE-1] of Byte;
   public

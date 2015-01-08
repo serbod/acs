@@ -40,7 +40,7 @@
         <Filename Value="player.lpr"/>
         <IsPartOfProject Value="True"/>
         <CursorPos X="3" Y="16"/>
-        <UsageCount Value="91"/>
+        <UsageCount Value="92"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit0>
       <Unit1>
@@ -50,9 +50,12 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="uMain"/>
-        <TopLine Value="22"/>
-        <CursorPos X="17" Y="42"/>
-        <UsageCount Value="91"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="97"/>
+        <CursorPos X="44" Y="25"/>
+        <UsageCount Value="92"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
@@ -60,22 +63,18 @@
       <Unit2>
         <Filename Value="..\..\Src\classes\acs_audio.pas"/>
         <UnitName Value="acs_audio"/>
-        <EditorIndex Value="4"/>
         <WindowIndex Value="1"/>
         <TopLine Value="458"/>
         <CursorPos X="1" Y="484"/>
         <UsageCount Value="34"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit2>
       <Unit3>
         <Filename Value="..\..\Src\drivers\windows\acs_audio.inc"/>
-        <EditorIndex Value="8"/>
         <WindowIndex Value="1"/>
         <TopLine Value="91"/>
         <CursorPos X="46" Y="101"/>
         <UsageCount Value="30"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit3>
       <Unit4>
@@ -99,35 +98,28 @@
       <Unit7>
         <Filename Value="..\..\Src\drivers\acs_stdaudio.pas"/>
         <UnitName Value="acs_stdaudio"/>
-        <EditorIndex Value="3"/>
         <WindowIndex Value="1"/>
         <TopLine Value="23"/>
         <CursorPos X="3" Y="39"/>
         <UsageCount Value="30"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit7>
       <Unit8>
         <Filename Value="..\..\Src\classes\acs_file.pas"/>
         <UnitName Value="acs_file"/>
-        <EditorIndex Value="6"/>
         <WindowIndex Value="1"/>
         <TopLine Value="1"/>
         <CursorPos X="3" Y="223"/>
         <UsageCount Value="32"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit8>
       <Unit9>
         <Filename Value="..\..\Src\fileformats\acs_allformats.pas"/>
         <UnitName Value="acs_allformats"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="10"/>
         <WindowIndex Value="1"/>
         <TopLine Value="1"/>
         <CursorPos X="93" Y="8"/>
         <UsageCount Value="30"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit9>
       <Unit10>
@@ -153,12 +145,10 @@
       <Unit13>
         <Filename Value="..\..\Src\classes\acs_classes.pas"/>
         <UnitName Value="acs_classes"/>
-        <EditorIndex Value="5"/>
         <WindowIndex Value="1"/>
         <TopLine Value="118"/>
         <CursorPos X="14" Y="132"/>
         <UsageCount Value="34"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit13>
       <Unit14>
@@ -170,12 +160,10 @@
       <Unit15>
         <Filename Value="..\..\Src\drivers\acs_dxaudio.pas"/>
         <UnitName Value="acs_dxaudio"/>
-        <EditorIndex Value="9"/>
         <WindowIndex Value="1"/>
         <TopLine Value="251"/>
         <CursorPos X="3" Y="262"/>
         <UsageCount Value="27"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit15>
       <Unit16>
@@ -227,7 +215,7 @@
         <ComponentName Value="fPlaylist"/>
         <TopLine Value="17"/>
         <CursorPos X="8" Y="32"/>
-        <UsageCount Value="71"/>
+        <UsageCount Value="72"/>
       </Unit23>
       <Unit24>
         <Filename Value="..\..\..\..\lazarus\lcl\interfaces\win32\win32object.inc"/>
@@ -247,11 +235,11 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="uvis"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="0"/>
         <WindowIndex Value="1"/>
         <TopLine Value="89"/>
-        <CursorPos X="15" Y="65"/>
-        <UsageCount Value="68"/>
+        <CursorPos X="20" Y="97"/>
+        <UsageCount Value="69"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
@@ -268,12 +256,10 @@
       <Unit28>
         <Filename Value="..\..\Src\classes\acs_procs.pas"/>
         <UnitName Value="acs_procs"/>
-        <EditorIndex Value="7"/>
         <WindowIndex Value="1"/>
         <TopLine Value="325"/>
         <CursorPos X="22" Y="337"/>
         <UsageCount Value="23"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit28>
       <Unit29>
@@ -780,23 +766,19 @@
       <Unit112>
         <Filename Value="..\..\Src\win32\acs_reg.pas"/>
         <UnitName Value="acs_reg"/>
-        <EditorIndex Value="0"/>
         <WindowIndex Value="1"/>
         <TopLine Value="4"/>
         <CursorPos X="80" Y="28"/>
         <UsageCount Value="14"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit112>
       <Unit113>
         <Filename Value="..\..\Src\classes\acs_properties.pas"/>
         <UnitName Value="acs_properties"/>
-        <EditorIndex Value="1"/>
         <WindowIndex Value="1"/>
         <TopLine Value="60"/>
         <CursorPos X="34" Y="70"/>
         <UsageCount Value="14"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit113>
       <Unit114>
@@ -839,123 +821,15 @@
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit118>
     </Units>
-    <JumpHistory Count="29" HistoryIndex="28">
+    <JumpHistory Count="2" HistoryIndex="1">
       <Position1>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="349" Column="1" TopLine="339"/>
-      </Position1>
-      <Position2>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="350" Column="7" TopLine="339"/>
-      </Position2>
-      <Position3>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="344" Column="1" TopLine="339"/>
-      </Position3>
-      <Position4>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="345" Column="1" TopLine="339"/>
-      </Position4>
-      <Position5>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="347" Column="1" TopLine="339"/>
-      </Position5>
-      <Position6>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="348" Column="1" TopLine="339"/>
-      </Position6>
-      <Position7>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="349" Column="1" TopLine="339"/>
-      </Position7>
-      <Position8>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="351" Column="1" TopLine="339"/>
-      </Position8>
-      <Position9>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="352" Column="1" TopLine="339"/>
-      </Position9>
-      <Position10>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="353" Column="1" TopLine="339"/>
-      </Position10>
-      <Position11>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="407" Column="1" TopLine="389"/>
-      </Position11>
-      <Position12>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="344" Column="1" TopLine="332"/>
-      </Position12>
-      <Position13>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="352" Column="16" TopLine="336"/>
-      </Position13>
-      <Position14>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="347" Column="1" TopLine="336"/>
-      </Position14>
-      <Position15>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="357" Column="13" TopLine="339"/>
-      </Position15>
-      <Position16>
         <Filename Value="uvis.pas"/>
         <Caret Line="75" Column="39" TopLine="66"/>
-      </Position16>
-      <Position17>
+      </Position1>
+      <Position2>
         <Filename Value="uvis.pas"/>
         <Caret Line="74" Column="38" TopLine="63"/>
-      </Position17>
-      <Position18>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="344" Column="4" TopLine="339"/>
-      </Position18>
-      <Position19>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="367" Column="33" TopLine="356"/>
-      </Position19>
-      <Position20>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="381" Column="35" TopLine="373"/>
-      </Position20>
-      <Position21>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="367" Column="32" TopLine="356"/>
-      </Position21>
-      <Position22>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="381" Column="32" TopLine="355"/>
-      </Position22>
-      <Position23>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="365" Column="1" TopLine="355"/>
-      </Position23>
-      <Position24>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="366" Column="1" TopLine="355"/>
-      </Position24>
-      <Position25>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="367" Column="1" TopLine="355"/>
-      </Position25>
-      <Position26>
-        <Filename Value="..\..\Src\classes\acs_procs.pas"/>
-        <Caret Line="368" Column="1" TopLine="358"/>
-      </Position26>
-      <Position27>
-        <Filename Value="..\..\Src\drivers\windows\acs_audio.inc"/>
-        <Caret Line="140" Column="46" TopLine="130"/>
-      </Position27>
-      <Position28>
-        <Filename Value="..\..\Src\drivers\windows\acs_audio.inc"/>
-        <Caret Line="1" Column="1" TopLine="1"/>
-      </Position28>
-      <Position29>
-        <Filename Value="..\..\Src\drivers\acs_dxaudio.pas"/>
-        <Caret Line="227" Column="23" TopLine="535"/>
-      </Position29>
+      </Position2>
     </JumpHistory>
   </ProjectOptions>
   <CompilerOptions>

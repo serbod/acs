@@ -169,9 +169,9 @@ type
   end;
 
 
-  { TACSCustomOutput }
+  { TAcsCustomOutput }
   { TACSOutput is the base class for all ACS output components. }
-  TACSCustomOutput = class(TComponent)
+  TAcsCustomOutput = class(TComponent)
   protected
     CanOutput: Boolean;
     CurProgr: real;
@@ -179,7 +179,7 @@ type
     FInput: TACSCustomInput;
     FOnDone: TACSOutputDoneEvent;
     FOnProgress: TACSOutputProgressEvent;
-    Busy: Boolean;  // Set to true by Run and to False by WhenDone.
+    FBusy: Boolean;  // Set to true by Run and to False by WhenDone.
     FOnThreadException: TACSThreadExceptionEvent;
     InputLock: Boolean;
     FBufferSize: Integer;
@@ -195,6 +195,7 @@ type
     procedure SetInput(AInput: TACSCustomInput); virtual;
     procedure SetPriority(Priority: TTPriority);
     procedure SetSuspend(v: Boolean);
+    { Called from Thread when thread stopped }
     procedure WhenDone;
     function GetTE: Integer;
     function GetStatus: TACSOutputStatus;
@@ -207,39 +208,35 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Prepare; virtual; abstract; // Calls FInput.init
+    { Called from Thread }
     function DoOutput(Abort: Boolean): Boolean; virtual; abstract;
     procedure Done; virtual; abstract; // Calls FInput.Flush
     {$IFDEF MSWINDOWS}
     procedure Abort;
     {$ENDIF}
-    { pauses the output (the output thread is suspended).
-    }
+    { pauses the output (the output thread is suspended). }
     procedure Pause; virtual;
-    { Resumes previously paused output.
-    }
+    { Resumes previously paused output. }
     procedure Resume; virtual;
     { This is the most important method in the output components.
-      After an input component has been assigned, call Run to start audio-processing chain.
-    }
+      After an input component has been assigned, call Run to start audio-processing chain. }
     procedure Run;
-    { Stops the running output process.
-    }
+    { Stops the running output process. }
     procedure Stop;
+    { Set to true by Run and to False by WhenDone. }
+    property Busy: Boolean read FBusy;
     { Use this property to set the delay (in milliseconds) in output thread.
       This property allows the user to reduce the stress the output thread puts
       on the CPU (especially under Windows).
       Be careful with this property when using TAudioOut component.
-      Assigning too large values to it can cause dropouts in audio playback.
-    }
+      Assigning too large values to it can cause dropouts in audio playback. }
     property Delay: Integer read GetDelay write SetDelay;
     { Output components perform output in their own threads.
-      Use this property to set the priority for the thread.
-    }
+      Use this property to set the priority for the thread. }
     property ThreadPriority: TTPriority read GetPriority write SetPriority;
     { Read Progress to get the output progress in percents.
       This value is meaningful only after the input component has been set
-      and only if the input component can tell the size of its stream.
-    }
+      and only if the input component can tell the size of its stream. }
     property Progress: Real read GetProgress;
     { This property indicates the output component's current status. Possible values are:
 
@@ -247,8 +244,7 @@ type
       
       tosPaused: the component is paused (the Pause method was called);
       
-      tosIdle: the component is idle;
-    }
+      tosIdle: the component is idle; }
     property Status: TACSOutputStatus read GetStatus;
     property TimeElapsed: Integer read GetTE;
   published
@@ -339,7 +335,7 @@ type
     This property allows output components that descend from TACSStreamedOutput
     to store data not only to files on disc but to any kind of stream as well.
   }
-  TACSStreamedOutput = class(TACSCustomOutput)
+  TACSStreamedOutput = class(TAcsCustomOutput)
   protected
     { Use this property to set the output stream for the corresponding output component.
       Remember that you have to create, destroy and position the input stream explicitly.
@@ -556,6 +552,7 @@ implementation
 constructor TACSCustomInput.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FBusy:=False;
   FPosition:=0;
 end;
 
@@ -567,10 +564,10 @@ end;
 procedure TACSThread.Execute;
 var
   DoneThread: TACSVerySmallThread;
-  ParentComponent: TACSCustomOutput;
+  ParentComponent: TAcsCustomOutput;
   Res: Boolean;
 begin
-  ParentComponent:=TACSCustomOutput(Parent);
+  ParentComponent:=TAcsCustomOutput(Parent);
   //    if not bSuspend then
   while not Terminating do
   begin
@@ -614,9 +611,10 @@ begin
   Terminating:=False;
 end;
 
-constructor TACSCustomOutput.Create(AOwner: TComponent);
+constructor TAcsCustomOutput.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FBusy:=False;
   Thread:=TACSThread.Create;
   Thread.Parent:=Self;
 //  Thread.DoOutput:=Self.DoOutput;
@@ -629,7 +627,7 @@ begin
   {$ENDIF}
 end;
 
-destructor TACSCustomOutput.Destroy;
+destructor TAcsCustomOutput.Destroy;
 begin
 //  if Thread.Suspended then
 //  Thread.Resume;
@@ -642,15 +640,15 @@ begin
   inherited Destroy;
 end;
 
-procedure TACSCustomOutput.WhenDone;
+procedure TAcsCustomOutput.WhenDone;
 begin
   if not Busy then Exit;
   CanOutput:=False;
   Done;
-  Busy:=False;
+  FBusy:=False;
 end;
 
-procedure TACSCustomOutput.Run;
+procedure TAcsCustomOutput.Run;
 begin
   if Busy then
     raise EAcsException.Create(strBusy);
@@ -660,7 +658,7 @@ begin
   Thread.Suspended:=True;
   try
     Prepare;
-    Busy:=True;
+    FBusy:=True;
     Thread.Stop:=False;
     CanOutput:=True;
     Thread.Suspended:=False;
@@ -669,12 +667,12 @@ begin
   end;
 end;
 
-procedure TACSCustomOutput.Stop;
+procedure TAcsCustomOutput.Stop;
 begin
   Thread.Stop:=True;
 end;
 
-function TACSCustomOutput.GetStatus: TACSOutputStatus;
+function TAcsCustomOutput.GetStatus: TACSOutputStatus;
 begin
   if Busy then
   begin
@@ -687,12 +685,12 @@ begin
     Result:=tosIdle
 end;
 
-procedure TACSCustomOutput.SetPriority(Priority: TTPriority);
+procedure TAcsCustomOutput.SetPriority(Priority: TTPriority);
 begin
   Thread.Priority:=Priority;
 end;
 
-function TACSCustomOutput.FillBufferFromInput(var AEndOfInput: Boolean
+function TAcsCustomOutput.FillBufferFromInput(var AEndOfInput: Boolean
   ): Integer;
 var
   n: Integer;
@@ -711,12 +709,12 @@ begin
   end;
 end;
 
-function TACSCustomOutput.GetPriority: TTPriority;
+function TAcsCustomOutput.GetPriority: TTPriority;
 begin
   Result:=Thread.Priority;
 end;
 
-procedure TACSCustomOutput.SetInput(AInput: TACSCustomInput);
+procedure TAcsCustomOutput.SetInput(AInput: TACSCustomInput);
 var
   OldInput, NewInput: TACSCustomInput;
 begin
@@ -735,7 +733,7 @@ begin
     FInput:=AInput;
 end;
 
-function TACSCustomOutput.GetProgress: Real;
+function TAcsCustomOutput.GetProgress: Real;
 begin
   if not Assigned(FInput) then
   begin
@@ -749,22 +747,22 @@ begin
   end;
 end;
 
-procedure TACSCustomOutput.Pause;
+procedure TAcsCustomOutput.Pause;
 begin
   Thread.DoPause;
 end;
 
-procedure TACSCustomOutput.Resume;
+procedure TAcsCustomOutput.Resume;
 begin
   Thread.DoResume;
 end;
 
-function TACSCustomOutput.GetSuspend: Boolean;
+function TAcsCustomOutput.GetSuspend: Boolean;
 begin
   Result:=Thread.Suspended;
 end;
 
-procedure TACSCustomOutput.SetSuspend(v: Boolean);
+procedure TAcsCustomOutput.SetSuspend(v: Boolean);
 begin
   Thread.Suspended:=v;
 end;
@@ -874,7 +872,7 @@ begin
   FOffset:=Offs;
 end;
 
-function TACSCustomOutput.GetTE: Integer;
+function TAcsCustomOutput.GetTE: Integer;
 begin
    if not Assigned(FInput) then
    Result:=0
@@ -882,13 +880,13 @@ begin
    Result:=Round(FInput.Position / ((FInput.BitsPerSample shr 3) * FInput.Channels * FInput.SampleRate));
 end;
 
-function TACSCustomOutput.GetDelay: Integer;
+function TAcsCustomOutput.GetDelay: Integer;
 begin
   if Assigned(Thread) then Result:=Thread.Delay
   else Result:=0;
 end;
 
-procedure TACSCustomOutput.SetDelay(Value: Integer);
+procedure TAcsCustomOutput.SetDelay(Value: Integer);
 begin
   if Assigned(Thread) then
   begin
@@ -918,8 +916,8 @@ end;
 
 procedure TACSCustomInput.SetBufferSize(AValue: Integer);
 begin
-  if Busy then
-    raise EAcsException.Create(strBusy);
+  //if Busy then
+  //  raise EAcsException.Create(strBusy);
   if AValue >= 0 then SetLength(FBuffer, AValue);
 end;
 
@@ -950,7 +948,7 @@ begin
   FStreamAssigned:=Assigned(FStream);
 end;
 
-procedure TACSCustomOutput.Notification(AComponent: TComponent; Operation: TOperation);
+procedure TAcsCustomOutput.Notification(AComponent: TComponent; Operation: TOperation);
 begin
   // Remove the following two lines if they cause troubles in your IDE
   if (AComponent = FInput) and (Operation = opRemove) then Input:=nil;
@@ -966,7 +964,7 @@ begin
   FBusy:=False;
 end;
 
-procedure TACSCustomOutput.HandleThreadException(E: Exception);
+procedure TAcsCustomOutput.HandleThreadException(E: Exception);
 var
   Conv: TACSCustomConverter;
 begin
@@ -987,11 +985,11 @@ begin
    end;
  end;
  CanOutput:=False;
- Busy:=False;
+ FBusy:=False;
  if Assigned(FOnThreadException) then FOnThreadException(Self, E);
 end;
 
-procedure TACSCustomOutput.SetBufferSize(AValue: Integer);
+procedure TAcsCustomOutput.SetBufferSize(AValue: Integer);
 begin
   if Busy then
     raise EAcsException.Create(strBusy);
@@ -1106,9 +1104,9 @@ end;
 
 procedure TACSThread.CallOnProgress;
 var
-  ParentComponent: TACSCustomOutput;
+  ParentComponent: TAcsCustomOutput;
 begin
-  ParentComponent:=TACSCustomOutput(Parent);
+  ParentComponent:=TAcsCustomOutput(Parent);
   ParentComponent.FOnProgress(ParentComponent);
 end;
 
@@ -1128,7 +1126,7 @@ begin
 end;
 
 {$IFDEF MSWINDOWS}
-procedure TACSCustomOutput.Abort;
+procedure TAcsCustomOutput.Abort;
 begin
   TerminateThread(Thread.Handle, 0);
   WhenDone;
