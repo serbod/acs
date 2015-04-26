@@ -13,7 +13,7 @@ reworked all buffers
 
 }
 
-  function GetTocEntry(cd_fd, Track : Integer): TACSCDTrackInfo;
+  function GetTocEntry(cd_fd, Track : Integer): TAcsCDTrackInfo;
   var
     Entry : cdrom_tocentry;
     toc : cdrom_tochdr;
@@ -23,18 +23,18 @@ reworked all buffers
     Entry.cdte_format := CDROM_MSF;
     Entry.cdte_track := Track+toc.cdth_trk0-1;
     fpioctl(cd_fd, CDROMREADTOCENTRY, @Entry);
-    frames1 := MSF2Frames(TACSCDMSF(Entry.cdte_addr.msf));
+    frames1 := MSF2Frames(TAcsCDMSF(Entry.cdte_addr.msf));
     if (Entry.cdte_adr_ctrl and CDROM_DATA_TRACK) <> 0 then
     Result.TrackType := ttData
     else Result.TrackType := ttAudio;
     if Entry.cdte_track < toc.cdth_trk1 then Inc(Entry.cdte_track)
     else Entry.cdte_track := CDROM_LEADOUT;
     fpioctl(cd_fd, CDROMREADTOCENTRY, @Entry);
-    frames2 := MSF2Frames(TACSCDMSF(Entry.cdte_addr.msf));
+    frames2 := MSF2Frames(TAcsCDMSF(Entry.cdte_addr.msf));
     Frames2MSF(frames2-frames1, Result.TrackLength);
   end;
 
-  function GetCDStatus(cd_fd : Integer) : TACSCDStatus;
+  function GetCDStatus(cd_fd : Integer) : TAcsCDStatus;
   (* not all drivers support the CDROM_DRIVE_STATUS ioctl
    we use this ioctl first and then some other tecnique
    if it is not supported. *)
@@ -68,7 +68,7 @@ reworked all buffers
     end;
   end;
 
-  function GetCDInfo(cd_fd : Integer) : TACSCDInfo;
+  function GetCDInfo(cd_fd : Integer) : TAcsCDInfo;
   var
     res : Integer;
     Data: Integer;
@@ -90,7 +90,7 @@ reworked all buffers
     end;
   end;
 
-  procedure TACSCDIn.OpenCD;
+  procedure TAcsCDIn.OpenCD;
   begin
     if FCurrentDrive >= length(DrivesPaths) then
       exit;
@@ -104,13 +104,13 @@ reworked all buffers
   end;
 
 
-  procedure TACSCDIn.CloseCD;
+  procedure TAcsCDIn.CloseCD;
   begin
     if FOpened = 1 then fpclose(_cd_fd);
     if FOpened > 0 then Dec(FOpened);
   end;
 
-  function TACSCDIn.GetInfo;
+  function TAcsCDIn.GetInfo;
   begin
     if Busy then raise EACSException.Create(strBusy);
     OpenCD;
@@ -118,7 +118,7 @@ reworked all buffers
     CloseCD;
   end;
 
-  function TACSCDIn.GetStatus;
+  function TAcsCDIn.GetStatus;
   begin
     if FCurrentDrive >= length(DrivesPaths) then
       exit;
@@ -135,7 +135,7 @@ reworked all buffers
     CloseCD;
   end;
 
-  function TACSCDIn.GetNumTracks;
+  function TAcsCDIn.GetNumTracks;
   var
     toc : cdrom_tochdr;
   begin
@@ -149,7 +149,7 @@ reworked all buffers
     CloseCD;
   end;
 
-  function TACSCDIn.GetTrackInfo;
+  function TAcsCDIn.GetTrackInfo;
   begin
     if Busy then raise EACSException.Create(strBusy);
     OpenCD;
@@ -163,7 +163,7 @@ reworked all buffers
     CloseCD;
   end;
 
-  function GetTrackMSF(cd_fd, Track : Integer) : TACSCDMSF;
+  function GetTrackMSF(cd_fd, Track : Integer) : TAcsCDMSF;
   var
     entry : cdrom_tocentry;
     hdr : cdrom_tochdr;
@@ -174,22 +174,22 @@ reworked all buffers
     if entry.cdte_track > hdr.cdth_trk1 then
     entry.cdte_track := CDROM_LEADOUT;
     fpioctl(cd_fd, CDROMREADTOCENTRY, @entry);
-    Result := TACSCDMSF(entry.cdte_addr.msf);
+    Result := TAcsCDMSF(entry.cdte_addr.msf);
   end;
 
-  function GetPosMSF(cd_fd : Integer; Pos : TACSCDPosition) : TACSCDMSF;
+  function GetPosMSF(cd_fd : Integer; Pos : TAcsCDPosition) : TAcsCDMSF;
   var
-    msf1 : TACSCDMSF;
+    msf1 : TAcsCDMSF;
     frames : Integer;
   begin
-    msf1 := TACSCDMSF(GetTrackMSF(cd_fd, Pos.Track));
+    msf1 := TAcsCDMSF(GetTrackMSF(cd_fd, Pos.Track));
     frames := MSF2Frames(msf1);
     frames := frames + MSF2Frames(Pos.MSF);
     Frames2MSF(frames, msf1);
     Result := msf1;
   end;
 
-  procedure TACSCDIn.SetST;
+  procedure TAcsCDIn.SetST;
   begin
     if Self.Busy then raise EACSException.Create(strBusy);
     FStartTrack := Track;
@@ -197,7 +197,7 @@ reworked all buffers
     FillChar(FStartPos.MSF, SizeOf(FStartPos.MSF), 0);
   end;
 
-  procedure TACSCDIn.SetET;
+  procedure TAcsCDIn.SetET;
   begin
     if Self.Busy then raise EACSException.Create(strBusy);
     FEndTrack := Track;
@@ -207,27 +207,27 @@ reworked all buffers
     CloseCD;
   end;
 
-  procedure TACSCDIn.SetSP;
+  procedure TAcsCDIn.SetSP;
   begin
     if Self.Busy then raise EACSException.Create(strBusy);
     Self.FStartPos := Pos;
   end;
 
-  procedure TACSCDIn.SetEP;
+  procedure TAcsCDIn.SetEP;
   begin
     if Self.Busy then raise EACSException.Create(strBusy);
     Self.FEndPos := Pos;
   end;
 
-  constructor TACSCDIn.Create;
+  constructor TAcsCDIn.Create;
   begin
     inherited Create(AOwner);
     FCurrentDrive := 0;
   end;
 
-  function TACSCDIn.GetSize;
+  function TAcsCDIn.GetSize;
   var
-    msf1, msf2 : TACSCDMSF;
+    msf1, msf2 : TAcsCDMSF;
   begin
     if Busy then raise EACSException.Create(strBusy);
     OpenCD;
@@ -238,7 +238,7 @@ reworked all buffers
       ((msf1.minute*60 + msf1.second)*75 + msf1.frame))*CD_FRAMESIZE_RAW;
   end;
 
-  procedure TACSCDIn.Init;
+  procedure TAcsCDIn.Init;
   begin
     if Busy then raise EACSException.Create(strBusy);
     if not (DiscInfo in [cdiDiscAudio, cdiDiscMixed]) then
@@ -254,7 +254,7 @@ reworked all buffers
 //    GetMem(FBuffer,BUF_SIZE * CD_FRAMESIZE_RAW);
   end;
 
-  procedure TACSCDIn.Flush;
+  procedure TAcsCDIn.Flush;
   begin
     CloseCD;
     FBusy := False;
@@ -262,7 +262,7 @@ reworked all buffers
     FSize := 0;
   end;
 
-  function TACSCDIn.GetData;
+  function TAcsCDIn.GetData;
   var
     StartFrame, EndFrame : Integer;
     cdaudio : cdrom_read_audio;
@@ -298,7 +298,7 @@ reworked all buffers
     Inc(FPosition, Result);
   end;
 
-  procedure TACSCDIn.Eject;
+  procedure TAcsCDIn.Eject;
   var
     Data: Integer;
   begin
@@ -309,7 +309,7 @@ reworked all buffers
     CloseCD;
   end;
 
-  procedure TACSCDIn.CloseTray;
+  procedure TAcsCDIn.CloseTray;
   var
     Data: Integer;
   begin
@@ -360,23 +360,23 @@ reworked all buffers
     end;
   end;
   
-  function TACSCDIn.GetDrivesCount : Integer;
+  function TAcsCDIn.GetDrivesCount : Integer;
   begin
     Result := DrivesCount;
   end;
   
-  procedure TACSCDIn.SetCurrentDrive(Value : Integer);
+  procedure TAcsCDIn.SetCurrentDrive(Value : Integer);
   begin
     if Busy then raise EACSException.Create(strBusy);
     FCurrentDrive := Value;
   end;
   
-  function TACSCDIn.GetDriveName : String;
+  function TAcsCDIn.GetDriveName : String;
   begin
     Result := '';
   end;
 
-  destructor TACSCDIn.Destroy;
+  destructor TAcsCDIn.Destroy;
   begin
     inherited Destroy;
   end;

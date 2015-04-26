@@ -20,7 +20,7 @@ Revision 1.1  2005/12/19 18:34:35  z0m3ie
 *** empty log message ***
 
 Revision 1.4  2005/12/04 16:54:33  z0m3ie
-All classes are renamed, Style TACS... than T... to avoid conflicts with other components (eg TMixer is TACSMixer now)
+All classes are renamed, Style TAcs... than T... to avoid conflicts with other components (eg TMixer is TAcsMixer now)
 
 Revision 1.3  2005/09/15 20:59:38  z0m3ie
 start translate the documentation in the source for pasdoc
@@ -70,13 +70,13 @@ const
 
 type
 
-  TACSMSConverterMode = (msmMonoToBoth, msmMonoToLeft, msmMonoToRight);
+  TAcsMSConverterMode = (msmMonoToBoth, msmMonoToLeft, msmMonoToRight);
 
   TDA = array[0..63] of Double;
   PDA = ^TDA;
 
 
-  TACSRateConverter = class(TACSCustomConverter)
+  TAcsRateConverter = class(TAcsCustomConverter)
   private
     FOutSampleRate : Integer;
     WantedSize : Integer;
@@ -88,7 +88,7 @@ type
     DAS : array of TAcsStereoSampleD;
     Kernel : array of Double;
     FKernelWidth : Integer;
-    FFilterWindow : TACSFilterWindowType;
+    FFilterWindow : TAcsFilterWindowType;
     Tail : Pointer;
     LBS : TAcsStereoSample16;
     function ConvertFreqs16Mono(InSize : Integer): Integer;
@@ -106,17 +106,17 @@ type
     procedure Init; override;
     procedure Flush; override;
   published
-    property FilterWindow : TACSFilterWindowType read FFilterWindow write FFilterWindow;
+    property FilterWindow : TAcsFilterWindowType read FFilterWindow write FFilterWindow;
     property KernelWidth : Integer read FKernelWidth write SetKernelWidth;
     property OutSampleRate : Integer read FOutSampleRate write SetOutSampleRate;
   end;
 
-  TACSMSConverter = class(TACSCustomConverter)
+  TAcsMSConverter = class(TAcsCustomConverter)
   private
     WantedSize : Integer;
     EndOfInput : Boolean;
     InOutBuf : array[1..BUF_SIZE] of Byte;
-    FMode : TACSMSConverterMode;
+    FMode : TAcsMSConverterMode;
   protected
     function GetBPS : Integer; override;
     function GetCh : Integer; override;
@@ -128,10 +128,10 @@ type
     procedure Init; override;
     procedure Flush; override;
   published
-    property Mode : TACSMSConverterMode read FMode write FMode;
+    property Mode : TAcsMSConverterMode read FMode write FMode;
   end;
 
-  TACSSampleConverter = class(TACSCustomConverter)
+  TAcsSampleConverter = class(TAcsCustomConverter)
   private
     WantedSize : Integer;
     EndOfInput : Boolean;
@@ -148,7 +148,7 @@ type
     procedure Flush; override;
   end;
 
-  TACSStereoBalance = class(TACSCustomConverter)
+  TAcsStereoBalance = class(TAcsCustomConverter)
   private
     FBalance : Single;
     procedure SetBalance(a : Single);
@@ -168,7 +168,7 @@ type
 
 implementation
 
-  function TACSRateConverter.ConvertFreqs16Mono(InSize : Integer): Integer;
+  function TAcsRateConverter.ConvertFreqs16Mono(InSize : Integer): Integer;
   var
     i, step, j, k, s, m : Integer;
     D : Double;
@@ -239,7 +239,7 @@ implementation
     Result := j shl 1;
   end;
 
-  function TACSRateConverter.ConvertFreqs16Stereo(InSize : Integer): Integer;
+  function TAcsRateConverter.ConvertFreqs16Stereo(InSize : Integer): Integer;
   var
     i, step, j, k, s, m1, m2 : Integer;
     D1, D2 : Double;
@@ -363,7 +363,7 @@ implementation
   end;
 
 
-  procedure ConvertMonoToStereo16(InOutBuf : PAcsBuffer16; InSize : Integer; Mode : TACSMSConverterMode);
+  procedure ConvertMonoToStereo16(InOutBuf : PAcsBuffer16; InSize : Integer; Mode : TAcsMSConverterMode);
   var
     i : Integer;
   begin
@@ -405,7 +405,7 @@ implementation
     Result := q;
   end;
 
-  constructor TACSRateConverter.Create;
+  constructor TAcsRateConverter.Create;
   begin
     inherited Create(AOwner);
     FOutSampleRate := 22050;
@@ -413,7 +413,7 @@ implementation
     FFilterWindow := fwBlackman;
   end;
 
-  destructor TACSRateConverter.Destroy;
+  destructor TAcsRateConverter.Destroy;
   begin
     Kernel := nil;
     DAS := nil;
@@ -421,24 +421,24 @@ implementation
     inherited Destroy;
   end;
 
-  function TACSRateConverter.GetBPS : Integer;
+  function TAcsRateConverter.GetBPS : Integer;
   begin
     Result := 16;
   end;
 
-  function TACSRateConverter.GetCh : Integer;
+  function TAcsRateConverter.GetCh : Integer;
   begin
     if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotAssigned);
     Result := FInput.Channels;
   end;
 
-  function TACSRateConverter.GetSR : Integer;
+  function TAcsRateConverter.GetSR : Integer;
   begin
     Result := FOutSampleRate;
   end;
 
-  procedure TACSRateConverter.Init;
+  procedure TAcsRateConverter.Init;
   var
     Ratio : Single;
     TailSize : Integer;
@@ -490,7 +490,7 @@ implementation
     CalculateSincKernel(@Kernel[0], Ratio, FKernelWidth, FFilterWindow);
   end;
 
-  procedure TACSRateConverter.Flush;
+  procedure TAcsRateConverter.Flush;
   begin
     FreeMem(Tail);
     FInput.Flush;
@@ -506,7 +506,7 @@ implementation
     FBusy := False;
   end;
 
-  function TACSRateConverter.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
+  function TAcsRateConverter.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
   var
     l : Integer;
     InSize : Integer;
@@ -569,22 +569,22 @@ implementation
     Inc(FPosition, Result);
   end;
 
-  constructor TACSMSConverter.Create;
+  constructor TAcsMSConverter.Create;
   begin
     inherited Create(AOwner);
   end;
 
-  destructor TACSMSConverter.Destroy;
+  destructor TAcsMSConverter.Destroy;
   begin
     inherited Destroy;
   end;
 
-  function TACSMSConverter.GetBPS : Integer;
+  function TAcsMSConverter.GetBPS : Integer;
   begin
     Result := 16;
   end;
 
-  function TACSMSConverter.GetCh : Integer;
+  function TAcsMSConverter.GetCh : Integer;
   begin
     if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotAssigned);
@@ -592,14 +592,14 @@ implementation
     else Result := 1;
   end;
 
-  function TACSMSConverter.GetSR : Integer;
+  function TAcsMSConverter.GetSR : Integer;
   begin
     if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotAssigned);
     Result := FInput.SampleRate;
   end;
 
-  procedure TACSMSConverter.Init;
+  procedure TAcsMSConverter.Init;
   begin
     if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotAssigned);
@@ -617,13 +617,13 @@ implementation
     else FSize := FInput.Size shl 1;
   end;
 
-  procedure TACSMSConverter.Flush;
+  procedure TAcsMSConverter.Flush;
   begin
     FInput.Flush;
     FBusy := False;
   end;
 
-  function TACSMSConverter.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
+  function TAcsMSConverter.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
   var
     l : Integer;
     InSize : Integer;
@@ -675,17 +675,17 @@ implementation
     Inc(FPosition, Result);
   end;
 
-  constructor TACSSampleConverter.Create;
+  constructor TAcsSampleConverter.Create;
   begin
     inherited Create(AOwner);
   end;
 
-  destructor TACSSampleConverter.Destroy;
+  destructor TAcsSampleConverter.Destroy;
   begin
     inherited Destroy;
   end;
 
-  function TACSSampleConverter.GetBPS : Integer;
+  function TAcsSampleConverter.GetBPS : Integer;
   begin
     if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotAssigned);
@@ -693,21 +693,21 @@ implementation
     else Result := 16;
   end;
 
-  function TACSSampleConverter.GetCh : Integer;
+  function TAcsSampleConverter.GetCh : Integer;
   begin
     if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotAssigned);
     Result:= FInput.Channels;
   end;
 
-  function TACSSampleConverter.GetSR : Integer;
+  function TAcsSampleConverter.GetSR : Integer;
   begin
     if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotAssigned);
     Result := FInput.SampleRate;
   end;
 
-  procedure TACSSampleConverter.Init;
+  procedure TAcsSampleConverter.Init;
   begin
     if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotAssigned);
@@ -725,13 +725,13 @@ implementation
     else FSize := FInput.Size shl 1;
   end;
 
-  procedure TACSSampleConverter.Flush;
+  procedure TAcsSampleConverter.Flush;
   begin
     FInput.Flush;
     FBusy := False;
   end;
 
-  function TACSSampleConverter.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
+  function TAcsSampleConverter.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
   var
     l : Integer;
     InSize : Integer;
@@ -783,54 +783,54 @@ implementation
  //   Inc(FPosition, Result);
   end;
 
-  procedure TACSRateConverter.SetOutSampleRate(aSR : Integer);
+  procedure TAcsRateConverter.SetOutSampleRate(aSR : Integer);
   begin
     if (aSR > 0) {and (not Busy)} then FOutSampleRate := aSR;
   end;
 
-  procedure TACSRateConverter.SetKernelWidth;
+  procedure TAcsRateConverter.SetKernelWidth;
   begin
     if (aKW > 1) and (not Busy) then FKernelWidth := aKW;
   end;
 
-  constructor TACSStereoBalance.Create;
+  constructor TAcsStereoBalance.Create;
   begin
     inherited Create(AOwner);
     FBalance := 0.5;
   end;
 
-  destructor TACSStereoBalance.Destroy;
+  destructor TAcsStereoBalance.Destroy;
   begin
     inherited Destroy;
   end;
 
-  procedure TACSStereoBalance.SetBalance;
+  procedure TAcsStereoBalance.SetBalance;
   begin
     if (a >= 0) and (a <=1) then FBalance := a;
   end;
 
-  function TACSStereoBalance.GetBPS : Integer;
+  function TAcsStereoBalance.GetBPS : Integer;
   begin
     if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotAssigned);
     Result := FInput.BitsPerSample;
   end;
 
-  function TACSStereoBalance.GetCh : Integer;
+  function TAcsStereoBalance.GetCh : Integer;
   begin
     if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotAssigned);
     Result := 2;
   end;
 
-  function TACSStereoBalance.GetSR : Integer;
+  function TAcsStereoBalance.GetSR : Integer;
   begin
     if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotAssigned);
     Result := FInput.SampleRate;
   end;
 
-  procedure TACSStereoBalance.Init;
+  procedure TAcsStereoBalance.Init;
   begin
     if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotAssigned);
@@ -842,13 +842,13 @@ implementation
     InputLock := False;
   end;
 
-  procedure TACSStereoBalance.Flush;
+  procedure TAcsStereoBalance.Flush;
   begin
     FInput.Flush;
     FBusy := False;
   end;
 
-  function TACSStereoBalance.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
+  function TAcsStereoBalance.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
   var
     WantedSize, i : Integer;
     P16 : PAcsBuffer16;

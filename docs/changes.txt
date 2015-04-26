@@ -49,6 +49,9 @@ delphi compatibility
 2005/12/04 16:54:34  z0m3ie
 All classes are renamed, Style TACS... than T... to avoid conflicts with other components (eg TMixer is TACSMixer now)
 
+2005/11/29 18:32:51  z0m3ie
+bugfixes for win32 version
+
 2005/11/28 21:57:24  z0m3ie
 mostly FileOut fixes
 moved PBuffer to PBuffer8

@@ -14,7 +14,7 @@ uses
 
 type
 
-  TACSFilterWindowType = (fwHamming, fwHann, fwBlackman);
+  TAcsFilterWindowType = (fwHamming, fwHann, fwBlackman);
 
 {$IFDEF LINUX}
   function FindLibs(const Pattern : String) : String;
@@ -31,7 +31,7 @@ type
 
   procedure BlackmanWindow(OutData: PAcsDoubleArray; Width: Integer; Symmetric: Boolean);
 
-  procedure CalculateSincKernel(OutData: PAcsDoubleArray; CutOff: Double; Width: Integer; WType: TACSFilterWindowType);
+  procedure CalculateSincKernel(OutData: PAcsDoubleArray; CutOff: Double; Width: Integer; WType: TAcsFilterWindowType);
 
   // not used
   procedure SmallIntArrayToDouble(InData: PSmallInt; OutData: PDouble; DataSize: Integer);
@@ -194,7 +194,7 @@ begin
   {$R+}
 end;
 
-procedure CalculateSincKernel(OutData: PAcsDoubleArray; CutOff: Double; Width: Integer; WType: TACSFilterWindowType);
+procedure CalculateSincKernel(OutData: PAcsDoubleArray; CutOff: Double; Width: Integer; WType: TAcsFilterWindowType);
 var
   i: Integer;
   S: Double;

@@ -7,7 +7,7 @@ Revision 1.1  2005/12/19 18:35:03  z0m3ie
 *** empty log message ***
 
 Revision 1.3  2005/12/04 16:54:34  z0m3ie
-All classes are renamed, Style TACS... than T... to avoid conflicts with other components (eg TMixer is TACSMixer now)
+All classes are renamed, Style TAcs... than T... to avoid conflicts with other components (eg TMixer is TAcsMixer now)
 
 Revision 1.2  2005/09/13 21:54:11  z0m3ie
 acs is localizeable now (ACS_Strings)
@@ -48,7 +48,7 @@ const
 var
   Mixers : array[0..MAX_MIXERS] of TMixerInfo; // one extra slot for /dev/mixer device
 
-  function GetChannelMask(Ch : TACSMixerChannel; Request : Integer): LongWord;
+  function GetChannelMask(Ch : TAcsMixerChannel; Request : Integer): LongWord;
   begin
     Result := 0;
     case Request of
@@ -103,7 +103,7 @@ var
     end;
   end;
 
-  function GetChannelType(Mask : Integer) : TACSMixerChannel;
+  function GetChannelType(Mask : Integer) : TAcsMixerChannel;
   begin
     case Mask of
       SOUND_MIXER_VOLUME:  Result := mcVolume;
@@ -122,10 +122,10 @@ var
     end;
   end;
 
-  procedure TACSMixer.SetDevNum(Num : Integer);
+  procedure TAcsMixer.SetDevNum(Num : Integer);
   var
     DevMask, i : Integer;
-    Channel : TACSMixerChannel;
+    Channel : TAcsMixerChannel;
   begin
     if Num in [0..MixersCount - 1] then // check [0..0] [0..-1]
     begin
@@ -150,7 +150,7 @@ var
     end;
   end;
 
-  function TACSMixer.GetRecSource;
+  function TAcsMixer.GetRecSource;
   var
     rs, pow,i : Integer;
   begin
@@ -169,7 +169,7 @@ var
         Result := i;
   end;
 
-  function TACSMixer.GetVolume;
+  function TAcsMixer.GetVolume;
   var
     vol, chan : Integer;
   begin
@@ -184,7 +184,7 @@ var
     end else Result.Main := vol;
   end;
 
-  function TACSMixer.IsStereo;
+  function TAcsMixer.IsStereo;
   var
     mask, chan : Integer;
   begin
@@ -195,7 +195,7 @@ var
     Result := (mask and (1 shl chan))<>0;
   end;
 
-  function TACSMixer.IsRecordable;
+  function TAcsMixer.IsRecordable;
   var
     mask, chan : Integer;
   begin
@@ -206,7 +206,7 @@ var
     Result := (mask and (1 shl chan))<>0;
   end;
 
-  procedure TACSMixer.SetRecSource;
+  procedure TAcsMixer.SetRecSource;
   var
     chan : Integer;
   begin
@@ -218,16 +218,16 @@ var
     raise EACSException.Create(Format(strChannelnotRecordable,[vChannel]));
   end;
 
-  function TACSMixer.GetMute(vChannel : integer) : Boolean;
+  function TAcsMixer.GetMute(vChannel : integer) : Boolean;
   begin
     Result := False;
   end;
 
-  procedure TACSMixer.SetMute(vChannel : integer;  Mute : Boolean);
+  procedure TAcsMixer.SetMute(vChannel : integer;  Mute : Boolean);
   begin
   end;
 
-  procedure TACSMixer.SetVolume;
+  procedure TAcsMixer.SetVolume;
   var
     vol, chan : Integer;
   begin
@@ -240,7 +240,7 @@ var
     fpclose(_mix_fd);
   end;
 
-  destructor TACSMixer.Destroy;
+  destructor TAcsMixer.Destroy;
   begin
     Setlength(FChannels,0);
     inherited Destroy;

@@ -11,7 +11,7 @@ Revision 1.1  2005/12/19 18:36:38  z0m3ie
 *** empty log message ***
 
 Revision 1.2  2005/12/04 16:54:34  z0m3ie
-All classes are renamed, Style TACS... than T... to avoid conflicts with other components (eg TMixer is TACSMixer now)
+All classes are renamed, Style TAcs... than T... to avoid conflicts with other components (eg TMixer is TAcsMixer now)
 
 Revision 1.1  2005/09/12 22:04:52  z0m3ie
 modified structure again, fileformats are now in an sperat folder.

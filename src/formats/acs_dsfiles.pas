@@ -18,7 +18,7 @@ uses
 type
   { TDSIn }
 
-  TDSIn = class(TACSCustomFileIn)
+  TDSIn = class(TAcsCustomFileIn)
   private
     {$ifdef fpc}
     FxFormat: _WAVEFORMATEX;

@@ -17,7 +17,7 @@ Revision 1.1  2005/12/19 18:34:35  z0m3ie
 *** empty log message ***
 
 Revision 1.3  2005/12/04 16:54:33  z0m3ie
-All classes are renamed, Style TACS... than T... to avoid conflicts with other components (eg TMixer is TACSMixer now)
+All classes are renamed, Style TAcs... than T... to avoid conflicts with other components (eg TMixer is TAcsMixer now)
 
 Revision 1.2  2005/09/13 21:54:11  z0m3ie
 acs is localizeable now (ACS_Strings)
@@ -48,16 +48,16 @@ const
 
 type
 
-  TACSFilterType = (ftBandPass, ftBandReject, ftHighPass, ftLowPass, ftAllPass);
+  TAcsFilterType = (ftBandPass, ftBandReject, ftHighPass, ftLowPass, ftAllPass);
 
-  TACSBWFilter = class(TACSCustomConverter)
+  TAcsBWFilter = class(TAcsCustomConverter)
   private
     a3 : array[0..2] of Double;
     b2 : array[0..1] of Double;
     x0, x1, y0, y1 : array[0..1] of Double;
     FLowFreq, FHighFreq : Integer;
     FAmplification : Word;
-    FFilterType : TACSFilterType;
+    FFilterType : TAcsFilterType;
     InBuf : array[1..BUF_SIZE] of Byte;
     procedure SetHighFreq(aFreq : Integer);
     procedure SetLowFreq(aFreq : Integer);
@@ -74,25 +74,25 @@ type
     procedure Flush; override;
   published
     property Amplification : Word read FAmplification write SetAmplification;
-    property FilterType : TACSFilterType read FFilterType write FFilterType;
+    property FilterType : TAcsFilterType read FFilterType write FFilterType;
     property HighFreq : Integer read FHighFreq write SetHighFreq;
     property LowFreq : Integer read FLowFreq write SetLowFreq;
   end;
 
-  TACSSincFilter = class(TACSCustomConverter)
+  TAcsSincFilter = class(TAcsCustomConverter)
   private
     Lock : Boolean;
     Kernel : array of Double;
     DA : PAcsDoubleArray;
     DAS : PAcsStereoBufferD;
     inBuf : array[1..BUF_SIZE] of Byte;
-    FFilterType : TACSFilterType;
+    FFilterType : TAcsFilterType;
     FKernelWidth : Integer;
     FLowFreq, FHighFreq : Integer;
-    FWindowType  : TACSFilterWindowType;
-    procedure SetFilterType(aFT  : TACSFilterType);
+    FWindowType  : TAcsFilterWindowType;
+    procedure SetFilterType(aFT  : TAcsFilterType);
     procedure SetKernelWidth(aKW : Integer);
-    procedure SetWindowType(aWT : TACSFilterWindowType);
+    procedure SetWindowType(aWT : TAcsFilterWindowType);
     procedure SetHighFreq(aFreq : Integer);
     procedure SetLowFreq(aFreq : Integer);
     procedure CalculateFilter;
@@ -108,14 +108,14 @@ type
     procedure Flush; override;
     procedure GetKernel(var K : PAcsDoubleArray);
   published
-    property FilterType : TACSFilterType read FFilterType write SetFilterType;
+    property FilterType : TAcsFilterType read FFilterType write SetFilterType;
     property HighFreq : Integer read FHighFreq write SetHighFreq;
     property KernelWidth : Integer read FKernelWidth write SetKernelWidth;
     property LowFreq : Integer read FLowFreq write SetLowFreq;
-    property WindowType  : TACSFilterWindowType read FWindowType write SetWindowType;
+    property WindowType  : TAcsFilterWindowType read FWindowType write SetWindowType;
   end;
 
-  TACSConvolver = class(TACSCustomConverter)
+  TAcsConvolver = class(TAcsCustomConverter)
   private
     Lock : Boolean;
     Kernel : array of Double;
@@ -143,57 +143,57 @@ type
 
 implementation
 
-  constructor TACSBWFilter.Create;
+  constructor TAcsBWFilter.Create;
   begin
     inherited Create(AOwner);
     FFilterType := ftBandPass;
     FAmplification := 1;
   end;
 
-  destructor TACSBWFilter.Destroy;
+  destructor TAcsBWFilter.Destroy;
   begin
     inherited Destroy;
   end;
 
-  function TACSBWFilter.GetBPS : Integer;
+  function TAcsBWFilter.GetBPS : Integer;
   begin
     Result := 16;
   end;
 
-  function TACSBWFilter.GetCh : Integer;
+  function TAcsBWFilter.GetCh : Integer;
   begin
     if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotAssigned);
     Result := FInput.Channels;
   end;
 
-  function TACSBWFilter.GetSR : Integer;
+  function TAcsBWFilter.GetSR : Integer;
   begin
     if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotAssigned);
     Result := FInput.SampleRate;
   end;
 
-  procedure TACSBWFilter.SetHighFreq;
+  procedure TAcsBWFilter.SetHighFreq;
   begin
     if FFilterType = ftLowPass then
     FHighFreq := 0
     else FHighFreq := aFreq;
   end;
 
-  procedure TACSBWFilter.SetLowFreq;
+  procedure TAcsBWFilter.SetLowFreq;
   begin
     if FFilterType = ftHighPass then
     FLowFreq := 0
     else FLowFreq := aFreq;
   end;
 
-  procedure TACSBWFilter.SetAmplification;
+  procedure TAcsBWFilter.SetAmplification;
   begin
     if Ampl > 0 then FAmplification := Ampl;
   end;
 
-  procedure TACSBWFilter.Init;
+  procedure TAcsBWFilter.Init;
   var
     C, D : Double;
   begin
@@ -260,13 +260,13 @@ implementation
     end;
   end;
 
-  procedure TACSBWFilter.Flush;
+  procedure TAcsBWFilter.Flush;
   begin
     FInput.Flush;
     FBusy := False;
   end;
 
-  function TACSBWFilter.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
+  function TAcsBWFilter.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
   var
     i : Integer;
     InBufMono : PAcsBuffer16;
@@ -333,7 +333,7 @@ implementation
  //   Inc(FPosition, Result);
   end;
 
-  constructor TACSSincFilter.Create;
+  constructor TAcsSincFilter.Create;
   begin
     inherited Create(AOwner);
     FKernelWidth := 31;
@@ -344,7 +344,7 @@ implementation
     DAS := nil;
   end;
 
-  destructor TACSSincFilter.Destroy;
+  destructor TAcsSincFilter.Destroy;
   begin
     Kernel := nil;
     if DA <> nil then FreeMem(DA);
@@ -352,7 +352,7 @@ implementation
     Inherited Destroy;
   end;
 
-  procedure TACSSincFilter.CalculateFilter;
+  procedure TAcsSincFilter.CalculateFilter;
   var
     Kernel1, Kernel2 : array of Double;
     CutOff : Double;
@@ -431,25 +431,25 @@ implementation
     Lock := False;
   end;
 
-  procedure TACSSincFilter.SetFilterType;
+  procedure TAcsSincFilter.SetFilterType;
   begin
     FFilterType := aFT;
     if Busy then CalculateFilter;
   end;
 
-  procedure TACSSincFilter.SetKernelWidth;
+  procedure TAcsSincFilter.SetKernelWidth;
   begin
     if aKW > 2 then
     if not Busy then FKernelWidth := aKW;
   end;
 
-  procedure TACSSincFilter.SetWindowType;
+  procedure TAcsSincFilter.SetWindowType;
   begin
     FWindowType := aWT;
     if Busy then CalculateFilter;
   end;
 
-  procedure TACSSincFilter.SetHighFreq;
+  procedure TAcsSincFilter.SetHighFreq;
   begin
     if aFreq > 0 then
     FHighFreq := aFreq;
@@ -462,7 +462,7 @@ implementation
     if Busy then CalculateFilter;
   end;
 
-  procedure TACSSincFilter.SetLowFreq;
+  procedure TAcsSincFilter.SetLowFreq;
   begin
     if aFreq > 0 then
     FLowFreq := aFreq;
@@ -475,28 +475,28 @@ implementation
     if Busy then CalculateFilter;
   end;
 
-  function TACSSincFilter.GetBPS : Integer;
+  function TAcsSincFilter.GetBPS : Integer;
   begin
     if not Assigned(Input) then
     raise EAcsException.Create(strInputnotassigned);
     Result := FInput.BitsPerSample;
   end;
 
-  function TACSSincFilter.GetCh : Integer;
+  function TAcsSincFilter.GetCh : Integer;
   begin
     if not Assigned(Input) then
     raise EAcsException.Create(strInputnotassigned);
     Result := FInput.Channels;
   end;
 
-  function TACSSincFilter.GetSR : Integer;
+  function TAcsSincFilter.GetSR : Integer;
   begin
     if not Assigned(Input) then
     raise EAcsException.Create(strInputnotassigned);
     Result := FInput.SampleRate;
   end;
 
-  procedure TACSSincFilter.Init;
+  procedure TAcsSincFilter.Init;
   begin
     if not Assigned(Input) then
     raise EAcsException.Create(strInputnotassigned);
@@ -520,7 +520,7 @@ implementation
     FSize := FInput.Size;
   end;
 
-  procedure TACSSincFilter.Flush;
+  procedure TAcsSincFilter.Flush;
   begin
     FInput.Flush;
     if DA <> nil then FreeMem(DA);
@@ -530,7 +530,7 @@ implementation
     FBusy := False;
   end;
 
-  function TACSSincFilter.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
+  function TAcsSincFilter.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
   var
     i, j, NumSamples : Integer;
     InBufMono : PAcsBuffer16;
@@ -598,12 +598,12 @@ implementation
     FPosition := Round(FInput.Position*(FSize/FInput.Size));
   end;
 
-  procedure TACSSincFilter.GetKernel;
+  procedure TAcsSincFilter.GetKernel;
   begin
     K := @Kernel[0];
   end;
 
-  constructor TACSConvolver.Create;
+  constructor TAcsConvolver.Create;
   begin
     inherited Create(AOwner);
     FKernelWidth := 31;
@@ -614,7 +614,7 @@ implementation
     DAS := nil;
   end;
 
-  destructor TACSConvolver.Destroy;
+  destructor TAcsConvolver.Destroy;
   begin
     Kernel := nil;
     if DA <> nil then FreeMem(DA);
@@ -622,34 +622,34 @@ implementation
     Inherited Destroy;
   end;
 
-  procedure TACSConvolver.SetKernelWidth;
+  procedure TAcsConvolver.SetKernelWidth;
   begin
     if a > 2 then
     if not Busy then FKernelWidth := a;
   end;
 
-  function TACSConvolver.GetBPS : Integer;
+  function TAcsConvolver.GetBPS : Integer;
   begin
     if not Assigned(Input) then
     raise EAcsException.Create(strInputnotassigned);
     Result := FInput.BitsPerSample;
   end;
 
-  function TACSConvolver.GetCh : Integer;
+  function TAcsConvolver.GetCh : Integer;
   begin
     if not Assigned(Input) then
     raise EAcsException.Create(strInputnotassigned);
     Result := FInput.Channels;
   end;
 
-  function TACSConvolver.GetSR : Integer;
+  function TAcsConvolver.GetSR : Integer;
   begin
     if not Assigned(Input) then
     raise EAcsException.Create(strInputnotassigned);
     Result := FInput.SampleRate;
   end;
 
-  procedure TACSConvolver.Init;
+  procedure TAcsConvolver.Init;
   begin
     if not Assigned(Input) then
     raise EAcsException.Create(strInputnotassigned);
@@ -672,7 +672,7 @@ implementation
     FSize := FInput.Size;
   end;
 
-  procedure TACSConvolver.Flush;
+  procedure TAcsConvolver.Flush;
   begin
     FInput.Flush;
     if DA <> nil then FreeMem(DA);
@@ -682,7 +682,7 @@ implementation
     FBusy := False;
   end;
 
-  function TACSConvolver.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
+  function TAcsConvolver.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
   var
     i, j, NumSamples : Integer;
     InBufMono : PAcsBuffer16;
@@ -753,7 +753,7 @@ implementation
     FPosition := Round(FInput.Position*(FSize/FInput.Size));
   end;
 
-  procedure TACSConvolver.SetKernel;
+  procedure TAcsConvolver.SetKernel;
   var
     i : Integer;
   begin

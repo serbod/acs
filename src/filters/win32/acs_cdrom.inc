@@ -18,7 +18,7 @@ Revision 1.1  2005/12/19 18:35:16  z0m3ie
 *** empty log message ***
 
 Revision 1.4  2005/12/04 16:54:34  z0m3ie
-All classes are renamed, Style TACS... than T... to avoid conflicts with other components (eg TMixer is TACSMixer now)
+All classes are renamed, Style TAcs... than T... to avoid conflicts with other components (eg TMixer is TAcsMixer now)
 
 Revision 1.3  2005/10/02 16:51:46  z0m3ie
 *** empty log message ***
@@ -53,14 +53,14 @@ TMP3ToWavConverter removed (fits not in component structure)
 type
   MSFAddr = array[0..3] of Byte;
 
-  function Toc2MSF(t : MSFAddr) : TACSCDMSF;
+  function Toc2MSF(t : MSFAddr) : TAcsCDMSF;
   begin
     Result.Minute := t[1];
     Result.Second := t[2];
     Result.Frame := t[3];
   end;
 
-  procedure TACSCDIn.OpenCD;
+  procedure TAcsCDIn.OpenCD;
   var
     GetCD: GETCDHAND;
   begin
@@ -79,14 +79,14 @@ type
     FCDHandle := GetCDHandle(GetCD);
   end;
 
-  procedure TACSCDIn.CloseCD;
+  procedure TAcsCDIn.CloseCD;
   begin
     if FCDHandle <> 0 then
       CloseCDHandle(FCDHandle);
     FCDHandle := 0;
   end;
 
-  function TACSCDIn.GetInfo : TACSCDInfo;
+  function TAcsCDIn.GetInfo : TAcsCDInfo;
   var
     i : Integer;
   begin
@@ -118,7 +118,7 @@ type
     CloseCD;
   end;
 
-  function TACSCDIn.GetStatus : TACSCDStatus;
+  function TAcsCDIn.GetStatus : TAcsCDStatus;
   var
     ms : Integer;
     AP : LongBool;
@@ -131,7 +131,7 @@ type
       Result := cdsNotReady;
   end;
 
-  function TACSCDIn.GetNumTracks : Integer;
+  function TAcsCDIn.GetNumTracks : Integer;
   begin
     OpenCD;
     if FToc.lastTrack = 0 then
@@ -147,10 +147,10 @@ type
     CloseCD;
   end;
 
-  FUNCTION TACSCDIn.GetTrackInfo(const vIndex : Integer) : TACSCDTrackInfo;
+  FUNCTION TAcsCDIn.GetTrackInfo(const vIndex : Integer) : TAcsCDTrackInfo;
   VAR
     Frames: Integer;
-    tmpmsf : TACSCDMSF;
+    tmpmsf : TAcsCDMSF;
   BEGIN
     IF Busy THEN
       RAISE EAcsException.Create(strBusy);
@@ -167,7 +167,7 @@ type
     Frames2MSF(Frames, Result.TrackLength);
   end;
 
-  procedure TACSCDIn.SetST;
+  procedure TAcsCDIn.SetST;
   begin
     if Self.Busy then raise EAcsException.Create(strBusy);
     FStartTrack := Track;
@@ -175,7 +175,7 @@ type
     FillChar(FStartPos.MSF, SizeOf(FStartPos.MSF), 0);
   end;
 
-  procedure TACSCDIn.SetET;
+  procedure TAcsCDIn.SetET;
   begin
     if Self.Busy then raise EAcsException.Create(strBusy);
     FEndTrack := Track;
@@ -183,20 +183,20 @@ type
     FillChar(FEndPos.MSF, SizeOf(FEndPos.MSF), 0);
   end;
 
-  procedure TACSCDIn.SetSP;
+  procedure TAcsCDIn.SetSP;
   begin
     if Self.Busy then raise EAcsException.Create(strBusy);
     FStartPos := Pos;
   end;
 
-  procedure TACSCDIn.SetEP;
+  procedure TAcsCDIn.SetEP;
   begin
     if Self.Busy then raise EAcsException.Create(strBusy);
     FEndPos := Pos;
     if Pos.Track = EndOfDisc.Track then FEndPos.Track := TracksCount + 1;
   end;
 
-  function TACSCDIn.GetSize : Integer;
+  function TAcsCDIn.GetSize : Integer;
   var
     Sect1, Sect2 : Integer;
   begin
@@ -212,7 +212,7 @@ type
     Result := (Sect2 - Sect1)*CD_FRAMESIZE_RAW;
   end;
 
-  procedure TACSCDIn.Init;
+  procedure TAcsCDIn.Init;
   var
     Sect1, Sect2 : Integer;
   begin
@@ -238,7 +238,7 @@ type
     SetLength(FBuffer,(BUF_SIZE * CD_FRAMESIZE_RAW)+TRACKBUFEXTRA);
   end;
 
-  procedure TACSCDIn.Flush;
+  procedure TAcsCDIn.Flush;
   begin
     CloseCD;
     FBusy := False;
@@ -247,7 +247,7 @@ type
     FSize := 0;
   end;
 
-  function TACSCDIn.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
+  function TAcsCDIn.GetData(Buffer : Pointer; BufferSize : Integer): Integer;
   var
     Abort : LongBool;
     fnum : Integer;
@@ -282,7 +282,7 @@ type
     Inc(FPosition, Result);
   end;
 
-  procedure TACSCDIn.SetCurrentDrive;
+  procedure TAcsCDIn.SetCurrentDrive;
   begin
     if Value in [0..FCDList.num-1] then
       FCurrentDrive := Value;
@@ -293,26 +293,26 @@ type
     CloseCD;
   end;
 
-  function TACSCDIn.GetDrivesCount : Integer;
+  function TAcsCDIn.GetDrivesCount : Integer;
   begin
     Result := FCDList.num;
   end;
 
-  function TACSCDIn.GetDriveName : string;
+  function TAcsCDIn.GetDriveName : string;
   begin
     Result := FCDList.Cd[FCurrentDrive].id;
   end;
 
-  procedure TACSCDIn.Eject;
+  procedure TAcsCDIn.Eject;
   begin
     if Busy then raise EAcsException.Create(strBusy);
   end;
 
-  procedure TACSCDIn.CloseTray;
+  procedure TAcsCDIn.CloseTray;
   begin
   end;
 
-  constructor TACSCDIn.Create;
+  constructor TAcsCDIn.Create;
   begin
     inherited Create(AOwner);
     AppPath := ExtractFilePath(ParamStr(0));
@@ -326,7 +326,7 @@ type
     GetCDList(FCDList);
   end;
 
-  destructor TACSCDIn.Destroy;
+  destructor TAcsCDIn.Destroy;
   begin
     if Busy then
       Flush;

@@ -11,7 +11,7 @@ Revision 1.1  2005/12/19 18:34:35  z0m3ie
 *** empty log message ***
 
 Revision 1.4  2005/12/04 16:54:33  z0m3ie
-All classes are renamed, Style TACS... than T... to avoid conflicts with other components (eg TMixer is TACSMixer now)
+All classes are renamed, Style TAcs... than T... to avoid conflicts with other components (eg TMixer is TAcsMixer now)
 
 Revision 1.3  2005/09/15 20:59:37  z0m3ie
 start translate the documentation in the source for pasdoc
@@ -53,14 +53,14 @@ const
   BUF_SIZE = $100000;
   
 type
-  TACSAudioMixerMode = (amMix, amConcatenate, amRTMix, amCustomMix);
+  TAcsAudioMixerMode = (amMix, amConcatenate, amRTMix, amCustomMix);
 
-  { TACSAudioMixer }
+  { TAcsAudioMixer }
   { Component }
-  TACSAudioMixer = class(TACSCustomInput)
+  TAcsAudioMixer = class(TAcsCustomInput)
   private
-    FInput1: TACSCustomInput;
-    FInput2: TACSCustomInput;
+    FInput1: TAcsCustomInput;
+    FInput2: TAcsCustomInput;
     BufStart: Integer;
     BufEnd: Integer;
     ByteCount: Cardinal;                // add by leozhang
@@ -71,12 +71,12 @@ type
     InBuf1: array[1..BUF_SIZE] of Byte;
     InBuf2: array[1..BUF_SIZE] of Byte;
     Busy: Boolean;
-    FMode: TACSAudioMixerMode;
+    FMode: TAcsAudioMixerMode;
     FInput2Start: Cardinal;
     FLock: Boolean;
     FFgPlaying: Boolean;
-    procedure SetInput1(AInput: TACSCustomInput);
-    procedure SetInput2(AInput: TACSCustomInput);
+    procedure SetInput1(AInput: TAcsCustomInput);
+    procedure SetInput2(AInput: TAcsCustomInput);
   protected
     function GetBPS: Integer; override;
     function GetCh: Integer; override;
@@ -89,9 +89,9 @@ type
     procedure Flush; override;
     property FgPlaying: Boolean read FFgPlaying;
   published
-    property Input1: TACSCustomInput read FInput1 write SetInput1;
-    property Input2: TACSCustomInput read FInput2 write SetInput2;
-    property Mode: TACSAudioMixerMode read FMode write FMode;
+    property Input1: TAcsCustomInput read FInput1 write SetInput1;
+    property Input2: TAcsCustomInput read FInput2 write SetInput2;
+    property Mode: TAcsAudioMixerMode read FMode write FMode;
     property Input2Start: Cardinal read FInput2Start write FInput2Start;
     property Volume1: Byte read FVolume1 write FVolume1;
     property Volume2: Byte read FVolume2 write FVolume2;
@@ -122,7 +122,7 @@ begin
   end;
 end;
 
-constructor TACSAudioMixer.Create(AOwner: TComponent);
+constructor TAcsAudioMixer.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   Busy:=False;
@@ -134,33 +134,33 @@ begin
   FInput2:=nil;
 end;
 
-destructor TACSAudioMixer.Destroy;
+destructor TAcsAudioMixer.Destroy;
 begin
   inherited Destroy;
 end;
 
-function TACSAudioMixer.GetBPS: Integer;
+function TAcsAudioMixer.GetBPS: Integer;
 begin
   if Assigned(FInput1) then Result:=FInput1.BitsPerSample
   else Result:=inherited GetBPS;
   //raise EAcsException.Create(strInputnotAssigned);
 end;
 
-function TACSAudioMixer.GetCh: Integer;
+function TAcsAudioMixer.GetCh: Integer;
 begin
   if Assigned(FInput1) then Result:=FInput1.Channels
   else Result:=inherited GetCh;
   //raise EAcsException.Create(strInputnotAssigned);
 end;
 
-function TACSAudioMixer.GetSR: Integer;
+function TAcsAudioMixer.GetSR: Integer;
 begin
   if Assigned(FInput1) then Result:=FInput1.SampleRate
   else Result:=inherited GetSR;
   //raise EAcsException.Create(strInputnotAssigned);
 end;
 
-procedure TACSAudioMixer.Init;
+procedure TAcsAudioMixer.Init;
 var
   In2StartByte: Cardinal;     // add by zhangl.
 begin
@@ -217,14 +217,14 @@ begin
   end;
 end;
 
-procedure TACSAudioMixer.Flush;
+procedure TAcsAudioMixer.Flush;
 begin
   if Assigned(FInput1) then FInput1.Flush;
   if (FMode <> amRTMix) or Assigned(FInput2) then FInput2.Flush;
   Busy:=False;
 end;
 
-function TACSAudioMixer.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsAudioMixer.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
 var
   l1, l2: Integer;
   InSize: Integer;
@@ -393,14 +393,14 @@ begin
   Inc(FPosition, Result);
 end;
 
-procedure TACSAudioMixer.SetInput1(AInput: TACSCustomInput);
+procedure TAcsAudioMixer.SetInput1(AInput: TAcsCustomInput);
 begin
   if Busy then
     raise EAcsException.Create(strBusy);
   FInput1:=AInput;
 end;
 
-procedure TACSAudioMixer.SetInput2(AInput: TACSCustomInput);
+procedure TAcsAudioMixer.SetInput2(AInput: TAcsCustomInput);
 begin
   if not Busy then FInput2:=AInput
   else

@@ -23,7 +23,7 @@ uses
   ;
 
 type
-  TACSMixerChannel = (mcUnknown,
+  TAcsMixerChannel = (mcUnknown,
                    mcVolume,
                    mcTreble,
                    mcBass,
@@ -79,7 +79,7 @@ type
   END;
   {$ENDIF}
 
-  TACSMixerLevel = record
+  TAcsMixerLevel = record
   case Word of
     1:
     (
@@ -88,12 +88,12 @@ type
     2: (Main: Byte;);
   end;
 
-  { TACSMixer }
+  { TAcsMixer }
 
-  TACSMixer = class(TComponent)
+  TAcsMixer = class(TComponent)
   private
     FDevNum: Integer;
-    FChannels: array of TACSMixerChannel;
+    FChannels: array of TAcsMixerChannel;
     {$IFDEF LINUX}
     _mix_fd: Integer;
     FFileName: String;
@@ -105,11 +105,11 @@ type
     {$ENDIF}
     FMixerName: String;
     function GetRecSource: Integer;
-    function GetVolume(vChannel: integer): TACSMixerLevel;
-    procedure SetVolume(vChannel: integer; vLevel: TACSMixerLevel);
+    function GetVolume(vChannel: integer): TAcsMixerLevel;
+    procedure SetVolume(vChannel: integer; vLevel: TAcsMixerLevel);
     procedure SetRecSource(vChannel: integer);
     procedure SetDevNum(Num: Integer);
-    function GetChannel(Num: Integer): TACSMixerChannel;
+    function GetChannel(Num: Integer): TAcsMixerChannel;
     function GetDevCount: Integer;
     function GetChannelCount: Integer;
     function GetChannelName(vChannel: Integer): string;
@@ -120,8 +120,8 @@ type
     destructor Destroy; override;
     function IsStereo(vChannel: Integer): Boolean;
     function IsRecordable(vChannel: Integer): Boolean;
-    property Channel[vChannel: Integer]: TACSMixerChannel read GetChannel;
-    property Level[vChannel: Integer]: TACSMixerLevel read GetVolume write SetVolume;
+    property Channel[vChannel: Integer]: TAcsMixerChannel read GetChannel;
+    property Level[vChannel: Integer]: TAcsMixerLevel read GetVolume write SetVolume;
     property Mute[vChannels: Integer]: Boolean read GetMute write SetMute;
     property ChannelName[vChannel: Integer]: string read GetChannelName;
     property RecordSource: Integer read GetRecSource write SetRecSource;
@@ -135,14 +135,14 @@ type
 var
   MixersCount: Byte;
 
-  function ChannelToStr(ch: TACSMixerChannel): String;
+  function ChannelToStr(ch: TAcsMixerChannel): String;
   function GetMixerName(DevNum: integer): String;
 
 implementation
 
 {$I ACS_Mixer.inc}
 
-function ChannelToStr(ch: TACSMixerChannel): String;
+function ChannelToStr(ch: TAcsMixerChannel): String;
 begin
   case ch of
     mcVolume:  Result:=strMixerVolume;
@@ -162,13 +162,13 @@ begin
   end;
 end;
 
-constructor TACSMixer.Create;
+constructor TAcsMixer.Create;
 begin
   inherited Create(AOwner);
   //if MixersCount > 0 then SetDevNum(0);
 end;
 
-function TACSMixer.GetChannel(Num: Integer): TACSMixerChannel;
+function TAcsMixer.GetChannel(Num: Integer): TAcsMixerChannel;
 begin
   if (Num < 0) or (Num > (Length(FChannels)-1)) then
     Result:=mcUnknown
@@ -176,17 +176,17 @@ begin
     Result:=FChannels[Num];
 end;
   
-function TACSMixer.GetDevCount: Integer;
+function TAcsMixer.GetDevCount: Integer;
 begin
   Result:=MixersCount;
 end;
 
-function TACSMixer.GetChannelCount: Integer;
+function TAcsMixer.GetChannelCount: Integer;
 begin
   Result:=Length(FChannels);
 end;
 
-function TACSMixer.GetChannelName(vChannel: Integer): string;
+function TAcsMixer.GetChannelName(vChannel: Integer): string;
 begin
   if (vChannel > -1) and (vChannel < ChannelCount) then
     Result:=ChannelToStr(FChannels[vChannel])

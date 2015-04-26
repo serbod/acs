@@ -21,7 +21,7 @@ function open(PathName: PChar; Flags: Integer): Integer; varargs; cdecl; externa
 function __close(Handle: Integer): Integer; cdecl; external libname;
 
 
-function GetAudioDeviceInfo(DevID : Integer; OutputDev : Boolean) : TACSDeviceInfo;
+function GetAudioDeviceInfo(DevID : Integer; OutputDev : Boolean) : TAcsDeviceInfo;
 begin
   Result.DeviceName := '/dev/dsp'+IntToStr(DevID);
   Result.DrvVersion := 0;
