@@ -55,7 +55,7 @@ const
 type
   { TDSIn }
 
-  TDSIn = class(TACSFileIn)
+  TDSIn = class(TAcsFileIn)
   private
     buf : PBuffer8;  // ring buffer
     FxFormat: TWaveFormatEx;

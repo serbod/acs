@@ -15,7 +15,7 @@ begin
   {$endif}
 end;
 
-function GetChannelfromMask(Mask: DWORD): TACSMixerChannel;
+function GetChannelfromMask(Mask: DWORD): TAcsMixerChannel;
 begin
   case Mask of
   MIXERLINE_COMPONENTTYPE_DST_UNDEFINED  : Result := mcUnknown;
@@ -42,7 +42,7 @@ begin
   end;
 end;
 
-procedure TACSMixer.SetDevNum(Num: Integer);
+procedure TAcsMixer.SetDevNum(Num: Integer);
 type
   TData = array [0..3] of MIXERCONTROLDETAILS_UNSIGNED;
   PData = ^TData;
@@ -191,7 +191,7 @@ begin
   end;
 end;
 
-function TACSMixer.GetVolume(vChannel: Integer): TACSMixerLevel;
+function TAcsMixer.GetVolume(vChannel: Integer): TAcsMixerLevel;
 type
   TData = array [0..3] of MIXERCONTROLDETAILS_UNSIGNED;
   PData = ^TData;
@@ -249,7 +249,7 @@ begin
     Result.Main:=Round((FControls[vChannel].CDetails[0].dwValue*255)/FControls[vChannel].Cmax);
 end;
 
-procedure TACSMixer.SetVolume(vChannel: Integer; vLevel: TACSMixerLevel);
+procedure TAcsMixer.SetVolume(vChannel: Integer; vLevel: TAcsMixerLevel);
 var
   aControlDetails: TMixerControlDetails;
 begin
@@ -274,14 +274,14 @@ begin
   mixerSetControlDetails(FMixerHandle, @aControlDetails, MIXER_SETCONTROLDETAILSF_Value);
 end;
 
-function TACSMixer.IsStereo(vChannel : Integer): Boolean;
+function TAcsMixer.IsStereo(vChannel : Integer): Boolean;
 begin
   Result:=False;
   if vChannel >= Length(FControls) then Exit;
   Result:= not (FControls[vChannel].CKanal=1);
 end;
 
-function TACSMixer.GetMute(vChannel: integer): Boolean;
+function TAcsMixer.GetMute(vChannel: integer): Boolean;
 type
   TData = array [0..3] of MIXERCONTROLDETAILS_UNSIGNED;
   PData = ^TData;
@@ -333,7 +333,7 @@ begin
   Result:=(FMuteControls[vChannel].CDetails[0].dwValue = 1);
 end;
   
-procedure TACSMixer.SetMute(vChannel: integer; Mute: Boolean);
+procedure TAcsMixer.SetMute(vChannel: integer; Mute: Boolean);
 var
   aControlDetails: TMixerControlDetails;
 begin
@@ -357,24 +357,24 @@ begin
   mixerSetControlDetails(FMixerHandle, @aControlDetails, MIXER_SETCONTROLDETAILSF_Value);
 end;
 
-function TACSMixer.IsRecordable(vChannel: Integer): Boolean;
+function TAcsMixer.IsRecordable(vChannel: Integer): Boolean;
 begin
   { TODO : IsRecordable }
   Result:=False;
 end;
 
-procedure TACSMixer.SetRecSource(vChannel: Integer);
+procedure TAcsMixer.SetRecSource(vChannel: Integer);
 begin
   { TODO : SetRecSource }
 end;
 
-function TACSMixer.GetRecSource: Integer;
+function TAcsMixer.GetRecSource: Integer;
 begin
   { TODO : GetRecSource }
   Result:=-1;
 end;
 
-destructor TACSMixer.Destroy;
+destructor TAcsMixer.Destroy;
 begin
   Setlength(FControls, 0);
   Setlength(FMuteControls, 0);

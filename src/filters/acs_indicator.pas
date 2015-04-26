@@ -14,9 +14,9 @@ uses
 
 type
 
-  { TACSSoundIndicator }
+  { TAcsSoundIndicator }
 
-  TACSSoundIndicator = class(TACSCustomConverter)
+  TAcsSoundIndicator = class(TAcsCustomConverter)
   private
     FLocked: Boolean;
     Window: array of Double;
@@ -42,7 +42,7 @@ type
 
 implementation
 
-constructor TACSSoundIndicator.Create(AOwner: TComponent);
+constructor TAcsSoundIndicator.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FLocked:=False;
@@ -50,12 +50,12 @@ begin
   //HannWindow(@Window, Length(Window), True);
 end;
 
-destructor TACSSoundIndicator.Destroy;
+destructor TAcsSoundIndicator.Destroy;
 begin
   inherited Destroy;
 end;
 
-procedure TACSSoundIndicator.CalculateSpectrum(PSampleWindow: Pointer;
+procedure TAcsSoundIndicator.CalculateSpectrum(PSampleWindow: Pointer;
   SamplesCount: integer; var AValues: array of Double);
 var
   pSample: PAcsDoubleArray;
@@ -111,33 +111,33 @@ begin
   {$R+}
 end;
 
-function TACSSoundIndicator.GetBPS: Integer;
+function TAcsSoundIndicator.GetBPS: Integer;
 begin
   if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotassigned);
   Result:=FInput.BitsPerSample;
 end;
 
-function TACSSoundIndicator.GetCh: Integer;
+function TAcsSoundIndicator.GetCh: Integer;
 begin
   if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotassigned);
   Result:=FInput.Channels;
 end;
 
-function TACSSoundIndicator.GetSR: Integer;
+function TAcsSoundIndicator.GetSR: Integer;
 begin
   if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotassigned);
   Result:=FInput.SampleRate;
 end;
 
-procedure TACSSoundIndicator.SetValuesCount(AValue: integer);
+procedure TAcsSoundIndicator.SetValuesCount(AValue: integer);
 begin
   FValuesCount:=AValue;
 end;
 
-procedure TACSSoundIndicator.Init;
+procedure TAcsSoundIndicator.Init;
 begin
   if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotassigned);
@@ -149,7 +149,7 @@ begin
   FPosition:=0;
 end;
 
-procedure TACSSoundIndicator.Flush;
+procedure TAcsSoundIndicator.Flush;
 begin
   FInput.Flush;
   //FillChar(FValues[0], SizeOf(Double)*32, 0);
@@ -157,7 +157,7 @@ begin
   FLocked:=False;
 end;
 
-function TACSSoundIndicator.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsSoundIndicator.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
 begin
   if not Busy then
     raise EAcsException.Create(strStreamnotopen);
@@ -175,7 +175,7 @@ begin
   FLocked:=False;
  end;
 
-procedure TACSSoundIndicator.GetValues(var Values: array of Double);
+procedure TAcsSoundIndicator.GetValues(var Values: array of Double);
 var
   i, NumSamples: Integer;
   pSample: PAcsDoubleArray;

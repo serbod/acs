@@ -25,7 +25,7 @@ Revision 1.1  2005/12/19 18:36:38  z0m3ie
 *** empty log message ***
 
 Revision 1.5  2005/12/04 16:54:34  z0m3ie
-All classes are renamed, Style TACS... than T... to avoid conflicts with other components (eg TMixer is TACSMixer now)
+All classes are renamed, Style TAcs... than T... to avoid conflicts with other components (eg TMixer is TAcsMixer now)
 
 Revision 1.4  2005/11/28 21:57:24  z0m3ie
 mostly FileOut fixes
@@ -77,7 +77,7 @@ type
   TVorbisBitRate = (brAutoSelect, br45, br48, br56, br64, br80, br96,
                  br112, br128, br144, br160, br192, br224, br256, br320, br499);
 
-  TVorbisOut = class(TACSCustomFileOut)
+  TVorbisOut = class(TAcsCustomFileOut)
   private
     FComments : TStringList;
     FSerial : Integer;
@@ -102,7 +102,7 @@ type
     procedure Done; override;
     function DoOutput(Abort : Boolean):Boolean; override;
     procedure Prepare; override;
-    procedure SetFileMode(aMode : TACSFileOutputMode); override;
+    procedure SetFileMode(aMode : TAcsFileOutputMode); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -116,7 +116,7 @@ type
     //property Vendor : String read FVendor write FVendor;
   end;
 
-  TVorbisIn = class(TACSCustomFileIn)
+  TVorbisIn = class(TAcsCustomFileIn)
   private
     FComments : TStringList;
 //    FVendor : String;
@@ -229,8 +229,8 @@ implementation
   constructor TVorbisOut.Create;
   begin
     inherited Create(AOwner);
-    FBufferSize := $10000;
-    VORBISLoadLibrary;
+    FBufferSize:=$10000; // default buffer size
+    VORBISLoadLibrary();
     FCompression := 0.2;
     FComments := TStringList.Create;
     FDesiredNominalBitrate := br64;
@@ -238,7 +238,7 @@ implementation
     FMinimumBitrate := br48;
     if not (csDesigning	in ComponentState) then
     begin
-      VORBISLoadLibrary;
+      VORBISLoadLibrary();
       if not LiboggLoaded then
       raise EAcsException.Create(Format(strCoudntloadLib,[Liboggpath]));
       if not LibvorbisLoaded then
@@ -261,79 +261,68 @@ implementation
     FComments.Assign(vComments);
   end;
 
-  procedure TVorbisOut.Prepare;
-  var
-    i, maxbr, minbr, nombr : Integer;
-    Name, Value : String;
-    rm : ovectl_ratemanage2_arg;
-  begin
-    GetMem(FBuffer,FBufferSize);
-    if not FStreamAssigned then
-    begin
-      if not Assigned(FInput) then
-        raise EAcsException.Create(strInputNotAssigned);
-      if FFileName = '' then raise EAcsException.Create(strNoFileOpened);
-      if (not FileExists(FFileName)) or (FFileMode = foRewrite) then
-      FStream := TFileStream.Create(FFileName, fmCreate or fmShareExclusive, FAccessMask)
-      else FStream := TFileStream.Create(FFileName, fmOpenReadWrite or fmShareExclusive, FAccessMask);
-    end;
-    FInput.Init;
-    if FFileMode = foAppend then
-    FStream.Seek(0, soFromEnd);
-    EndOfStream := False;
-    vorbis_info_init(VInfo);
-    if DesiredNominalBitrate = brAutoSelect then
-    begin
-      {$IFNDEF USE_VORBIS_11}
-      vorbis_encode_init_vbr(VInfo, FInput.Channels, FInput.SampleRate, FCompression);
-      {$ENDIF}
-      {$IFDEF USE_VORBIS_11}
-      vorbis_encode_setup_vbr(VInfo, FInput.Channels, FInput.SampleRate, FCompression);
-      vorbis_encode_setup_init(VInfo);
-      {$ENDIF}
-    end else
-    begin
-      nombr := VorbisBitrateToInt(FDesiredNominalBitrate);
-      maxbr := VorbisBitrateToInt(FDesiredMaximumBitrate);
-      if maxbr < nombr then maxbr := nombr;
-      minbr := VorbisBitrateToInt(Self.FMinimumBitrate);
-      if minbr < 0 then minbr := nombr;
-      vorbis_encode_init(VInfo, FInput.Channels, FInput.SampleRate, maxbr, nombr, minbr);
-    end;
-    vorbis_comment_init(VComm);
-    for i := 0 to FComments.Count - 1 do
-    begin
-      Name := FComments.Names[i];
-      Value := FComments.Values[Name];
-      vorbis_comment_add_tag(VComm, PChar(Name), PChar(Value));
-    end;
-    vorbis_analysis_init(Vdsp, VInfo);
-    vorbis_block_init(Vdsp, VBlock);
-    ogg_stream_init(OggSS, FSerial);
-    vorbis_analysis_headerout(Vdsp, VComm, header, header_comm, header_code);
-    ogg_stream_packetin(OggSS, header);
-    ogg_stream_packetin(OggSS, header_comm);
-    ogg_stream_packetin(OggSS, header_code);
-    while ogg_stream_flush(OggSS, OggPg) <> 0 do
-    begin
-      FStream.Write(OggPg.header^, OggPg.header_len);
-      FStream.Write(OggPg.body^, OggPg.body_len);
-    end;
-  end;
+procedure TVorbisOut.Prepare();
+var
+  i, maxbr, minbr, nombr: Integer;
+  Name, Value: String;
+  rm: ovectl_ratemanage2_arg;
+begin
+  inherited Prepare();
 
-  procedure TVorbisOut.Done;
+  if FFileMode = foAppend then
+    FStream.Seek(0, soFromEnd);
+  EndOfStream:=False;
+  vorbis_info_init(VInfo);
+  if DesiredNominalBitrate = brAutoSelect then
   begin
-    if not FStreamAssigned then
-    FStream.Free;
-    FInput.Flush;
-    FComments.Clear;
-    ogg_stream_clear(OggSS);
-    vorbis_block_clear(VBlock);
-    vorbis_dsp_clear(Vdsp);
-    vorbis_comment_clear(VComm);
-    vorbis_info_clear(VInfo);
-    FreeMem(FBuffer);
+    {$IFNDEF USE_VORBIS_11}
+    vorbis_encode_init_vbr(VInfo, FInput.Channels, FInput.SampleRate, FCompression);
+    {$ENDIF}
+    {$IFDEF USE_VORBIS_11}
+    vorbis_encode_setup_vbr(VInfo, FInput.Channels, FInput.SampleRate, FCompression);
+    vorbis_encode_setup_init(VInfo);
+    {$ENDIF}
+  end
+  else
+  begin
+    nombr:=VorbisBitrateToInt(FDesiredNominalBitrate);
+    maxbr:=VorbisBitrateToInt(FDesiredMaximumBitrate);
+    if maxbr < nombr then maxbr:=nombr;
+    minbr:=VorbisBitrateToInt(Self.FMinimumBitrate);
+    if minbr < 0 then minbr:=nombr;
+    vorbis_encode_init(VInfo, FInput.Channels, FInput.SampleRate, maxbr, nombr, minbr);
   end;
+  vorbis_comment_init(VComm);
+  for i:=0 to FComments.Count-1 do
+  begin
+    Name:=FComments.Names[i];
+    Value:=FComments.Values[Name];
+    vorbis_comment_add_tag(VComm, PChar(Name), PChar(Value));
+  end;
+  vorbis_analysis_init(Vdsp, VInfo);
+  vorbis_block_init(Vdsp, VBlock);
+  ogg_stream_init(OggSS, FSerial);
+  vorbis_analysis_headerout(Vdsp, VComm, header, header_comm, header_code);
+  ogg_stream_packetin(OggSS, header);
+  ogg_stream_packetin(OggSS, header_comm);
+  ogg_stream_packetin(OggSS, header_code);
+  while ogg_stream_flush(OggSS, OggPg) <> 0 do
+  begin
+    FStream.Write(OggPg.header^, OggPg.header_len);
+    FStream.Write(OggPg.body^, OggPg.body_len);
+  end;
+end;
+
+procedure TVorbisOut.Done();
+begin
+  FComments.Clear();
+  ogg_stream_clear(OggSS);
+  vorbis_block_clear(VBlock);
+  vorbis_dsp_clear(Vdsp);
+  vorbis_comment_clear(VComm);
+  vorbis_info_clear(VInfo);
+  inherited Done();
+end;
 
   function TVorbisOut.DoOutput(Abort : Boolean):Boolean;
   var
@@ -354,29 +343,42 @@ implementation
     while InputLock do;
     InputLock := True;
     chc := Finput.Channels;
-    Len := Finput.GetData(@FBuffer[0], FBufferSize);
+    //Len := FInput.GetData(@FBuffer[0], FBufferSize);
+    Len := FInput.GetData(FBuffer.Memory, FBuffer.Size);
     InputLock := False;
     if Len <> 0 then
     begin
       if chc = 2 then
       begin
-        out_buf := vorbis_analysis_buffer(Vdsp, FBufferSize shr 2);
+        out_buf := vorbis_analysis_buffer(Vdsp, (FBuffer.Size div 4));
        (* A bit of pointer arithmetics. What is easy in C
           is not so easy in Pascal. *)
         tmpBuf1 := out_buf^;
         Inc(out_buf);
         tmpBuf2 := out_buf^;
-        for i:=0 to (Len shr 2)-1 do
+        for i:=0 to (Len div 4)-1 do
         begin
+          { // old
           tmpBuf1[i] := FBuffer[i*2]/$8000;
-          tmpBuf2[i] := FBuffer[i*2+1]/$8000;
+          tmpBuf2[i] := FBuffer[i*2+1]/$8000; }
+          { // slow but true
+          FBuffer.Position:=0;
+          tmpBuf1[i] := FBuffer.ReadByte()/$8000;
+          tmpBuf2[i] := FBuffer.ReadByte()/$8000; }
+          // fast
+          tmpBuf1[i] := PByte(FBuffer.Memory)[i*2]/$8000;
+          tmpBuf2[i] := PByte(FBuffer.Memory)[i*2+1]/$8000;
         end;
         vorbis_analysis_wrote(Vdsp, Len shr 2);
-      end else
+      end
+      else
       begin
-        out_buf := vorbis_analysis_buffer(Vdsp, FBufferSize shr 1);
-        for i:=0 to (Len shr 1)-1 do
-        out_buf^[i] := FBuffer[i]/$8000;
+        out_buf := vorbis_analysis_buffer(Vdsp, (FBuffer.Size div 2));
+        for i:=0 to (Len div 2)-1 do
+        begin
+          //out_buf^[i] := FBuffer[i]/$8000;
+          out_buf^[i] := PByte(FBuffer.Memory)[i]/$8000;
+        end;
         vorbis_analysis_wrote(Vdsp, Len shr 1);
       end;
     end else

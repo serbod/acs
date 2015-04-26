@@ -50,16 +50,16 @@ type
     procedure AddBlockToChain(WH: PWaveHdr);
     {$ENDIF}
   protected
-    function GetDeviceCount: Integer; override;
+    function GetDeviceCount(): Integer; override;
     procedure SetDevice(Ch: Integer); override;
     function GetDeviceName(ADeviceNumber: Integer): string; override;
     function GetDeviceInfo(ADeviceNumber: Integer): TAcsDeviceInfo; override;
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
-    procedure Prepare; override;
-    procedure Done; override;
+    destructor Destroy(); override;
+    procedure Prepare(); override;
     function DoOutput(Abort: Boolean): Boolean; override;
+    procedure Done(); override;
   end;
 
   { TStdAudioIn }
@@ -82,19 +82,19 @@ type
     procedure AddBlockToChain(WH: PWaveHdr);
     {$ENDIF}
   protected
-    function GetBPS: Integer; override;
-    function GetCh: Integer; override;
-    function GetSR: Integer; override;
+    function GetBPS(): Integer; override;
+    function GetCh(): Integer; override;
+    function GetSR(): Integer; override;
     procedure SetDevice(Ch: Integer); override;
     function GetDeviceName(ADeviceNumber: Integer): string; override;
     function GetDeviceInfo(ADeviceNumber: Integer): TAcsDeviceInfo; override;
-    function GetTotalTime: Real; override;
+    function GetTotalTime(): Real; override;
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
+    destructor Destroy(); override;
     function GetData(Buffer: Pointer; oBufferSize: Integer): Integer; override;
-    procedure Init; override;
-    procedure Flush; override;
+    procedure Init(); override;
+    procedure Flush(); override;
   end;
 
 var
@@ -125,6 +125,13 @@ begin
   Result:=GetAudioDeviceInfo(ADeviceNumber, True);
 end;
 
+function TStdAudioOut.GetDeviceCount(): Integer;
+begin
+  Result:=OutputChannelsCount;
+end;
+
+{ TStdAudioIn }
+
 function TStdAudioIn.GetDeviceName(ADeviceNumber: Integer): string;
 begin
   Result:=GetDeviceInfo(ADeviceNumber).DeviceName;
@@ -136,7 +143,7 @@ begin
   Result:=GetAudioDeviceInfo(ADeviceNumber, False);
 end;
 
-function TStdAudioIn.GetTotalTime: Real;
+function TStdAudioIn.GetTotalTime(): Real;
 begin
   Result:=RecTime;
 end;
@@ -153,11 +160,6 @@ begin
   {$IFDEF MSWINDOWS}
   FBlocksCount:=4;
   {$ENDIF}
-end;
-
-function TStdAudioOut.GetDeviceCount: Integer;
-begin
-  Result:=OutputChannelsCount;
 end;
 
 initialization

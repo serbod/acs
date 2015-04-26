@@ -17,7 +17,7 @@ Revision 1.1  2005/12/19 18:34:35  z0m3ie
 *** empty log message ***
 
 Revision 1.2  2005/12/04 16:54:34  z0m3ie
-All classes are renamed, Style TACS... than T... to avoid conflicts with other components (eg TMixer is TACSMixer now)
+All classes are renamed, Style TAcs... than T... to avoid conflicts with other components (eg TMixer is TAcsMixer now)
 
 Revision 1.1  2005/11/27 16:50:33  z0m3ie
 add ACS VolumeQuerry
@@ -40,7 +40,7 @@ uses
 
 type
 
-  TACSVolumeQuery = class(TACSCustomConverter)
+  TAcsVolumeQuery = class(TAcsCustomConverter)
   private
     Lock : Boolean;
     FLeft, FRight: Array of Word;
@@ -66,38 +66,38 @@ type
 
 implementation
 
-  constructor TACSVolumeQuery.Create;
+  constructor TAcsVolumeQuery.Create;
   begin
     inherited Create(AOwner);
   end;
 
-  destructor TACSVolumeQuery.Destroy;
+  destructor TAcsVolumeQuery.Destroy;
   begin
     inherited Destroy;
   end;
 
-  function TACSVolumeQuery.GetBPS : Integer;
+  function TAcsVolumeQuery.GetBPS : Integer;
   begin
     if not Assigned(FInput) then
     raise EACSException.Create(strInputnotAssigned);
     Result := FInput.BitsPerSample;
   end;
 
-  function TACSVolumeQuery.GetCh : Integer;
+  function TAcsVolumeQuery.GetCh : Integer;
   begin
     if not Assigned(FInput) then
     raise EACSException.Create(strInputnotAssigned);
     Result := FInput.Channels;
   end;
 
-  function TACSVolumeQuery.GetSR : Integer;
+  function TAcsVolumeQuery.GetSR : Integer;
   begin
     if not Assigned(FInput) then
     raise EACSException.Create(strInputnotAssigned);
     Result := FInput.SampleRate;
   end;
 
-  procedure TACSVolumeQuery.Init;
+  procedure TAcsVolumeQuery.Init;
   begin
     if not Assigned(FInput) then
     raise EACSException.Create(strInputnotAssigned);
@@ -118,14 +118,14 @@ implementation
     Lock := False;
   end;
 
-  procedure TACSVolumeQuery.Flush;
+  procedure TAcsVolumeQuery.Flush;
   begin
     FInput.Flush;
     FBusy := False;
     Lock := False;
   end;
 
-  function TACSVolumeQuery.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+  function TAcsVolumeQuery.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
   var
     LVol, RVol, LMax, RMax: Word;
     i, NumSamples: Integer;
@@ -192,7 +192,7 @@ implementation
     Lock := False;
   end;
 
-  function TACSVolumeQuery.volLeft: Word;
+  function TAcsVolumeQuery.volLeft: Word;
   begin
     Lock := True;
     if Busy then Result := FLeft[0]
@@ -200,7 +200,7 @@ implementation
     Lock := False;
   end;
 
-  function TACSVolumeQuery.volRight: Word;
+  function TAcsVolumeQuery.volRight: Word;
   begin
     Lock := True;
     if Busy then Result := FRight[0]
@@ -208,7 +208,7 @@ implementation
     Lock := False;
   end;
 
-  function TACSVolumeQuery.dbLeft: Single;
+  function TAcsVolumeQuery.dbLeft: Single;
   begin
     Lock := True;
     if Busy then Result := 10 * Log10((FLeft[0]+1)/32768)
@@ -216,7 +216,7 @@ implementation
     Lock := False;
   end;
 
-  function TACSVolumeQuery.dbRight: Single;
+  function TAcsVolumeQuery.dbRight: Single;
   begin
     Lock := True;
     if Busy then Result := 10 * Log10((FRight[0]+1)/32768)

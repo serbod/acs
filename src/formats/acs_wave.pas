@@ -34,7 +34,7 @@ Revision 1.6  2005/12/18 17:01:54  z0m3ie
 delphi compatibility
 
 Revision 1.5  2005/12/04 16:54:34  z0m3ie
-All classes are renamed, Style TACS... than T... to avoid conflicts with other components (eg TMixer is TACSMixer now)
+All classes are renamed, Style TAcs... than T... to avoid conflicts with other components (eg TMixer is TAcsMixer now)
 
 Revision 1.4  2005/11/28 21:57:24  z0m3ie
 mostly FileOut fixes
@@ -179,7 +179,7 @@ type
 
   { TWaveIn }
 
-  TWaveIn = class(TACSCustomFileIn)
+  TWaveIn = class(TAcsCustomFileIn)
   private
     buf: array[0..BUFFER_SIZE] of byte;
     _WavType: TWavType;
@@ -218,7 +218,7 @@ type
     function Seek(SampleNum: Integer): Boolean; override;
   end;
 
-  TWaveOut = class(TACSCustomFileOut)
+  TWaveOut = class(TAcsCustomFileOut)
   private
     EndOfInput: Boolean;
     FWavType: TWavType;
@@ -241,7 +241,7 @@ type
     procedure EncodeDVIADPCMMono(InData: PAcsBuffer16; OutData: PAcsBuffer8);
     procedure EncodeDVIADPCMStereo(InData: PAcsBuffer16; OutData: PAcsBuffer8);
   protected
-    procedure SetFileMode(AMode: TACSFileOutputMode); override;
+    procedure SetFileMode(AMode: TAcsFileOutputMode); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -1224,170 +1224,145 @@ begin
    FEncodeState.PredSamp_r := PredSamp;
 end;
 
-constructor TWaveOut.Create;
+constructor TWaveOut.Create();
 begin
   inherited Create(AOwner);
-  FBufferSize := $4000;
-  FWavType := wtPCM;
-  FBlockAlign := 512;
+  FBufferSize:=$4000; // default buffer size
+  FWavType:=wtPCM;
+  FBlockAlign:=512;
 end;
 
-destructor TWaveOut.Destroy;
+destructor TWaveOut.Destroy();
 begin
   inherited Destroy;
 end;
 
-procedure TWaveOut.SetWavType;
+procedure TWaveOut.SetWavType();
 begin
   if Busy then Exit;
   if (WT = wtPCM) or (WT = wtDVIADPCM) then
-  FWavType := WT;
+    FWavType:=WT;
 end;
 
-  procedure TWaveOut.Prepare;
-  var
-    Header : TWaveHeader;
-    DVIADPCMHeader : TDVIADPCMHeader;
+procedure TWaveOut.Prepare();
+var
+  Header: TWaveHeader;
+  DVIADPCMHeader: TDVIADPCMHeader;
+begin
+  inherited Prepare();
+  EndOfInput:=False;
+  if (FFileMode = foAppend) and (FStream.Size <> 0) then
   begin
-    GetMem(FBuffer,FBufferSize);
-    EndOfInput := False;
-    if not FStreamAssigned then
+    ReadRIFFHeader();
+    if not (FPrevWavType in [wtPCM, wtDVIADPCM]) then
     begin
-      if FFileName = '' then raise EAcsException.Create(strFilenamenotassigned);
-      if (not FileExists(FFileName)) or (FFileMode = foRewrite) then
-      FStream := TFileStream.Create(FFileName, fmCreate or fmShareExclusive, FAccessMask)
-      else FStream := TFileStream.Create(FFileName, fmOpenReadWrite or fmShareExclusive, FAccessMask);
+      inherited Done();
+      raise EAcsException.Create('Cannot append data to this .wav file.');
     end;
-    FInput.Init;
-    if (FFileMode = foAppend) and (FStream.Size <> 0) then
-    begin
-      ReadRIFFHeader;
-      if not (FPrevWavType in [wtPCM, wtDVIADPCM]) then
-      begin
-        FInput.Flush;
-        if not FStreamAssigned then
-        begin
-          FStream.Free;
-          FStream := nil;
-        end;
-        raise EAcsException.Create('Cannot append data to this .wav file.');
-      end;
-      FWavType := FPrevWavType;
-    end;
-    case FWavType of
-      wtPCM :
-      begin
-        if (FFileMode = foAppend) and (FStream.Size <> 0) then
-        begin
-          if (FPrevSR <> FInput.SampleRate) or
-             (FPrevBPS <> FInput.BitsPerSample) or
-             (FPrevCh <> FInput.Channels) then
-          begin
-            FInput.Flush;
-            if not FStreamAssigned then
-            begin
-              FStream.Free;
-              FStream := nil;
-            end;
-            raise EAcsException.Create('Cannot append data in different audio format.');
-          end;
-          FStream.Seek(0, soFromEnd);
-        end else
-        begin
-          FillHeaderPCM(Header);
-          FStream.Write(Header, WaveHeaderOffs);
-        end;
-      end;
-      wtDVIADPCM :
-      begin
-        if FInput.BitsPerSample <> 16 then
-        begin
-          FInput.Flush;
-          if not FStreamAssigned then
-          begin
-            FStream.Free;
-            FStream := nil;
-          end;
-          raise EAcsException.Create('Cannot encode 8 bit sound into ADPCM.');
-        end;
-//        FBlockAlign := 512;
-        if (FFileMode = foAppend) and (FStream.Size <> 0) then
-        begin
-          if (FPrevSR <> FInput.SampleRate) or
-             (FPrevCh <> FInput.Channels) then
-          begin
-            FInput.Flush;
-            if not FStreamAssigned then
-            begin
-              FStream.Free;
-              FStream := nil;
-            end;
-            raise EAcsException.Create('Cannot append data in different audio format.');
-          end;
-          FStream.Seek(0, soFromEnd);
-        end else
-        begin
-          FillHeaderDVIADPCM(DVIADPCMHeader);
-          FStream.Write(DVIADPCMHeader, SizeOf(DVIADPCMHeader));
-          FEncodeState.Index_l := 0;
-          FEncodeState.Index_r := 0;
-        end;
-      end;
-    end;
+    FWavType:=FPrevWavType;
   end;
+  case FWavType of
+    wtPCM:
+    begin
+      if (FFileMode = foAppend) and (FStream.Size <> 0) then
+      begin
+        if (FPrevSR <> FInput.SampleRate) or
+           (FPrevBPS <> FInput.BitsPerSample) or
+           (FPrevCh <> FInput.Channels) then
+        begin
+          inherited Done();
+          raise EAcsException.Create('Cannot append data in different audio format.');
+        end;
+        FStream.Seek(0, soFromEnd);
+      end
+      else
+      begin
+        FillHeaderPCM(Header);
+        FStream.Write(Header, WaveHeaderOffs);
+      end;
+    end;
 
-  procedure TWaveOut.Done;
-  var
-    Size : Integer;
-    Hdr : TDVIADPCMHeader;
-  begin
-    if ((FInput.Size < 0) or (FFileMode = foAppend)) and (FStream <> nil) then
+    wtDVIADPCM:
     begin
-      case FWavType of
-        wtPCM:
+      if FInput.BitsPerSample <> 16 then
+      begin
+        inherited Done();
+        raise EAcsException.Create('Cannot encode 8 bit sound into ADPCM.');
+      end;
+      //FBlockAlign := 512;
+      if (FFileMode = foAppend) and (FStream.Size <> 0) then
+      begin
+        if (FPrevSR <> FInput.SampleRate) or
+           (FPrevCh <> FInput.Channels) then
         begin
-          if FFileMode = foAppend then
-          begin
-            FStream.Seek(FDataSizeOffs, soFromBeginning);
-            Size := FStream.Size - HeaderSize;
-            FStream.Write(Size, 4);
-          end else
-          begin
-            Size := FStream.Size - 44;
-            FStream.Seek(DataSizeOffs, soFromBeginning);
-            FStream.Write(Size, 4);
-          end;
+          inherited Done();
+          raise EAcsException.Create('Cannot append data in different audio format.');
         end;
-        wtDVIADPCM:
+        FStream.Seek(0, soFromEnd);
+      end
+      else
+      begin
+        FillHeaderDVIADPCM(DVIADPCMHeader);
+        FStream.Write(DVIADPCMHeader, SizeOf(DVIADPCMHeader));
+        FEncodeState.Index_l:=0;
+        FEncodeState.Index_r:=0;
+      end;
+    end;
+  end;
+end;
+
+procedure TWaveOut.Done();
+var
+  Size: Integer;
+  Hdr: TDVIADPCMHeader;
+begin
+  if ((FInput.Size < 0) or (FFileMode = foAppend)) and (FStream <> nil) then
+  begin
+    case FWavType of
+      wtPCM:
+      begin
+        if FFileMode = foAppend then
         begin
-          if FFileMode = foAppend then
-          begin
-            FStream.Seek(FDataSizeOffs, soFromBeginning);
-            Size := FStream.Size - HeaderSize;
-            FStream.Write(Size, 4);
-            FStream.Seek(FLenOffs, soFromBeginning);
-            Size := (Size div FBlockAlign)*((FBlockAlign-FPrevCh*4)*(2 div FPrevCh) + 1);
-            FStream.Write(Size, 4);
-          end else
-          begin
-            Size := FStream.Size - SizeOf(TDVIADPCMHeader);
-            FStream.Seek(0, soFromBeginning);
-            Fstream.Read(Hdr, SizeOf(Hdr));
-            Hdr.DataSize := Size;
-            Hdr.DataLength := (Hdr.DataSize div Hdr.BlockAlign) * Hdr.SamplesPerBlock;
-            FStream.Seek(0, soFromBeginning);
-            FStream.Write(Hdr, SizeOf(Hdr));
-          end;
+          FStream.Seek(FDataSizeOffs, soFromBeginning);
+          Size:=FStream.Size - HeaderSize;
+          FStream.Write(Size, 4);
+        end else
+        begin
+          Size:=FStream.Size - 44;
+          FStream.Seek(DataSizeOffs, soFromBeginning);
+          FStream.Write(Size, 4);
         end;
       end;
-      Size := FStream.Size;
-      FStream.Seek(4, soFromBeginning);
-      FStream.Write(Size, 4);
+
+      wtDVIADPCM:
+      begin
+        if FFileMode = foAppend then
+        begin
+          FStream.Seek(FDataSizeOffs, soFromBeginning);
+          Size:=FStream.Size - HeaderSize;
+          FStream.Write(Size, 4);
+          FStream.Seek(FLenOffs, soFromBeginning);
+          Size:=(Size div FBlockAlign) * ((FBlockAlign - FPrevCh * 4) * (2 div FPrevCh) + 1);
+          FStream.Write(Size, 4);
+        end
+        else
+        begin
+          Size:=FStream.Size - SizeOf(TDVIADPCMHeader);
+          FStream.Seek(0, soFromBeginning);
+          Fstream.Read(Hdr, SizeOf(Hdr));
+          Hdr.DataSize:=Size;
+          Hdr.DataLength:=(Hdr.DataSize div Hdr.BlockAlign) * Hdr.SamplesPerBlock;
+          FStream.Seek(0, soFromBeginning);
+          FStream.Write(Hdr, SizeOf(Hdr));
+        end;
+      end;
     end;
-    if (not FStreamAssigned) and (FStream <> nil) then FStream.Free;
-    FInput.Flush;
-    FreeMem(FBuffer);
+    Size:=FStream.Size;
+    FStream.Seek(4, soFromBeginning);
+    FStream.Write(Size, 4);
   end;
+  inherited Done();
+end;
 
   function TWaveOut.DoOutput(Abort : Boolean):Boolean;
   var
@@ -1419,9 +1394,11 @@ end;
         try
           while InputLock do;
           InputLock := True;
-          Len := Finput.GetData(@FBuffer[0], FBufferSize);
+          //Len := Finput.GetData(@FBuffer[0], FBufferSize);
+          Len := FInput.GetData(FBuffer.Memory, FBuffer.Size);
           InputLock := False;
-          FStream.Write(FBuffer[0], Len);
+          //FStream.Write(FBuffer[0], Len);
+          FStream.Write(FBuffer.Memory, Len);
         except
         end;
         if Len > 0 then Result := True

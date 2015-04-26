@@ -24,7 +24,7 @@ Revision 1.7  2005/12/18 17:01:54  z0m3ie
 delphi compatibility
 
 Revision 1.6  2005/12/04 16:54:33  z0m3ie
-All classes are renamed, Style TACS... than T... to avoid conflicts with other components (eg TMixer is TACSMixer now)
+All classes are renamed, Style TAcs... than T... to avoid conflicts with other components (eg TMixer is TAcsMixer now)
 
 Revision 1.5  2005/11/28 21:57:24  z0m3ie
 mostly FileOut fixes
@@ -101,32 +101,32 @@ type
   {$ENDIF}
   {$ENDIF}
 
-  TACSCDStatus = (cdsNotReady, cdsReady, cdsPlaying, cdsPaused);
-  TACSTrackType = (ttAudio, ttData);
-  TACSCDInfo = (cdiNoDisc, cdiDiscAudio, cdiDiscData, cdiDiscMixed, cdiUnknown);
-  TACSMCN = array[0..13] of Char;
+  TAcsCDStatus = (cdsNotReady, cdsReady, cdsPlaying, cdsPaused);
+  TAcsTrackType = (ttAudio, ttData);
+  TAcsCDInfo = (cdiNoDisc, cdiDiscAudio, cdiDiscData, cdiDiscMixed, cdiUnknown);
+  TAcsMCN = array[0..13] of Char;
 
-  TACSCDMSF = record
+  TAcsCDMSF = record
     Minute: Byte;
     Second: Byte;
     Frame: Byte;
   end;
-  PACSCDMSF = ^TACSCDMSF;
+  PACSCDMSF = ^TAcsCDMSF;
 
-  TACSCDTrackInfo = record
-    TrackStart: TACSCDMSF;
-    TrackLength: TACSCDMSF;
-    TrackType: TACSTrackType;
+  TAcsCDTrackInfo = record
+    TrackStart: TAcsCDMSF;
+    TrackLength: TAcsCDMSF;
+    TrackType: TAcsTrackType;
   end;
 
-  TACSCDPosition = record
+  TAcsCDPosition = record
     Track: Integer;
-    MSF: TACSCDMSF;
+    MSF: TAcsCDMSF;
   end;
 
 const
 
-  EndOfDisc: TACSCDPosition = (Track: 100; MSF: (Minute: 0; Second: 0; Frame: 0));
+  EndOfDisc: TAcsCDPosition = (Track: 100; MSF: (Minute: 0; Second: 0; Frame: 0));
   CD_FRAMESIZE_RAW = 2352;
   BUF_SIZE = 50;  // 75 frames - 1 sec
 
@@ -140,20 +140,20 @@ type
     and linux direct from device
   }
 
-  TACSCDIn = class(TACSCustomInput)
+  TAcsCDIn = class(TAcsCustomInput)
   private
     FBuffer: array of byte;
     FCurrentDrive: Integer;
     FStartTrack: Integer;
     FEndTrack: Integer;
-    FStartPos: TACSCDPosition;
-    FEndPos: TACSCDPosition;
+    FStartPos: TAcsCDPosition;
+    FEndPos: TAcsCDPosition;
     FRipEnd: Integer;
     FCDDBId: Longint;
     {$IFDEF LINUX}
     FOpened: Integer;
-    FCurPos: TACSCDMSF;
-    FEndMSF: TACSCDMSF;
+    FCurPos: TAcsCDMSF;
+    FEndMSF: TAcsCDMSF;
     FDrivesCount: Integer;
     _cd_fd: Integer;
     BufSize: Integer;
@@ -167,15 +167,15 @@ type
     {$ENDIF}
     procedure OpenCD;
     procedure CloseCD;
-    function GetStatus: TACSCDStatus;
+    function GetStatus: TAcsCDStatus;
     function GetNumTracks: Integer;
-    function GetTrackInfo(const vIndex: Integer): TACSCDTrackInfo;
+    function GetTrackInfo(const vIndex: Integer): TAcsCDTrackInfo;
     procedure SetST(Track: Integer);
     procedure SetET(Track: Integer);
-    procedure SetSP(Pos: TACSCDPosition);
-    procedure SetEP(Pos: TACSCDPosition);
+    procedure SetSP(Pos: TAcsCDPosition);
+    procedure SetEP(Pos: TAcsCDPosition);
     function GetSize: Integer;
-    function GetInfo: TACSCDInfo;
+    function GetInfo: TAcsCDInfo;
     function GetDrivesCount: Integer;
     procedure SetCurrentDrive(Value: Integer);
     function GetDriveName: String;
@@ -193,14 +193,14 @@ type
     procedure Flush; override;
     procedure Eject;
     procedure CloseTray;
-    property DiscInfo: TACSCDInfo read GetInfo;
-    property Status: TACSCDStatus read GetStatus;
-    property Tracks[const vIndex: Integer]: TACSCDTrackInfo read GetTrackInfo;
+    property DiscInfo: TAcsCDInfo read GetInfo;
+    property Status: TAcsCDStatus read GetStatus;
+    property Tracks[const vIndex: Integer]: TAcsCDTrackInfo read GetTrackInfo;
     property TracksCount: Integer read GetNumTracks;
     property DriveName: String read GetDriveName;
     property DrivesCount: Integer read GetDrivesCount;
-    property StartPos: TACSCDPosition read FStartPos write SetSP;
-    property EndPos: TACSCDPosition read FEndPos write SetEP;
+    property StartPos: TAcsCDPosition read FStartPos write SetSP;
+    property EndPos: TAcsCDPosition read FEndPos write SetEP;
     property CDDBId: LongInt read GetCDDBID;
   published
     property CurrentDrive: Integer read FCurrentDrive write SetCurrentDrive;
@@ -208,9 +208,9 @@ type
     property EndTrack: Integer read FEndTrack write SetET;
   end;
 
-  function MSFToStr(const MSF: TACSCDMSF): String;
-  procedure Frames2MSF(Frames: Integer; var MSF: TACSCDMSF);
-  function MSF2Frames(const MSF: TACSCDMSF): Integer;
+  function MSFToStr(const MSF: TAcsCDMSF): String;
+  procedure Frames2MSF(Frames: Integer; var MSF: TAcsCDMSF);
+  function MSF2Frames(const MSF: TAcsCDMSF): Integer;
   
   {$IFDEF LINUX}
   var
@@ -224,7 +224,7 @@ implementation
 
 {$I ACS_CDROM.inc}
 
-function MSFToStr(const MSF: TACSCDMSF): String;
+function MSFToStr(const MSF: TAcsCDMSF): String;
 var
   sep: String;
   sec, min: Integer;
@@ -244,7 +244,7 @@ begin
   Result:=IntToStr(min)+sep+IntToStr(sec);
 end;
 
-procedure Frames2MSF(Frames: Integer; var MSF: TACSCDMSF);
+procedure Frames2MSF(Frames: Integer; var MSF: TAcsCDMSF);
 var
   Temp: Integer;
 begin
@@ -254,33 +254,33 @@ begin
   MSF.Frame:=(Frames mod 75);
 end;
 
-function MSF2Frames(const MSF: TACSCDMSF): Integer;
+function MSF2Frames(const MSF: TAcsCDMSF): Integer;
 begin
   Result:=((MSF.Minute*60)+MSF.Second)*75+MSF.Frame;
 end;
 
-function TACSCDIn.GetBPS: Integer;
+function TAcsCDIn.GetBPS: Integer;
 begin
   Result:=16;
 end;
 
-function TACSCDIn.GetCh: Integer;
+function TAcsCDIn.GetCh: Integer;
 begin
   Result:=2;
 end;
 
-function TACSCDIn.GetSR: Integer;
+function TAcsCDIn.GetSR: Integer;
 begin
   Result:=44100;
 end;
 
-function TACSCDIn.GetTotalTime: real;
+function TAcsCDIn.GetTotalTime: real;
 begin
   if (SampleRate=0) or (Channels=0) or (BitsPerSample=0) then Exit;
   Result:=Size/(SampleRate*Channels*(BitsPerSample shr 3));
 end;
 
-function TACSCDIn.GetCDDBID: LongInt;
+function TAcsCDIn.GetCDDBID: LongInt;
 
   function prg_sum(n: integer): integer;
   var
@@ -295,7 +295,7 @@ function TACSCDIn.GetCDDBID: LongInt;
 
 var
   i, N, L: Longint;
-  CDM: TACSCDMSF;
+  CDM: TAcsCDMSF;
 begin
   N:=0;
   L:=0;

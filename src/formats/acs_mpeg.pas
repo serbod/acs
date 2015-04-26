@@ -10,7 +10,7 @@ uses
   Classes, SysUtils,ACS_file,ACS_classes, smpeg;
 
 type
-  TMPEGIn = class(TACSCustomFileIn)
+  TMPEGIn = class(TAcsCustomFileIn)
   private
     _M : Pointer;
   protected

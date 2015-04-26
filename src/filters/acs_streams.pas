@@ -19,7 +19,7 @@ const
 
 type
 
-  TACSStreamOut = class(TACSStreamedOutput)
+  TAcsStreamOut = class(TAcsStreamedOutput)
   protected
     function GetBPS: Integer;
     function GetCh: Integer;
@@ -35,7 +35,7 @@ type
     property OutChannles: Integer read GetCh;
   end;
 
-  TACSStreamIn = class(TACSStreamedInput)
+  TAcsStreamIn = class(TAcsStreamedInput)
   private
     FBPS: Integer;
     FChan: Integer;
@@ -59,19 +59,19 @@ type
 
 implementation
 
-procedure TACSStreamOut.Prepare;
+procedure TAcsStreamOut.Prepare();
 begin
-  if not FStreamAssigned then
+  if not Assigned(FStream) then
     raise EAcsException.Create(strStreamObjectnotassigned);
-  FInput.Init;
+  FInput.Init();
 end;
 
-procedure TACSStreamOut.Done;
+procedure TAcsStreamOut.Done();
 begin
-  FInput.Flush;
+  FInput.Flush();
 end;
 
-function TACSStreamOut.DoOutput(Abort: Boolean): Boolean;
+function TAcsStreamOut.DoOutput(Abort: Boolean): Boolean;
 var
   Len: Integer;
   P: Pointer;
@@ -98,17 +98,17 @@ begin
   FreeMem(P);
 end;
 
-constructor TACSStreamOut.Create;
+constructor TAcsStreamOut.Create;
 begin
   inherited Create(AOwner);
 end;
 
-destructor TACSStreamOut.Destroy;
+destructor TAcsStreamOut.Destroy;
 begin
   inherited Destroy;
 end;
 
-constructor TACSStreamIn.Create;
+constructor TAcsStreamIn.Create;
 begin
   inherited Create(AOwner);
   FBPS:=8;
@@ -117,12 +117,12 @@ begin
   FSize:=-1;
 end;
 
-destructor TACSStreamIn.Destroy;
+destructor TAcsStreamIn.Destroy;
 begin
   inherited Destroy;
 end;
 
-procedure TACSStreamIn.Init;
+procedure TAcsStreamIn.Init;
 begin
   if Busy then
     raise EAcsException.Create(strBusy);
@@ -133,13 +133,13 @@ begin
   FSize:=FStream.Size;
 end;
 
-procedure TACSStreamIn.Flush;
+procedure TAcsStreamIn.Flush;
 begin
 //  FStream.Position := 0;
   FBusy:=False;
 end;
 
-function TACSStreamIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsStreamIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
 begin
   Result:=FStream.Read(Buffer^, BufferSize);
   FPosition:=FStream.Position;
@@ -147,38 +147,38 @@ begin
   if FPosition >= FSize then Result:=0;
 end;
 
-function TACSStreamOut.GetSR: Integer;
+function TAcsStreamOut.GetSR: Integer;
 begin
   if not Assigned(Input) then
     raise EAcsException.Create(strInputnotassigned);
   Result:=FInput.SampleRate;
 end;
 
-function TACSStreamOut.GetBPS: Integer;
+function TAcsStreamOut.GetBPS: Integer;
 begin
   if not Assigned(Input) then
     raise EAcsException.Create(strInputnotassigned);
   Result:=FInput.BitsPerSample;
 end;
 
-function TACSStreamOut.GetCh: Integer;
+function TAcsStreamOut.GetCh: Integer;
 begin
   if not Assigned(Input) then
     raise EAcsException.Create(strInputnotassigned);
   Result:=FInput.Channels;
 end;
 
-function TACSStreamIn.GetBPS: Integer;
+function TAcsStreamIn.GetBPS: Integer;
 begin
   Result:=Self.FBPS;
 end;
 
-function TACSStreamIn.GetCh: Integer;
+function TAcsStreamIn.GetCh: Integer;
 begin
   Result:=Self.FChan;
 end;
 
-function TACSStreamIn.GetSR: Integer;
+function TAcsStreamIn.GetSR: Integer;
 begin
   Result:=Self.FSampleRate;
 end;

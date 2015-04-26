@@ -19,50 +19,50 @@ uses
   Classes, ACS_Classes, Dialogs, SysUtils, ACS_Strings;
 
 type
-  TACSFileInClass = class of TACSCustomFileIn;
-  TACSFileOutClass = class of TACSCustomFileOut;
+  TAcsFileInClass = class of TAcsCustomFileIn;
+  TAcsFileOutClass = class of TAcsCustomFileOut;
 
-  TACSFileCapTyp = (fcLoad, fcSave);
-  TACSFileCapTyps = set of TACSFileCapTyp;
+  TAcsFileCapTyp = (fcLoad, fcSave);
+  TAcsFileCapTyps = set of TAcsFileCapTyp;
 
 
-  TACSFormatClass = class of TComponent;
+  TAcsFormatClass = class of TComponent;
 
-  { TACSFileFormat }
-  TACSFileFormat = class
+  { TAcsFileFormat }
+  TAcsFileFormat = class
   public
-    FileClass       : TACSFormatClass;
+    FileClass       : TAcsFormatClass;
     Extension       : String;
     Description     : String;
   end;
 
-  { TACSFileFormatsList
+  { TAcsFileFormatsList
 
     To this List all Filefomats must be added,
     use initialization section of your format units to add your format to acs
     so the user must only add your unit to the uses clausle to have support for
     your fileformat.
   }
-  TACSFileFormatsList = class (TList)
+  TAcsFileFormatsList = class (TList)
   public
     destructor Destroy; override;
-    procedure Add(const Ext, Desc: String; AClass: TACSFormatClass);
-    function FindExt(Ext: string; Typs: TACSFileCapTyps): TACSFormatClass;
-    function FindFromFileName(const FileName: String; Typs: TACSFileCapTyps): TACSFormatClass;
-    procedure Remove(AClass: TACSFormatClass);
-    procedure BuildFilterStrings(var Descriptions: String; Typs: TACSFileCapTyps);
+    procedure Add(const Ext, Desc: String; AClass: TAcsFormatClass);
+    function FindExt(Ext: string; Typs: TAcsFileCapTyps): TAcsFormatClass;
+    function FindFromFileName(const FileName: String; Typs: TAcsFileCapTyps): TAcsFormatClass;
+    procedure Remove(AClass: TAcsFormatClass);
+    procedure BuildFilterStrings(var Descriptions: String; Typs: TAcsFileCapTyps);
   end;
 
 
-  { TACSFileIn
+  { TAcsFileIn
 
     This class is an wrapper for all fileformats
   }
-  TACSFileIn = CLASS(TACSCustomFileIn)
+  TAcsFileIn = CLASS(TAcsCustomFileIn)
   private
     FEndSample: Integer;
     FFileName: string;
-    FInput: TACSCustomFileIn;
+    FInput: TAcsCustomFileIn;
     FDialog: TOpenDialog;
     FLoop: Boolean;
     FStartSample: Integer;
@@ -102,28 +102,28 @@ type
   end;
 
 
-  { TACSFileOut
+  { TAcsFileOut
 
     This class is an wrapper for all fileformats
   }
-  TACSFileOut = class(TComponent)
+  TAcsFileOut = class(TComponent)
   private
     FBufferSize: Integer;
-    FFileMode: TACSFileOutputMode;
+    FFileMode: TAcsFileOutputMode;
     FFileName: string;
-    FOnDone:TACSOutputDoneEvent;
-    FOnProgress: TACSOutputProgressEvent;
-    FOnThreadException: TACSThreadExceptionEvent;
-    FOutput: TACSCustomFileOut;
+    FOnDone:TAcsOutputDoneEvent;
+    FOnProgress: TAcsOutputProgressEvent;
+    FOnThreadException: TAcsThreadExceptionEvent;
+    FOutput: TAcsCustomFileOut;
     FDialog: TSaveDialog;
-    FInput: TACSCustomInput;
+    FInput: TAcsCustomInput;
 {$IFDEF LINUX}
     FAccessMask : Integer;
 {$ENDIF}
     function GetDelay: Integer;
     function GetPriority: TTPriority;
     function GetProgress: Real;
-    function GetStatus: TACSOutputStatus;
+    function GetStatus: TAcsOutputStatus;
     function GetTE: Integer;
     procedure SetDelay(const AValue: Integer);
     procedure SetPriority(const AValue: TTPriority);
@@ -133,11 +133,11 @@ type
     procedure OutputProgress(Sender: TComponent);
   protected
     FBaseChannel: Integer;
-    procedure SetInput(AInput: TACSCustomInput);
+    procedure SetInput(AInput: TAcsCustomInput);
     procedure Done;
     function DoOutput(Abort: Boolean): Boolean;
     procedure Prepare;
-    procedure SetFileMode(aMode: TACSFileOutputMode); virtual;
+    procedure SetFileMode(aMode: TAcsFileOutputMode); virtual;
     procedure SetFileName(const AValue: string);
   public
     constructor Create(AOwner: TComponent); override;
@@ -151,95 +151,95 @@ type
     property Delay: Integer read GetDelay write SetDelay;
     property ThreadPriority: TTPriority read GetPriority write SetPriority;
     property Progress: Real read GetProgress;
-    property Status: TACSOutputStatus read GetStatus;
+    property Status: TAcsOutputStatus read GetStatus;
     property TimeElapsed: Integer read GetTE;
 {$IFDEF LINUX}
     property AccessMask: Integer read FAccessMask write FAccessMask;
 {$ENDIF}
   published
-    property FileMode: TACSFileOutputMode read FFileMode write SetFileMode;
+    property FileMode: TAcsFileOutputMode read FFileMode write SetFileMode;
     property FileName: string read FFileName write SetFileName;
-    property Input: TACSCustomInput read FInput write SetInput;
-    property OnDone: TACSOutputDoneEvent read FOnDone write FOndone;
-    property OnProgress: TACSOutputProgressEvent read FOnProgress write FOnProgress;
-    property OnThreadException: TACSThreadExceptionEvent read FOnThreadException write FOnThreadException;
+    property Input: TAcsCustomInput read FInput write SetInput;
+    property OnDone: TAcsOutputDoneEvent read FOnDone write FOndone;
+    property OnProgress: TAcsOutputProgressEvent read FOnProgress write FOnProgress;
+    property OnThreadException: TAcsThreadExceptionEvent read FOnThreadException write FOnThreadException;
   end;
 
 var
-  FileFormats: TACSFileFormatsList;
+  FileFormats: TAcsFileFormatsList;
 
 implementation
 
-{ TACSFileIn }
+{ TAcsFileIn }
 
-function TACSFileIn.GetBPS: Integer;
+function TAcsFileIn.GetBPS: Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.BitsPerSample;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TACSFileIn.GetCh: Integer;
+function TAcsFileIn.GetCh: Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.Channels;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TACSFileIn.GetSR: Integer;
+function TAcsFileIn.GetSR: Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.SampleRate;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TACSFileIn.GetTime: Integer;
+function TAcsFileIn.GetTime: Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.Time;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TACSFileIn.GetValid: Boolean;
+function TAcsFileIn.GetValid: Boolean;
 begin
   Result:=False;
   if Assigned(FInput) then Result:=FInput.Valid;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TACSFileIn.GetTotalTime: Real;
+function TAcsFileIn.GetTotalTime: Real;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.TotalTime
 end;
 
-procedure TACSFileIn.Reset;
+procedure TAcsFileIn.Reset;
 begin
   if Assigned(FInput) then FInput.Reset;
 end;
 
-procedure TACSFileIn.SetFileName(const AValue: string);
+procedure TAcsFileIn.SetFileName(const AValue: string);
 begin
   FFileName:=AValue;
   if Assigned(FInput) then FreeAndNil(FInput);
   if AValue='' then Exit;
-  FInput:=TACSFileInClass(FileFormats.FindFromFileName(AValue, [fcLoad])).Create(nil);
+  FInput:=TAcsFileInClass(FileFormats.FindFromFileName(AValue, [fcLoad])).Create(nil);
   if Assigned(FInput) then FInput.FileName:=FFilename;
 end;
 
-function TACSFileIn.GetSize: Integer;
+function TAcsFileIn.GetSize: Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.Size;
 end;
 
-function TACSFileIn.GetPosition: Integer;
+function TAcsFileIn.GetPosition: Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.Position;
 end;
 
-constructor TACSFileIn.Create(AOwner: TComponent);
+constructor TAcsFileIn.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FInput:=nil;
@@ -248,13 +248,13 @@ begin
   FValid:=False;
 end;
 
-destructor TACSFileIn.Destroy;
+destructor TAcsFileIn.Destroy;
 begin
   if Assigned(FInput) then FreeAndNil(FInput);
   inherited Destroy;
 end;
 
-procedure TACSFileIn.Open;
+procedure TAcsFileIn.Open;
 var
   desc: string;
 begin
@@ -265,65 +265,65 @@ begin
   if FDialog.Execute then
   begin
     if Assigned(FInput) then FreeAndNil(FInput);
-    FInput:=TACSFileInClass(FileFormats.FindFromFileName(FDialog.FileName, [fcLoad])).Create(nil);
+    FInput:=TAcsFileInClass(FileFormats.FindFromFileName(FDialog.FileName, [fcLoad])).Create(nil);
     FFileName:=FDialog.FileName;
     if Assigned(FInput) then FInput.FileName:=FFilename;
   end;
   FDialog.Free;
 end;
 
-procedure TACSFileIn.Flush;
+procedure TAcsFileIn.Flush;
 begin
   if Assigned(FInput) then FInput.Flush;
 end;
 
-procedure TACSFileIn.Init;
+procedure TAcsFileIn.Init;
 begin
   if Assigned(FInput) then FInput.Init;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TACSFileIn.Seek(SampleNum: Integer): Boolean;
+function TAcsFileIn.Seek(SampleNum: Integer): Boolean;
 begin
   Result:=False;
   if Assigned(FInput) then Result:=FInput.Seek(SampleNum);
     //EAcsException.Create(strnoFileOpened);
 end;
 
-function TACSFileIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsFileIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.GetData(Buffer, BufferSize);
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TACSFileIn.SetStartTime(Minutes, Seconds: Integer): Boolean;
+function TAcsFileIn.SetStartTime(Minutes, Seconds: Integer): Boolean;
 begin
   Result:=False;
   if Assigned(FInput) then Result:=FInput.SetStartTime(Minutes, Seconds);
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TACSFileIn.SetEndTime(Minutes, Seconds: Integer): Boolean;
+function TAcsFileIn.SetEndTime(Minutes, Seconds: Integer): Boolean;
 begin
   Result:=False;
   if Assigned(FInput) then Result:=FInput.SetEndTime(Minutes, Seconds);
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-procedure TACSFileIn.Jump(Offs: Real);
+procedure TAcsFileIn.Jump(Offs: Real);
 begin
   if Assigned(FInput) then FInput.Jump(Offs);
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-{ TACSFileOut }
+{ TAcsFileOut }
 
-procedure TACSFileOut.SetFileName(const AValue: string);
+procedure TAcsFileOut.SetFileName(const AValue: string);
 begin
   if FFileName=AValue then Exit;
   if Assigned(FOutput) then FreeAndNil(FOutput);
-  FOutput:=TACSFileOutClass(FileFormats.FindFromFileName(AValue, [fcSave])).Create(nil);
+  FOutput:=TAcsFileOutClass(FileFormats.FindFromFileName(AValue, [fcSave])).Create(nil);
   if Assigned(FOutput) then
   begin
     FOutput.FileName:=AValue;
@@ -336,101 +336,101 @@ begin
   end;
 end;
 
-constructor TACSFileOut.Create(AOwner: TComponent);
+constructor TAcsFileOut.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FInput:=nil;
   FOutput:=nil;
 end;
 
-procedure TACSFileOut.Done;
+procedure TAcsFileOut.Done;
 begin
   if Assigned(FOutput) then FOutput.Done;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TACSFileOut.DoOutput(Abort: Boolean): Boolean;
+function TAcsFileOut.DoOutput(Abort: Boolean): Boolean;
 begin
   Result:=False;
   if not Assigned(FOutput) then Result:=FOutput.DoOutput(Abort);
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-procedure TACSFileOut.Prepare;
+procedure TAcsFileOut.Prepare;
 begin
   if Assigned(FOutput) then FOutput.Prepare;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TACSFileOut.GetDelay: Integer;
+function TAcsFileOut.GetDelay: Integer;
 begin
   Result:=0;
   if not Assigned(FOutput) then Result:=FOutput.Delay;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TACSFileOut.GetPriority: TTPriority;
+function TAcsFileOut.GetPriority: TTPriority;
 begin
   Result:=TTPriority.tpNormal;
   if not Assigned(FOutput) then Result:=FOutput.ThreadPriority;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TACSFileOut.GetProgress: Real;
+function TAcsFileOut.GetProgress: Real;
 begin
   Result:=0;
   if Assigned(FOutput) then Result:=FOutput.Progress;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TACSFileOut.GetStatus: TACSOutputStatus;
+function TAcsFileOut.GetStatus: TAcsOutputStatus;
 begin
-  Result:=TACSOutputStatus.tosUndefined;
+  Result:=TAcsOutputStatus.tosUndefined;
   if Assigned(FOutput) then Result:=FOutput.Status;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TACSFileOut.GetTE: Integer;
+function TAcsFileOut.GetTE: Integer;
 begin
   Result:=0;
   if Assigned(FOutput) then Result:=FOutput.TimeElapsed;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-procedure TACSFileOut.SetDelay(const AValue: Integer);
+procedure TAcsFileOut.SetDelay(const AValue: Integer);
 begin
   if Assigned(FOutput) then FOutput.Delay:=AValue;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-procedure TACSFileOut.SetPriority(const AValue: TTPriority);
+procedure TAcsFileOut.SetPriority(const AValue: TTPriority);
 begin
   if Assigned(FOutput) then FOutput.ThreadPriority:=AValue;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-procedure TACSFileOut.ThreadException(Sender: TComponent; E: Exception);
+procedure TAcsFileOut.ThreadException(Sender: TComponent; E: Exception);
 begin
   if Assigned(OnThreadException) then OnThreadException(Sender, E);
 end;
 
-procedure TACSFileOut.OutputDone(Sender: TComponent);
+procedure TAcsFileOut.OutputDone(Sender: TComponent);
 begin
   if Assigned(OnDone) then OnDone(Sender);
 end;
 
-procedure TACSFileOut.OutputProgress(Sender: TComponent);
+procedure TAcsFileOut.OutputProgress(Sender: TComponent);
 begin
   if Assigned(OnProgress) then OnProgress(Sender);
 end;
 
-procedure TACSFileOut.SetInput(AInput: TACSCustomInput);
+procedure TAcsFileOut.SetInput(AInput: TAcsCustomInput);
 begin
   FInput:=AInput;
   if Assigned(FOutput) then FOutput.Input:=FInput;
 end;
 
-procedure TACSFileOut.SetFileMode(AMode: TACSFileOutputMode);
+procedure TAcsFileOut.SetFileMode(AMode: TAcsFileOutputMode);
 begin
   // GAK:20060731 changed whole of this method, as it was stopping component loading/creating
   if AMode <> FFileMode then
@@ -440,7 +440,7 @@ begin
   end;
 end;
 
-procedure TACSFileOut.Open;
+procedure TAcsFileOut.Open;
 var
   desc: string;
 begin
@@ -450,7 +450,7 @@ begin
   FDialog.Filter:=desc;
   if FDialog.Execute then
   begin
-    FOutput:=TACSFileOutClass(FileFormats.FindFromFileName(FDialog.FileName, [fcSave])).Create(nil);
+    FOutput:=TAcsFileOutClass(FileFormats.FindFromFileName(FDialog.FileName, [fcSave])).Create(nil);
     FileName:=FDialog.FileName;
     FOutput.FileMode:=FFileMode;
     FOutput.Input:=FInput;
@@ -462,50 +462,50 @@ begin
   FDialog.Free;
 end;
 
-procedure TACSFileOut.Pause;
+procedure TAcsFileOut.Pause;
 begin
   if Assigned(FOutput) then FOutput.Pause;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-procedure TACSFileOut.Resume;
+procedure TAcsFileOut.Resume;
 begin
   if Assigned(FOutput) then FOutput.Resume;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-procedure TACSFileOut.Run;
+procedure TAcsFileOut.Run;
 begin
   if Assigned(FOutput) then FOutput.Run;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-procedure TACSFileOut.Stop;
+procedure TAcsFileOut.Stop;
 begin
   if Assigned(FOutput) then FOutput.Stop;
 end;
 
-destructor TACSFileOut.Destroy;
+destructor TAcsFileOut.Destroy;
 begin
   if Assigned(FOutput) then FreeAndNil(FOutput);
   inherited Destroy;
 end;
 
-{ TACSFileFormatsList }
+{ TAcsFileFormatsList }
 
-destructor TACSFileFormatsList.Destroy;
+destructor TAcsFileFormatsList.Destroy;
 var
   i: integer;
 begin
-  for i:=0 to Count-1 do TACSFileFormat(Items[i]).Free;
+  for i:=0 to Count-1 do TAcsFileFormat(Items[i]).Free;
   inherited Destroy;
 end;
 
-procedure TACSFileFormatsList.Add(const Ext, Desc: String; AClass: TACSFormatClass);
+procedure TAcsFileFormatsList.Add(const Ext, Desc: String; AClass: TAcsFormatClass);
 var
-  newRec: TACSFileFormat;
+  newRec: TAcsFileFormat;
 begin
-  newRec:=TACSFileFormat.Create;
+  newRec:=TAcsFileFormat.Create;
   with newRec do
   begin
     Extension:=LowerCase(Ext);
@@ -515,21 +515,21 @@ begin
   inherited Add(newRec);
 end;
 
-function TACSFileFormatsList.FindExt(Ext: string; Typs: TACSFileCapTyps): TACSFormatClass;
+function TAcsFileFormatsList.FindExt(Ext: string; Typs: TAcsFileCapTyps): TAcsFormatClass;
 var
   i: Integer;
 begin
   Ext:=LowerCase(Ext);
   for i:=Count-1 downto 0 do
   begin
-    with TACSFileFormat(Items[i]) do
+    with TAcsFileFormat(Items[i]) do
     begin
-      if ((fcLoad in Typs) and (TACSFileFormat(Items[i]).FileClass.InheritsFrom(TACSCustomFileIn)))
-      or ((fcSave in Typs) and (TACSFileFormat(Items[i]).FileClass.InheritsFrom(TACSCustomFileOut))) then
+      if ((fcLoad in Typs) and (TAcsFileFormat(Items[i]).FileClass.InheritsFrom(TAcsCustomFileIn)))
+      or ((fcSave in Typs) and (TAcsFileFormat(Items[i]).FileClass.InheritsFrom(TAcsCustomFileOut))) then
       begin
         if Extension=Ext then
         begin
-          Result:=TACSFileFormat(Items[i]).FileClass;
+          Result:=TAcsFileFormat(Items[i]).FileClass;
           Exit;
         end;
       end;
@@ -538,8 +538,8 @@ begin
   Result:=nil;
 end;
 
-function TACSFileFormatsList.FindFromFileName(const FileName: String;
-  Typs: TACSFileCapTyps): TACSFormatClass;
+function TAcsFileFormatsList.FindFromFileName(const FileName: String;
+  Typs: TAcsFileCapTyps): TAcsFormatClass;
 var
   Ext: String;
 begin
@@ -550,25 +550,25 @@ begin
     raise EAcsException.CreateFmt(strUnknownExtension, [Ext]);
 end;
 
-procedure TACSFileFormatsList.Remove(AClass: TACSFormatClass);
+procedure TAcsFileFormatsList.Remove(AClass: TAcsFormatClass);
 var
   i: Integer;
 begin
   for i:=Count-1 downto 0 do
   begin
-    if TACSFileFormat(Items[i]).FileClass.InheritsFrom(AClass) then
+    if TAcsFileFormat(Items[i]).FileClass.InheritsFrom(AClass) then
     begin
-      TACSFileFormat(Items[i]).Free;
+      TAcsFileFormat(Items[i]).Free;
       Delete(i);
     end;
   end;
 end;
 
-procedure TACSFileFormatsList.BuildFilterStrings(var Descriptions: String;
-  Typs: TACSFileCapTyps);
+procedure TAcsFileFormatsList.BuildFilterStrings(var Descriptions: String;
+  Typs: TAcsFileCapTyps);
 var
   k, i: Integer;
-  FileFormat: TACSFileFormat;
+  FileFormat: TAcsFileFormat;
   sFilters: string;
 begin
   Descriptions:='';
@@ -576,9 +576,9 @@ begin
   k:=0;
   for i:=0 to Count-1 do
   begin
-    FileFormat:=TACSFileFormat(Items[i]);
-    if ((fcLoad in Typs) and (FileFormat.FileClass.InheritsFrom(TACSCustomFileIn)))
-    or ((fcSave in Typs) and (FileFormat.FileClass.InheritsFrom(TACSCustomFileOut))) then
+    FileFormat:=TAcsFileFormat(Items[i]);
+    if ((fcLoad in Typs) and (FileFormat.FileClass.InheritsFrom(TAcsCustomFileIn)))
+    or ((fcSave in Typs) and (FileFormat.FileClass.InheritsFrom(TAcsCustomFileOut))) then
     begin
       with FileFormat do
       begin
@@ -598,7 +598,7 @@ end;
 
 initialization
 
-  FileFormats:=TACSFileFormatsList.Create;
+  FileFormats:=TAcsFileFormatsList.Create;
 
 finalization
 

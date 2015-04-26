@@ -8,6 +8,7 @@
 @abstract(this unit introduces the base classes for acs)
 @author(Andrei Borovsky (2003-2005))
 @author(Christian Ulrich (2005))
+@author(Sergey Bodrov (2014-2015))
 }
 
 unit acs_classes;
@@ -20,6 +21,10 @@ uses
   Windows, Dialogs,
 {$ENDIF}
   acs_strings, Classes, SysUtils, acs_types;
+
+const
+
+  STREAM_BUFFER_SIZE = $80000;
 
 type
 
@@ -62,35 +67,78 @@ type
 
   {Basic Thread class for ACS}
 
-  { TACSThread }
+  { TAcsThread }
 
   TAcsThread = class(TThread)
   private
-    procedure CallOnProgress;
+    procedure CallOnProgress();
   public
     Parent: TObject;
     Terminating: Boolean;
     Stop: Boolean;
-    HandleException: TACSHandleThreadException;
+    HandleException: TAcsHandleThreadException;
     Delay: Integer;
     CS: TRTLCriticalSection;
-    constructor Create;
-    procedure DoPause;
-    procedure DoResume;
-    procedure Execute; override;
+    constructor Create();
+    procedure DoPause();
+    procedure DoResume();
+    procedure Execute(); override;
   end;
 
   TAcsVerySmallThread = class(TThread)
   public
-    FOnDone: TACSOutputDoneEvent;
+    FOnDone: TAcsOutputDoneEvent;
     Sender: TComponent;
-    procedure Execute; override;
-    procedure CallOnDone;
+    procedure Execute(); override;
+    procedure CallOnDone();
   end;
 
 
-  { TACSCustomInput }
-  { TACSInput is the base class for all input and converter components. }
+  TAcsBufferMode = (bmBlock, bmReport);
+
+  // Circular buffer with TStream interface
+  TAcsCircularBuffer = class(TStream)
+  private
+    Buff: array[0..STREAM_BUFFER_SIZE-1] of Byte;
+    ReadCur: Integer;
+    WriteCur: Integer;
+    FBufferMode: TAcsBufferMode;
+//    fBreak: Boolean;
+    FBytesInBuffer: Integer;
+    BlockEventName: String;
+//    LockEventName: String;
+    FBytesRead: Integer;
+    {$IFDEF MSWINDOWS}
+    BlockEvent: THandle;
+    CS: TRTLCriticalSection;
+    {$ENDIF}
+  public
+    constructor Create();
+    destructor Destroy; override;
+    procedure Reset();
+    function Read(var Buffer; Count: Longint): Longint; override;
+    function Seek(Offset: Longint; Origin: Word): Longint; overload; override;
+    function Seek(const Offset: Int64; Origin: TSeekOrigin): Int64; overload; override;
+    function Write(const Buffer; Count: Longint): Longint; override;
+    property BytesInBuffer: Integer read FBytesInBuffer;
+    property BufferMode: TAcsBufferMode read FBufferMode write FBufferMode;
+  end;
+
+  { TAcsBuffer }
+
+  TAcsBuffer = class(TMemoryStream)
+  protected
+    FLock: TMultiReadExclusiveWriteSynchronizer;
+  public
+    constructor Create();
+    destructor Destroy(); override;
+    function Read(var Buffer; Count: Longint): Longint; override;
+    function Write(const Buffer; Count: Longint): Longint; override;
+  end;
+
+
+  { TAcsCustomInput }
+  { TAcsInput is the base class for all input and converter components. }
   TAcsCustomInput = class(TComponent)
   protected
     FPosition: Integer;
@@ -101,17 +149,17 @@ type
     FBuffer: array of Byte;
     (* We don't declare the buffer size variable here
      because different descendants may need different buffer sizes *)
-    function GetBPS: Integer; virtual;
-    function GetCh: Integer; virtual;
-    function GetSR: Integer; virtual;
-    function GetTotalTime: Real; virtual;
+    function GetBPS(): Integer; virtual;
+    function GetCh(): Integer; virtual;
+    function GetSR(): Integer; virtual;
+    function GetTotalTime(): Real; virtual;
     procedure SetBufferSize(AValue: Integer); virtual;
-    function GetBufferSize: Integer;
+    function GetBufferSize(): Integer;
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
+    destructor Destroy(); override;
     { This is an abstract method.
-      In TACSInput descendands this function reads the audio stream data into the Buffer.
+      In TAcsInput descendands this function reads the audio stream data into the Buffer.
       Returns the number of bytes actually read.
       Returns zero at the end of stream.
       
@@ -126,22 +174,23 @@ type
       
       InputComponent.Flush;
     }
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; virtual; abstract;
+    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; virtual; overload;
+    function GetData(AStream: TStream): Integer; virtual; overload;
     { This function is called from output component when the buffer must be filled.
     }
-    procedure Reset; virtual;
-    { This is an abstract method. In TACSInput descendands it prepares input
+    procedure Reset(); virtual;
+    { This is an abstract method. In TAcsInput descendands it prepares input
       component for reading data.
     }
-    procedure Init; virtual; abstract;
-    { This is an abstract method. In TACSInput descendands it closes the current input,
+    procedure Init(); virtual; abstract;
+    { This is an abstract method. In TAcsInput descendands it closes the current input,
       clearing up all temporary structures alocated during data transfer.
       
       Note: usually this method is called internally by the output or converter component to
       which the input component is assigned. You can call this method if you want to get direct
       access to the audio stream.
     }
-    procedure Flush; virtual; abstract;
+    procedure Flush(); virtual; abstract;
     { Read this property to determine the number of bits per sample in the input audio stream.
       Possible values are 8 and 16.
     }
@@ -170,59 +219,67 @@ type
 
 
   { TAcsCustomOutput }
-  { TACSOutput is the base class for all ACS output components. }
+  { TAcsCustomOutput is the base class for all ACS output components. }
   TAcsCustomOutput = class(TComponent)
   protected
     CanOutput: Boolean;
-    CurProgr: real;
-    Thread: TACSThread;
-    FInput: TACSCustomInput;
-    FOnDone: TACSOutputDoneEvent;
-    FOnProgress: TACSOutputProgressEvent;
+    CurProgr: Real;
+    Thread: TAcsThread;
+    FInput: TAcsCustomInput;
+    FOnDone: TAcsOutputDoneEvent;
+    FOnProgress: TAcsOutputProgressEvent;
     FBusy: Boolean;  // Set to true by Run and to False by WhenDone.
-    FOnThreadException: TACSThreadExceptionEvent;
+    FOnThreadException: TAcsThreadExceptionEvent;
     InputLock: Boolean;
     FBufferSize: Integer;
-    FBuffer: PAcsBuffer8;
+    //FBuffer: PAcsBuffer8;
     //FBuffer: array of Byte;
+    FBuffer: TAcsBuffer;
 
     { Read data from Input into Buffer, return bytes read
       AEndOfInput set to True if end of input buffer is reached }
-    function FillBufferFromInput(var AEndOfInput: Boolean): Integer;
-    function GetPriority: TTPriority;
-    function GetSuspend: Boolean;
-    function GetProgress: Real;
-    procedure SetInput(AInput: TACSCustomInput); virtual;
-    procedure SetPriority(Priority: TTPriority);
-    procedure SetSuspend(v: Boolean);
+    function FillBufferFromInput(var AEndOfInput: Boolean): Integer; virtual;
+    function GetPriority(): TTPriority; virtual;
+    procedure SetPriority(Priority: TTPriority); virtual;
+    function GetSuspend(): Boolean; virtual;
+    procedure SetSuspend(v: Boolean); virtual;
+    function GetProgress(): Real; virtual;
+    procedure SetInput(AInput: TAcsCustomInput); virtual;
     { Called from Thread when thread stopped }
-    procedure WhenDone;
-    function GetTE: Integer;
-    function GetStatus: TACSOutputStatus;
-    function GetDelay: Integer;
-    procedure SetDelay(Value: Integer);
+    procedure WhenDone(); virtual;
+    { Time elapsed }
+    function GetTE(): Integer; virtual;
+    function GetStatus(): TAcsOutputStatus; virtual;
+    function GetDelay(): Integer; virtual;
+    procedure SetDelay(Value: Integer); virtual;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
-    procedure HandleThreadException(E: Exception);
-    procedure SetBufferSize(AValue: Integer);
+    procedure HandleThreadException(E: Exception); virtual;
+    function GetBufferSize(): Integer;
+    procedure SetBufferSize(AValue: Integer); virtual;
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
-    procedure Prepare; virtual; abstract; // Calls FInput.init
+    destructor Destroy(); override;
+
+    { Set default buffer size and calls FInput.Init() }
+    procedure Prepare(); virtual;
     { Called from Thread }
     function DoOutput(Abort: Boolean): Boolean; virtual; abstract;
-    procedure Done; virtual; abstract; // Calls FInput.Flush
+    { Calls FInput.Flush() and reset buffer to zero }
+    procedure Done(); virtual;
+
     {$IFDEF MSWINDOWS}
-    procedure Abort;
+    procedure Abort();
     {$ENDIF}
-    { pauses the output (the output thread is suspended). }
-    procedure Pause; virtual;
-    { Resumes previously paused output. }
-    procedure Resume; virtual;
     { This is the most important method in the output components.
       After an input component has been assigned, call Run to start audio-processing chain. }
-    procedure Run;
+    procedure Run();
     { Stops the running output process. }
-    procedure Stop;
+    procedure Stop();
+    { pauses the output (the output thread is suspended). }
+    procedure Pause(); virtual;
+    { Resumes previously paused output. }
+    procedure Resume(); virtual;
+
     { Set to true by Run and to False by WhenDone. }
     property Busy: Boolean read FBusy;
     { Use this property to set the delay (in milliseconds) in output thread.
@@ -245,21 +302,19 @@ type
       tosPaused: the component is paused (the Pause method was called);
       
       tosIdle: the component is idle; }
-    property Status: TACSOutputStatus read GetStatus;
+    property Status: TAcsOutputStatus read GetStatus;
     property TimeElapsed: Integer read GetTE;
   published
     { This property allows you to set the input component for the output component.
-      The valid input components must be descendants of TACSInput.
-    }
-    property Input: TACSCustomInput read FInput write SetInput;
+      The valid input components must be descendants of TAcsInput. }
+    property Input: TAcsCustomInput read FInput write SetInput;
     { If this property is set to True the output thread suspends every time the
       output component becomes inactive, otherwise the thread executes permanently.
       This property is introduced to simplify the debugging process ander
       Kylix IDE. Output components perform output in their own threads.
       The signals received by multi-threaded applications under IDE can cause problems.
       Set this property to False when debugging your application
-      and to True in the final release.
-    }
+      and to True in the final release. }
     property SuspendWhenIdle: Boolean read GetSuspend write SetSuspend;
     { This event is invoked when the output is finished.
 
@@ -268,13 +323,11 @@ type
       "Component is buisy" exception.
       It is a good practice to desable output-starting controls in the
       method where the output component's Run method is called and to enable
-      them in the output component's OnDone event handler.
-    }
-    property OnDone: TACSOutputDoneEvent read FOnDone write FOndone;
+      them in the output component's OnDone event handler. }
+    property OnDone: TAcsOutputDoneEvent read FOnDone write FOndone;
     { This event is invoked every time the Progress property value changes.
-      Be careful when referencing GUI interface components in OnProgress event's handler.
-    }
-    property OnProgress: TACSOutputProgressEvent read FOnProgress write FOnProgress;
+      Be careful when referencing GUI interface components in OnProgress event's handler. }
+    property OnProgress: TAcsOutputProgressEvent read FOnProgress write FOnProgress;
     { Thread procedure should never terminate.
       For this reason all the exceptions that might arise in the thread
       procedure are caught within the procedure itself.
@@ -283,21 +336,19 @@ type
       Avoid any potential exception-rising actions in this event’s handler!
       Use the handler to reset application controls (if needed) and call the
       input component’s Reset method.
-      See the CD ripper demo for an example of handling thread exceptions.
-    }
-    property OnThreadException: TACSThreadExceptionEvent read FOnThreadException write FOnThreadException;
-    { This Property sets the BufferSize of the component
-    }
-    property BufferSize: Integer read FBufferSize write SetBufferSize;
+      See the CD ripper demo for an example of handling thread exceptions. }
+    property OnThreadException: TAcsThreadExceptionEvent read FOnThreadException write FOnThreadException;
+    { This Property sets the BufferSize of the component }
+    property BufferSize: Integer read GetBufferSize write SetBufferSize;
   end;
 
-  { TACSStreamedInput introduces Stream property.
-    This property allows input components that descend from TACSStreamedInput
+  { TAcsStreamedInput introduces Stream property.
+    This property allows input components that descend from TAcsStreamedInput
     to get data not only from files on disc but from any kind of stream.
-    The descendats of this class are TACSFileIn (and all its descendats except TMACIn),
+    The descendats of this class are TAcsFileIn (and all its descendats except TMACIn),
     and TStreamIn component that is designed to read raw audio data from streams.
   }
-  TACSStreamedInput = class(TACSCustomInput)
+  TAcsStreamedInput = class(TAcsCustomInput)
   protected
     FStream: TStream;
     FStreamAssigned: Boolean;
@@ -321,7 +372,7 @@ type
     property Seekable: Boolean read FSeekable write FSeekable;
     { Use this property to set the input stream for the input component.
       Remember that you have to create, destroy and position the input stream explicitly.
-      In TACSFileIn descendants the stream assigned to this property takes over
+      In TAcsFileIn descendants the stream assigned to this property takes over
       the FileName property, i. e. if both Stream and FileName property are assigned,
       the stream and not the file will be used for the actual input.
       To unassign this property set it to nil.
@@ -331,21 +382,20 @@ type
     constructor Create(AOwner: TComponent); override;
   end;
 
-  { TACSStreamedOutput introduces Stream property.
-    This property allows output components that descend from TACSStreamedOutput
+  { TAcsStreamedOutput introduces Stream property.
+    This property allows output components that descend from TAcsStreamedOutput
     to store data not only to files on disc but to any kind of stream as well.
   }
-  TACSStreamedOutput = class(TAcsCustomOutput)
+  TAcsStreamedOutput = class(TAcsCustomOutput)
   protected
     { Use this property to set the output stream for the corresponding output component.
       Remember that you have to create, destroy and position the input stream explicitly.
-      In file-handling TACSStreamedOutput descendants the stream assigned to this property
+      In file-handling TAcsStreamedOutput descendants the stream assigned to this property
       takes over the FileName property, i. e. if both Stream and FileName property are assigned,
       the stream and not the file will be used for the actual output.
       To unassign this property set it to nil.
     }
     FStream: TStream;
-    FStreamAssigned: Boolean;
     procedure SetStream(AStream: TStream);
   public
     property Stream: TStream read FStream write SetStream;
@@ -354,7 +404,7 @@ type
   { This class introduces an simple handler for an file tag it can hold any streamable
     piece of data or an string
   }
-  TACSFileTag = class
+  TAcsFileTag = class
   private
     function GetName: string; virtual;
   public
@@ -368,26 +418,26 @@ type
   { This class introduces an base class for file tag lists
   }
 
-  { TACSFileInfo }
+  { TAcsFileInfo }
 
-  TACSFileInfo = class
+  TAcsFileInfo = class
   private
     procedure ReadFromFile; virtual;
-    procedure SetStringTag(Idx: string; const AValue: TACSFileTag);
-    function GetStringTag(Idx: string): TACSFileTag;
+    procedure SetStringTag(Idx: string; const AValue: TAcsFileTag);
+    function GetStringTag(Idx: string): TAcsFileTag;
   public
     procedure SaveToFile; virtual;
-    property Tags[Idx: string]: TACSFileTag read GetStringTag write SetStringTag;
+    property Tags[Idx: string]: TAcsFileTag read GetStringTag write SetStringTag;
   end;
   
 
-  { TACSCustomFileIn }
-  { TACSFileIn is the base class for all input components that read data from files
+  { TAcsCustomFileIn }
+  { TAcsFileIn is the base class for all input components that read data from files
     (or from other streams in the corresponding file format).
     It introduces such properties as FileName, StartSample, EndSample, Loop,
     and Valid and Jump, Seek, SetStartTime, SetEndTime methods.
   }
-  TACSCustomFileIn = class(TACSStreamedInput)
+  TAcsCustomFileIn = class(TAcsStreamedInput)
   protected
     FFileName: TFileName;
     FOffset: Real;
@@ -468,18 +518,24 @@ type
     property StartSample: Integer read FStartSample write FStartSample;
   end;
 
-  TACSCustomFileOut = class(TACSStreamedOutput)
+  { TAcsCustomFileOut }
+
+  TAcsCustomFileOut = class(TAcsStreamedOutput)
   protected
     FFileName: TFileName;
-    FFileMode: TACSFileOutputMode;
+    FFileMode: TAcsFileOutputMode;
     FAccessMask: Integer;
-    procedure SetFileMode(AMode: TACSFileOutputMode); virtual;
+    procedure SetFileMode(AMode: TAcsFileOutputMode); virtual;
   public
     constructor Create(AOwner: TComponent); override;
     { Use this property to set the file access mask. The default value is $1B6,
     which corresponds to rw-rw-rw- access mask.
     }
     property AccessMask: Integer read FAccessMask write FAccessMask;
+    { check and open file stream }
+    procedure Prepare(); override;
+    { close file stream }
+    procedure Done(); override;
   published
     { There are two possible values for this property: foRewrite and foAppend.
       When foRewrite (default value) is set and the file with the specified
@@ -490,80 +546,95 @@ type
       file (stream).
       Currently only TWaveOut and TVorbisOut components support foAppend mode.
     }
-    property FileMode: TACSFileOutputMode read FFileMode write SetFileMode;
+    property FileMode: TAcsFileOutputMode read FFileMode write SetFileMode;
     { Use this property to set the name of the file to save data to.
     }
     property FileName: TFileName read FFileName write FFileName;
   end;
 
-  TACSCustomConverter = class(TACSCustomInput)
+  { TAcsCustomConverter }
+  { TAcsCustomConverter is the base class for all ACS converter classes.
+  Converters are intermediate sections in the audio processing chain.
+  Being the descendants of TAcsCustomInput they can be linked to the output
+  components, while their Input property allows to link them with input
+  components and other converters.
+
+  TAcsCustomConverter introduces new published property - Input - the very
+  property that distinguishes a converter from an input component. }
+  TAcsCustomConverter = class(TAcsCustomInput)
   protected
     InputLock: Boolean;
-    FInput: TACSCustomInput;
+    FInput: TAcsCustomInput;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
-    procedure SetInput(AInput: TACSCustomInput); virtual;
+    procedure SetInput(AInput: TAcsCustomInput); virtual;
   public
-    procedure UnlockInput;
+    procedure UnlockInput();
   published
-    property Input: TACSCustomInput read FInput write SetInput;
+    property Input: TAcsCustomInput read FInput write SetInput;
   end;
-
-const
-
-  STREAM_BUFFER_SIZE = $80000;
-
-type
-
-  // Circular buffer with TStream interface
-
-  TACSBufferMode = (bmBlock, bmReport);
-
-  TACSBufferStream = class(TStream)
-  private
-    Buff: array[0..STREAM_BUFFER_SIZE-1] of Byte;
-    ReadCur: Integer;
-    WriteCur: Integer;
-    FBufferMode: TACSBufferMode;
-//    fBreak: Boolean;
-    FBytesInBuffer: Integer;
-    BlockEventName: String;
-//    LockEventName: String;
-    FBytesRead: Integer;
-    {$IFDEF MSWINDOWS}
-    BlockEvent: THandle;
-    CS: TRTLCriticalSection;
-    {$ENDIF}
-  public
-    constructor Create;
-    destructor Destroy; override;
-    function Read(var Buffer; Count: Longint): Longint; override;
-    procedure Reset;
-    function Seek(Offset: Longint; Origin: Word): Longint; overload; override;
-    function Seek(const Offset: Int64; Origin: TSeekOrigin): Int64; overload; override;
-    function Write(const Buffer; Count: Longint): Longint; override;
-    property BytesInBuffer: Integer read FBytesInBuffer;
-    property BufferMode: TACSBufferMode read FBufferMode write FBufferMode;
-  end;
-
 
 
 implementation
 
-constructor TACSCustomInput.Create(AOwner: TComponent);
+{ TAcsBuffer }
+
+constructor TAcsBuffer.Create();
 begin
-  inherited Create(AOwner);
-  FBusy:=False;
-  FPosition:=0;
+  inherited Create;
+  FLock:=TMultiReadExclusiveWriteSynchronizer.Create();
 end;
 
-destructor TACSCustomInput.Destroy;
+destructor TAcsBuffer.Destroy();
 begin
+  FreeAndNil(FLock);
   inherited Destroy;
 end;
 
-procedure TACSThread.Execute;
+function TAcsBuffer.Read(var Buffer; Count: Longint): Longint;
+begin
+  FLock.BeginRead();
+  Result:=inherited Read(Buffer, Count);
+  FLock.EndRead();
+end;
+
+function TAcsBuffer.Write(const Buffer; Count: Longint): Longint;
+begin
+  if FLock.BeginWrite() then
+  begin
+    Result:=inherited Write(Buffer, Count);
+    FLock.EndWrite();
+  end
+  else Result:=0;
+end;
+
+{ TAcsThread }
+
+procedure TAcsThread.CallOnProgress();
 var
-  DoneThread: TACSVerySmallThread;
+  ParentComponent: TAcsCustomOutput;
+begin
+  ParentComponent:=TAcsCustomOutput(Parent);
+  ParentComponent.FOnProgress(ParentComponent);
+end;
+
+constructor TAcsThread.Create();
+begin
+ inherited Create(True);
+end;
+
+procedure TAcsThread.DoPause();
+begin
+  if not Suspended then Suspended:=True;
+end;
+
+procedure TAcsThread.DoResume();
+begin
+  if Suspended then Suspended:=False;
+end;
+
+procedure TAcsThread.Execute();
+var
+  DoneThread: TAcsVerySmallThread;
   ParentComponent: TAcsCustomOutput;
   Res: Boolean;
 begin
@@ -583,9 +654,9 @@ begin
       if Stop or (not Res) then
       begin
         Stop:=False;
-        ParentComponent.WhenDone;
+        ParentComponent.WhenDone();
         // This ensures that OnDone event is called outside this thread
-        DoneThread:=TACSVerySmallThread.Create(True);
+        DoneThread:=TAcsVerySmallThread.Create(True);
         DoneThread.Sender:=ParentComponent;
         DoneThread.FOnDone:=ParentComponent.FOnDone;
         DoneThread.FreeOnTerminate:=True;
@@ -611,11 +682,81 @@ begin
   Terminating:=False;
 end;
 
+{ TAcsCustomInput }
+
+constructor TAcsCustomInput.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FBusy:=False;
+  FPosition:=0;
+end;
+
+destructor TAcsCustomInput.Destroy();
+begin
+  inherited Destroy;
+end;
+
+function TAcsCustomInput.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+begin
+  Result:=Min(Self.BufferSize, BufferSize);
+  Move(Buffer, FBuffer, Result);
+end;
+
+function TAcsCustomInput.GetData(AStream: TStream): Integer;
+begin
+  Result:=Min(Self.BufferSize, AStream.Size);
+  AStream.Read(FBuffer, Result);
+end;
+
+function TAcsCustomInput.GetBPS(): Integer;
+begin
+  Result:=-1;
+end;
+
+function TAcsCustomInput.GetCh(): Integer;
+begin
+  Result:=-1;
+end;
+
+function TAcsCustomInput.GetSR(): Integer;
+begin
+  Result:=-1;
+end;
+
+function TAcsCustomInput.GetTotalTime: Real;
+begin
+  Result:=0;  // Default result for the streams.
+end;
+
+procedure TAcsCustomInput.SetBufferSize(AValue: Integer);
+begin
+  //if Busy then
+  //  raise EAcsException.Create(strBusy);
+  if AValue >= 0 then SetLength(FBuffer, AValue);
+end;
+
+function TAcsCustomInput.GetBufferSize: Integer;
+begin
+  Result:=Length(FBuffer);
+end;
+
+procedure TAcsCustomInput.Reset();
+begin
+  try
+    Flush();
+  except
+  end;
+  FBusy:=False;
+end;
+
+{ TAcsCustomOutput }
+
 constructor TAcsCustomOutput.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FBusy:=False;
-  Thread:=TACSThread.Create;
+  FBuffer:=TAcsBuffer.Create();
+  Thread:=TAcsThread.Create();
   Thread.Parent:=Self;
 //  Thread.DoOutput:=Self.DoOutput;
 //  Thread.FOnDone:=Self.WhenDone;
@@ -627,7 +768,7 @@ begin
   {$ENDIF}
 end;
 
-destructor TAcsCustomOutput.Destroy;
+destructor TAcsCustomOutput.Destroy();
 begin
 //  if Thread.Suspended then
 //  Thread.Resume;
@@ -637,18 +778,33 @@ begin
   {$IFDEF MSWINDOWS}
   DeleteCriticalSection(Thread.CS);
   {$ENDIF}
+  FreeAndNil(FBuffer);
   inherited Destroy;
 end;
 
-procedure TAcsCustomOutput.WhenDone;
+procedure TAcsCustomOutput.Prepare();
 begin
-  if not Busy then Exit;
-  CanOutput:=False;
-  Done;
-  FBusy:=False;
+  if not Assigned(FInput) then
+    raise EAcsException.Create(strInputNotAssigned);
+  SetBufferSize(FBufferSize); // set default buffer size
+  if Assigned(FInput) then FInput.Init();
 end;
 
-procedure TAcsCustomOutput.Run;
+procedure TAcsCustomOutput.Done();
+begin
+  if Assigned(FInput) then FInput.Flush();
+  SetBufferSize(0);
+end;
+
+{$IFDEF MSWINDOWS}
+procedure TAcsCustomOutput.Abort();
+begin
+  TerminateThread(Thread.Handle, 0);
+  WhenDone();
+end;
+{$ENDIF}
+
+procedure TAcsCustomOutput.Run();
 begin
   if Busy then
     raise EAcsException.Create(strBusy);
@@ -657,7 +813,7 @@ begin
   InputLock:=False;
   Thread.Suspended:=True;
   try
-    Prepare;
+    Prepare();
     FBusy:=True;
     Thread.Stop:=False;
     CanOutput:=True;
@@ -667,12 +823,30 @@ begin
   end;
 end;
 
-procedure TAcsCustomOutput.Stop;
+procedure TAcsCustomOutput.Stop();
 begin
   Thread.Stop:=True;
 end;
 
-function TAcsCustomOutput.GetStatus: TACSOutputStatus;
+procedure TAcsCustomOutput.Pause();
+begin
+  Thread.DoPause();
+end;
+
+procedure TAcsCustomOutput.Resume();
+begin
+  Thread.DoResume();
+end;
+
+procedure TAcsCustomOutput.WhenDone();
+begin
+  if not Busy then Exit;
+  CanOutput:=False;
+  Done();
+  FBusy:=False;
+end;
+
+function TAcsCustomOutput.GetStatus(): TAcsOutputStatus;
 begin
   if Busy then
   begin
@@ -697,9 +871,9 @@ var
 begin
   Result:=0;
   if not Assigned(FInput) then Exit;
-  while Result < FBufferSize do
+  while Result < FBuffer.Size do
   begin
-    n:=FInput.GetData(@FBuffer^[Result], FBufferSize-Result);
+    n:=FInput.GetData(FBuffer.Memory+Result, FBuffer.Size-Result);
     if n = 0 then
     begin
       AEndOfInput:=True;
@@ -709,14 +883,14 @@ begin
   end;
 end;
 
-function TAcsCustomOutput.GetPriority: TTPriority;
+function TAcsCustomOutput.GetPriority(): TTPriority;
 begin
   Result:=Thread.Priority;
 end;
 
-procedure TAcsCustomOutput.SetInput(AInput: TACSCustomInput);
+procedure TAcsCustomOutput.SetInput(AInput: TAcsCustomInput);
 var
-  OldInput, NewInput: TACSCustomInput;
+  OldInput, NewInput: TAcsCustomInput;
 begin
   if Busy then
   begin
@@ -733,7 +907,7 @@ begin
     FInput:=AInput;
 end;
 
-function TAcsCustomOutput.GetProgress: Real;
+function TAcsCustomOutput.GetProgress(): Real;
 begin
   if not Assigned(FInput) then
   begin
@@ -747,17 +921,7 @@ begin
   end;
 end;
 
-procedure TAcsCustomOutput.Pause;
-begin
-  Thread.DoPause;
-end;
-
-procedure TAcsCustomOutput.Resume;
-begin
-  Thread.DoResume;
-end;
-
-function TAcsCustomOutput.GetSuspend: Boolean;
+function TAcsCustomOutput.GetSuspend(): Boolean;
 begin
   Result:=Thread.Suspended;
 end;
@@ -767,120 +931,15 @@ begin
   Thread.Suspended:=v;
 end;
 
-constructor TACSStreamedInput.Create(AOwner: TComponent);
-begin
-  inherited Create(AOwner);
-  FStream:=nil;
-  FSeekable:=True;
-end;
-
-function TACSCustomFileIn.GetBPS: Integer;
-begin
-  if FSeekable then
-  begin
-    { TODO : Optimize }
-    OpenFile;
-    Result:=FBPS;
-    CloseFile;
-  end
-  else Result:=FBPS;
-end;
-
-function TACSCustomFileIn.GetCh: Integer;
-begin
-  if FSeekable then
-  begin
-    OpenFile;
-    Result:=FChan;
-    CloseFile;
-  end
-  else Result:=FChan;
-end;
-
-function TACSCustomFileIn.GetSR: Integer;
-begin
-  if FSeekable then
-  begin
-    OpenFile;
-    Result:=FSR;
-    CloseFile;
-  end
-  else Result:=FSR;
-end;
-
-function TACSCustomFileIn.GetTime: Integer;
-begin
-  if FSeekable then
-  begin
-    OpenFile;
-    Result:=FTime;
-    CloseFile;
-  end
-  else Result:=FTime;
-end;
-
-function TACSCustomFileIn.GetValid: Boolean;
-begin
-  Result:=False;
-  if (not FStreamAssigned) and (FileName = '') then Exit;
-  if FSeekable then
-  begin
-    OpenFile;
-    Result:=FValid;
-    CloseFile;
-  end
-  else Result:=FValid;
-end;
-
-procedure TACSCustomFileIn.OpenFile;
-begin
-  FSize:=0;
-end;
-
-procedure TACSCustomFileIn.CloseFile;
-begin
-
-end;
-
-procedure TACSCustomFileIn.Init;
-begin
-  if Busy then raise EAcsException.Create(strBusy);
-  if not FStreamAssigned then
-    if FFileName = '' then raise EAcsException.Create(strFilenamenotassigned);
-  OpenFile;
-  if StartSample <> 0 then Seek(StartSample);
-  if (StartSample <> 0) or (FEndSample <> -1) then
-  begin
-    FSize:=FEndSample-FStartSample;
-    if FEndSample = -1 then FSize:=FSize+FTotalSamples+1;
-    FSize:=FSize*(BitsPerSample shr 3)*FChan;
-  end;
-  FBusy:=True;
-  BufStart:=1;
-  BufEnd:=0;
-  FPosition:=0;
-end;
-
-procedure TACSCustomFileIn.Flush;
-begin
-  CloseFile;
-  FBusy:=False;
-end;
-
-procedure TACSCustomFileIn.Jump(Offs: Real);
-begin
-  FOffset:=Offs;
-end;
-
-function TAcsCustomOutput.GetTE: Integer;
+function TAcsCustomOutput.GetTE(): Integer;
 begin
    if not Assigned(FInput) then
-   Result:=0
+     Result:=0
    else
-   Result:=Round(FInput.Position / ((FInput.BitsPerSample shr 3) * FInput.Channels * FInput.SampleRate));
+     Result:=Round(FInput.Position / ((FInput.BitsPerSample shr 3) * FInput.Channels * FInput.SampleRate));
 end;
 
-function TAcsCustomOutput.GetDelay: Integer;
+function TAcsCustomOutput.GetDelay(): Integer;
 begin
   if Assigned(Thread) then Result:=Thread.Delay
   else Result:=0;
@@ -894,60 +953,6 @@ begin
   end;
 end;
 
-function TACSCustomInput.GetBPS: Integer;
-begin
-  Result:=-1;
-end;
-
-function TACSCustomInput.GetCh: Integer;
-begin
-  Result:=-1;
-end;
-
-function TACSCustomInput.GetSR: Integer;
-begin
-  Result:=-1;
-end;
-
-function TACSCustomInput.GetTotalTime: Real;
-begin
-  Result:=0;  // Default result for the streams.
-end;
-
-procedure TACSCustomInput.SetBufferSize(AValue: Integer);
-begin
-  //if Busy then
-  //  raise EAcsException.Create(strBusy);
-  if AValue >= 0 then SetLength(FBuffer, AValue);
-end;
-
-function TACSCustomInput.GetBufferSize: Integer;
-begin
-  Result:=Length(FBuffer);
-end;
-
-function TACSCustomFileIn.GetTotalTime: Real;
-begin
-  OpenFile;
-  Result:=0;
-  if (SampleRate = 0) or (Channels = 0) or (BitsPerSample = 0) then
-  else
-    Result:=Size/(SampleRate*Channels*(BitsPerSample shr 3));
-  CloseFile;
-end;
-
-procedure TACSStreamedInput.SetStream(AStream: TStream);
-begin
-  FStream:=AStream;
-  FStreamAssigned:=Assigned(FStream);
-end;
-
-procedure TACSStreamedOutput.SetStream(AStream: TStream);
-begin
-  FStream:=AStream;
-  FStreamAssigned:=Assigned(FStream);
-end;
-
 procedure TAcsCustomOutput.Notification(AComponent: TComponent; Operation: TOperation);
 begin
   // Remove the following two lines if they cause troubles in your IDE
@@ -955,26 +960,17 @@ begin
   inherited Notification(AComponent, Operation);
 end;
 
-procedure TACSCustomInput.Reset;
-begin
-  try
-    Flush;
-  except
-  end;
-  FBusy:=False;
-end;
-
 procedure TAcsCustomOutput.HandleThreadException(E: Exception);
 var
-  Conv: TACSCustomConverter;
+  Conv: TAcsCustomConverter;
 begin
  InputLock:=False;
  if Status <> tosIdle then
  begin
    try
-    if FInput is TACSCustomConverter then
+    if FInput is TAcsCustomConverter then
     begin
-      Conv:=(FInput as TACSCustomConverter);
+      Conv:=(FInput as TAcsCustomConverter);
       Conv.UnlockInput;
     end;
    except
@@ -989,22 +985,193 @@ begin
  if Assigned(FOnThreadException) then FOnThreadException(Self, E);
 end;
 
+function TAcsCustomOutput.GetBufferSize(): Integer;
+begin
+  Result:=FBuffer.Size;
+end;
+
 procedure TAcsCustomOutput.SetBufferSize(AValue: Integer);
 begin
   if Busy then
     raise EAcsException.Create(strBusy);
-  if AValue > 0 then FBufferSize:=AValue;
+  //if AValue > 0 then FBufferSize:=AValue;
+  if AValue > 0 then FBuffer.Size:=AValue;
 end;
 
+{ TAcsStreamedInput }
 
-procedure TACSCustomFileIn.Reset;
+constructor TAcsStreamedInput.Create(AOwner: TComponent);
 begin
-  inherited Reset;
+  inherited Create(AOwner);
+  FStream:=nil;
+  FSeekable:=True;
+end;
+
+{ TAcsCustomFileIn }
+
+constructor TAcsCustomFileIn.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FStartSample:=0;
+  FEndSample:=-1;
+end;
+
+procedure TAcsCustomFileIn.Reset();
+begin
+  inherited Reset();
   FOpened:=0;
 end;
 
+procedure TAcsCustomFileIn.Flush();
+begin
+  CloseFile();
+  FBusy:=False;
+end;
 
-constructor TACSCustomFileOut.Create;
+procedure TAcsCustomFileIn.Init();
+begin
+  if Busy then raise EAcsException.Create(strBusy);
+  if not Assigned(FStream) then
+    if FFileName = '' then raise EAcsException.Create(strFilenamenotassigned);
+  OpenFile();
+  if StartSample <> 0 then Seek(StartSample);
+  if (StartSample <> 0) or (FEndSample <> -1) then
+  begin
+    FSize:=FEndSample-FStartSample;
+    if FEndSample = -1 then FSize:=FSize+FTotalSamples+1;
+    FSize:=FSize*(BitsPerSample shr 3)*FChan;
+  end;
+  FBusy:=True;
+  BufStart:=1;
+  BufEnd:=0;
+  FPosition:=0;
+end;
+
+function TAcsCustomFileIn.GetBPS(): Integer;
+begin
+  if FSeekable then
+  begin
+    { TODO : Optimize }
+    OpenFile();
+    Result:=FBPS;
+    CloseFile;
+  end
+  else Result:=FBPS;
+end;
+
+function TAcsCustomFileIn.GetCh(): Integer;
+begin
+  if FSeekable then
+  begin
+    OpenFile;
+    Result:=FChan;
+    CloseFile;
+  end
+  else Result:=FChan;
+end;
+
+function TAcsCustomFileIn.GetSR(): Integer;
+begin
+  if FSeekable then
+  begin
+    OpenFile;
+    Result:=FSR;
+    CloseFile;
+  end
+  else Result:=FSR;
+end;
+
+function TAcsCustomFileIn.GetTime(): Integer;
+begin
+  if FSeekable then
+  begin
+    OpenFile();
+    Result:=FTime;
+    CloseFile();
+  end
+  else Result:=FTime;
+end;
+
+function TAcsCustomFileIn.GetValid(): Boolean;
+begin
+  Result:=False;
+  if (not Assigned(FStream)) or (FileName = '') then Exit;
+  if FSeekable then
+  begin
+    OpenFile();
+    Result:=FValid;
+    CloseFile();
+  end
+  else Result:=FValid;
+end;
+
+procedure TAcsCustomFileIn.OpenFile();
+begin
+  FSize:=0;
+end;
+
+procedure TAcsCustomFileIn.CloseFile();
+begin
+
+end;
+
+procedure TAcsCustomFileIn.Jump(Offs: Real);
+begin
+  FOffset:=Offs;
+end;
+
+function TAcsCustomFileIn.GetTotalTime: Real;
+begin
+  OpenFile;
+  Result:=0;
+  if (SampleRate = 0) or (Channels = 0) or (BitsPerSample = 0) then
+  else
+    Result:=Size/(SampleRate*Channels*(BitsPerSample shr 3));
+  CloseFile;
+end;
+
+function TAcsCustomFileIn.SetStartTime(Minutes, Seconds: Integer): Boolean;
+var
+  Sample: Integer;
+begin
+  Result:=False;
+  if not FSeekable then Exit;
+  OpenFile;
+  CloseFile;
+  Sample:=(Minutes*60+Seconds)*FSR;
+  if Sample > FTotalSamples then Exit;
+  FStartSample:=Sample;
+  Result:=True;
+end;
+
+function TAcsCustomFileIn.SetEndTime(Minutes, Seconds: Integer): Boolean;
+var
+  Sample: Integer;
+begin
+  Result:=False;
+  if not FSeekable then Exit;
+  OpenFile;
+  CloseFile;
+  Sample:=(Minutes*60+Seconds)*FSR;
+  if Sample > FTotalSamples then Exit;
+  FEndSample:=Sample;
+  Result:=True;
+end;
+
+procedure TAcsStreamedInput.SetStream(AStream: TStream);
+begin
+  FStream:=AStream;
+  FStreamAssigned:=Assigned(FStream);
+end;
+
+procedure TAcsStreamedOutput.SetStream(AStream: TStream);
+begin
+  FStream:=AStream;
+end;
+
+{ TAcsCustomFileOut }
+
+constructor TAcsCustomFileOut.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   {$IFDEF LINUX}
@@ -1012,21 +1179,41 @@ begin
   {$ENDIF}
 end;
 
-procedure TACSCustomFileOut.SetFileMode;
+procedure TAcsCustomFileOut.Prepare();
+begin
+  inherited Prepare();
+  if Assigned(FStream) then FreeAndNil(FStream);
+  if FFileName = '' then
+    raise EAcsException.Create(strFilenamenotassigned);
+  if (not FileExists(FFileName)) or (FFileMode = foRewrite) then
+    FStream := TFileStream.Create(FFileName, fmCreate or fmShareExclusive, FAccessMask)
+  else
+    FStream := TFileStream.Create(FFileName, fmOpenReadWrite or fmShareExclusive, FAccessMask);
+end;
+
+procedure TAcsCustomFileOut.Done();
+begin
+  if Assigned(FStream) then FreeAndNil(FStream);
+  inherited Done();
+end;
+
+procedure TAcsCustomFileOut.SetFileMode(AMode: TAcsFileOutputMode);
 begin
   FFileMode:=foRewrite;
 end;
 
-procedure TACSCustomConverter.Notification;
+{ TAcsCustomConverter }
+
+procedure TAcsCustomConverter.Notification(AComponent: TComponent; Operation: TOperation);
 begin
   // Remove the following two lines if they cause troubles in your IDE
   if (AComponent = FInput) and (Operation = opRemove) then Input:=nil;
   inherited Notification(AComponent, Operation);
 end;
 
-procedure TACSCustomConverter.SetInput(AInput: TACSCustomInput);
+procedure TAcsCustomConverter.SetInput(AInput: TAcsCustomInput);
 var
-  OldInput, NewInput: TACSCustomInput;
+  OldInput, NewInput: TAcsCustomInput;
 begin
   if AInput = Self then Exit;
   if Busy then
@@ -1044,96 +1231,34 @@ begin
     FInput:=AInput;
 end;
 
-procedure TACSCustomConverter.UnlockInput;
+procedure TAcsCustomConverter.UnlockInput();
 var
-  Conv: TACSCustomConverter;
+  Conv: TAcsCustomConverter;
 begin
   InputLock:=False;
   if Assigned(FInput) then
-  if (FInput is TACSCustomConverter) then
+  if (FInput is TAcsCustomConverter) then
   begin
-    Conv:=(FInput as TACSCustomConverter);
-    Conv.UnlockInput;
+    Conv:=(FInput as TAcsCustomConverter);
+    Conv.UnlockInput();
   end;
 end;
 
-function TACSCustomFileIn.SetStartTime(Minutes, Seconds: Integer): Boolean;
-var
-  Sample: Integer;
-begin
-  Result:=False;
-  if not FSeekable then Exit;
-  OpenFile;
-  CloseFile;
-  Sample:=(Minutes*60+Seconds)*FSR;
-  if Sample > FTotalSamples then Exit;
-  FStartSample:=Sample;
-  Result:=True;
-end;
+{ TAcsVerySmallThread }
 
-function TACSCustomFileIn.SetEndTime(Minutes, Seconds: Integer): Boolean;
-var
-  Sample: Integer;
-begin
-  Result:=False;
-  if not FSeekable then Exit;
-  OpenFile;
-  CloseFile;
-  Sample:=(Minutes*60+Seconds)*FSR;
-  if Sample > FTotalSamples then Exit;
-  FEndSample:=Sample;
-  Result:=True;
-end;
-
-constructor TACSCustomFileIn.Create(AOwner: TComponent);
-begin
-  inherited Create(AOwner);
-  FStartSample:=0;
-  FEndSample:=-1;
-end;
-
-procedure TACSVerySmallThread.Execute;
+procedure TAcsVerySmallThread.Execute();
 begin
  Synchronize(CallOnDone);
 end;
 
-procedure  TACSVerySmallThread.CallOnDone;
+procedure TAcsVerySmallThread.CallOnDone();
 begin
  if Assigned(FOnDone) then FOnDone(Sender);
 end;
 
-procedure TACSThread.CallOnProgress;
-var
-  ParentComponent: TAcsCustomOutput;
-begin
-  ParentComponent:=TAcsCustomOutput(Parent);
-  ParentComponent.FOnProgress(ParentComponent);
-end;
+{ TAcsCircularBuffer }
 
-constructor TACSThread.Create;
-begin
- inherited Create(True);
-end;
-
-procedure TACSThread.DoPause;
-begin
-  if not Suspended then Suspended:=True;
-end;
-
-procedure TACSThread.DoResume;
-begin
-  if Suspended then Suspended:=False;
-end;
-
-{$IFDEF MSWINDOWS}
-procedure TAcsCustomOutput.Abort;
-begin
-  TerminateThread(Thread.Handle, 0);
-  WhenDone;
-end;
-{$ENDIF}
-
-constructor TACSBufferStream.Create;
+constructor TAcsCircularBuffer.Create();
 begin
   inherited Create;
   {$IFDEF MSWINDOWS}
@@ -1143,7 +1268,7 @@ begin
   {$ENDIF}
 end;
 
-destructor TACSBufferStream.Destroy;
+destructor TAcsCircularBuffer.Destroy();
 begin
   {$IFDEF MSWINDOWS}
   DeleteCriticalSection(CS);
@@ -1152,7 +1277,21 @@ begin
   inherited Destroy;
 end;
 
-function TACSBufferStream.Write(const Buffer; Count: Longint): Longint;
+procedure TAcsCircularBuffer.Reset();
+begin
+  {$IFDEF MSWINDOWS}
+  EnterCriticalSection(CS);
+  {$ENDIF}
+  ReadCur:=0;
+  WriteCur:=0;
+  FBytesRead:=0;
+  {$IFDEF MSWINDOWS}
+  SetEvent(BlockEvent);
+  LeaveCriticalSection(CS);
+ {$ENDIF}
+end;
+
+function TAcsCircularBuffer.Write(const Buffer; Count: Longint): Longint;
 var
   addr: Pointer;
   S1, S2: Integer;
@@ -1200,7 +1339,7 @@ begin
   {$ENDIF}
 end;
 
-function TACSBufferStream.Read(var Buffer; Count: Integer): Integer;
+function TAcsCircularBuffer.Read(var Buffer; Count: Integer): Integer;
 var
   addr: Pointer;
   S1, S2: Integer;
@@ -1252,77 +1391,61 @@ begin
   {$ENDIF}
 end;
 
-procedure TACSBufferStream.Reset;
-begin
-  {$IFDEF MSWINDOWS}
-  EnterCriticalSection(CS);
-  {$ENDIF}
-  ReadCur:=0;
-  WriteCur:=0;
-  FBytesRead:=0;
-  {$IFDEF MSWINDOWS}
-  SetEvent(BlockEvent);
-  LeaveCriticalSection(CS);
- {$ENDIF}
-end;
-
 // the following property is implemented 'cause tstreams position property uses them
 
-function TACSBufferStream.Seek(Offset: Longint; Origin: Word): Integer;
+function TAcsCircularBuffer.Seek(Offset: Longint; Origin: Word): Integer;
 begin
   if (Offset = 0) and (Origin = 0) then Result:=FBytesRead
   else Result:=0;
-  //raise EAcsException.Create(strSeeknotimplemented);
 end;
 
-function TACSBufferStream.Seek(const Offset: Int64; Origin: TSeekOrigin): Int64;
+function TAcsCircularBuffer.Seek(const Offset: Int64; Origin: TSeekOrigin): Int64;
 begin
   if (Offset = 0) and (Origin = soCurrent) then Result:=FBytesRead
   else Result:=0;
-  //raise EAcsException.Create(strSeeknotimplemented);
 end;
 
-{ TACSFileInfo }
+{ TAcsFileInfo }
 
-function TACSFileInfo.GetStringTag(Idx: string): TACSFileTag;
+function TAcsFileInfo.GetStringTag(Idx: string): TAcsFileTag;
 begin
  Result:=nil;
 end;
 
-procedure TACSFileInfo.ReadFromFile;
+procedure TAcsFileInfo.ReadFromFile();
 begin
 end;
 
-procedure TACSFileInfo.SetStringTag(Idx: string; const AValue: TACSFileTag);
+procedure TAcsFileInfo.SetStringTag(Idx: string; const AValue: TAcsFileTag);
 begin
 end;
 
-procedure TACSFileInfo.SaveToFile;
+procedure TAcsFileInfo.SaveToFile();
 begin
 end;
 
-{ TACSFileTag }
+{ TAcsFileTag }
 
-function TACSFileTag.GetName: string;
-begin
- Result:='';
-end;
-
-function TACSFileTag.AsString: string;
+function TAcsFileTag.GetName(): string;
 begin
  Result:='';
 end;
 
-function TACSFileTag.Streamable: Boolean;
+function TAcsFileTag.AsString(): string;
+begin
+ Result:='';
+end;
+
+function TAcsFileTag.Streamable(): Boolean;
 begin
   Result:=False;
 end;
 
-procedure TACSFileTag.SaveToStream(Stream: TStream);
+procedure TAcsFileTag.SaveToStream(Stream: TStream);
 begin
 end;
 
-procedure TACSFileTag.LoadFromStream(Stream: TStream);
+procedure TAcsFileTag.LoadFromStream(Stream: TStream);
 begin
 end;
 

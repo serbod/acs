@@ -31,10 +31,6 @@ changed mail adress
 
 unit lame;
 
-{$ifdef fpc}
-{$mode delphi}
-{$endif}
-
 interface
 
 uses
@@ -780,22 +776,22 @@ var
   id3tag_set_track : id3tag_set_track_t;
   id3tag_set_genre : id3tag_set_genre_t;
 
-procedure LoadLAME;
-procedure UnloadLAME;
+procedure LoadLAME();
+procedure UnloadLAME();
 
 implementation
 
 var
 
 {$IFDEF LINUX}
-  Libhandle : Pointer;
+  Libhandle: Pointer;
 {$ENDIF}
 
 {$IFDEF WIN32}
-  Libhandle : HMODULE;
+  Libhandle: HMODULE;
 {$ENDIF}
 
-procedure LoadLAME;
+procedure LoadLAME();
 begin
   if LAMELoaded then Exit;
 {$IFDEF LINUX}
@@ -1055,4 +1051,6 @@ begin
 {$ENDIF}
 
 end;
+
+
 end.

@@ -8,51 +8,6 @@
   You can contact me at acs@compiler4.net
 *)
 
-{
-$Log: acs_mac.pas,v $
-Revision 1.7  2006/07/04 17:12:45  z0m3ie
-ACS 2.4 alt wiederhergestellt (unterschiedliche Sampleformate ...)
-
-Revision 1.3  2005/12/30 11:10:57  z0m3ie
-some corrections to lazarus-linux depending things
-
-Revision 1.2  2005/12/26 17:31:39  z0m3ie
-fixed some problems in acs_dsfiles
-fixed some problems in acs_vorbis
-reworked all buffers
-
-Revision 1.1  2005/12/19 18:36:38  z0m3ie
-*** empty log message ***
-
-Revision 1.6  2005/12/18 17:01:54  z0m3ie
-delphi compatibility
-
-Revision 1.5  2005/12/04 16:54:34  z0m3ie
-All classes are renamed, Style TACS... than T... to avoid conflicts with other components (eg TMixer is TACSMixer now)
-
-Revision 1.4  2005/11/29 18:32:51  z0m3ie
-bugfixes for win32 version
-
-Revision 1.3  2005/11/28 21:57:24  z0m3ie
-mostly FileOut fixes
-moved PBuffer to PBuffer8
-set all to dynamically Buffering
-
-Revision 1.2  2005/09/13 04:04:50  z0m3ie
-First release without Components for Fileformats
-only TFileIn and TFileOut are Visible
-
-Revision 1.1  2005/09/12 22:04:52  z0m3ie
-modified structure again, fileformats are now in an sperat folder.
-all File In/Out classes are capsulated from TFileIn and TFileOut
-
-Revision 1.1  2005/08/25 20:18:00  z0m3ie
-Version 2.4 restructure
-TCDPlayer removed (fits not in component structure)
-TMP3ToWavConverter removed (fits not in component structure)
-
-}
-
 unit acs_mac;
 
 {$ifdef linux}{$message error 'unit not supported'}{$endif linux}
@@ -60,13 +15,13 @@ unit acs_mac;
 interface
 
 uses
-  ACS_File,Classes, SysUtils, Windows, ACS_Classes, MACDll;
+  ACS_File, Classes, SysUtils, Windows, ACS_Classes, MACDll;
 
 type
 
   // Note by A.B.: It seems that APE compressor supports file output only.
 
-  TMACOut = class(TACSCustomFileOut)
+  TMACOut = class(TAcsCustomFileOut)
   private
     APECompress: TAPECompress;
     WaveFormatEx: TWaveFormatEx;
@@ -75,12 +30,12 @@ type
     FMaxAudioBytes: Integer;
     procedure SetCompressionLevel(Value: Integer);
   protected
-    procedure Done; override;
+    procedure Done(); override;
     function DoOutput(Abort: Boolean): Boolean; override;
-    procedure Prepare; override;
+    procedure Prepare(); override;
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
+    destructor Destroy(); override;
   published
     property CompressionLevel: LongInt read FCompressionLevel write SetCompressionLevel stored True;
     property MaxAudioBytes: Integer read FMaxAudioBytes write FMaxAudioBytes;
@@ -89,32 +44,32 @@ type
   (* Note by A.B.: Due to the reasons described above this component
      ignores streamed input *)
 
-  TMACIn = class(TACSCustomFileIn)
+  TMACIn = class(TAcsCustomFileIn)
   private
     APEDecompress: TAPEDecompress;
     EndOfStream: Boolean;
-    function GetAverageBitrate: Integer;
-    function GetCurrentBitrate: Integer;
-    function GetCurrentBlock: Integer;
-    function GetCurrentMS: Integer;
-    function GetLengthMS: Integer;
-    function GetTotalBlocks: Integer;
+    function GetAverageBitrate(): Integer;
+    function GetCurrentBitrate(): Integer;
+    function GetCurrentBlock(): Integer;
+    function GetCurrentMS(): Integer;
+    function GetLengthMS(): Integer;
+    function GetTotalBlocks(): Integer;
   protected
-    function GetBPS: Integer; override;
-    function GetCh: Integer; override;
-    function GetSR: Integer; override;
-    function GetTotalTime: real; override;
-    procedure OpenFile; override;
-    procedure CloseFile; override;
+    function GetBPS(): Integer; override;
+    function GetCh(): Integer; override;
+    function GetSR(): Integer; override;
+    function GetTotalTime(): Real; override;
+    procedure OpenFile(); override;
+    procedure CloseFile(); override;
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
+    destructor Destroy(); override;
     function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
 
-    function Seek(Sample : Integer) : Boolean; override;
+    function Seek(Sample: Integer) : Boolean; override;
 
-    procedure Flush; override;
-    procedure Init; override;
+    procedure Flush(); override;
+    procedure Init(); override;
 
     property AverageBitrate: Integer read GetAverageBitrate;
     property CurrentBitrate: Integer read GetCurrentBitrate;
@@ -126,10 +81,10 @@ type
 
 implementation
 
-constructor TMACOut.Create;
+constructor TMACOut.Create();
 begin
   inherited Create(AOwner);
-  FBufferSize := $10000;
+  FBufferSize:=$10000;  // default buffer size
   FCompressionLevel := COMPRESSION_LEVEL_NORMAL;
   FMaxAudioBytes := MAX_AUDIO_BYTES_UNKNOWN;
   if not (csDesigning in ComponentState) then
@@ -139,27 +94,24 @@ begin
   end;
 end;
 
-destructor TMACOut.Destroy;
+destructor TMACOut.Destroy();
 begin
-  if Assigned(APECompress) then
-    APECompress.Free;
+  if Assigned(APECompress) then FreeAndNil(APECompress);
   inherited Destroy;
 end;
 
-procedure TMACOut.Prepare;
+procedure TMACOut.Prepare();
 var
   r: Integer;
 begin
-  GetMem(FBuffer,FBufferSize);
-  if FFileName = '' then raise EAcsException.Create('File name is not assigned.');
-  FInput.Init;
-  EndOfStream := False;
+  inherited Prepare();
+  EndOfStream:=False;
 
-  APECompress := TAPECompress.Create;
+  APECompress:=TAPECompress.Create();
 
   macFillWaveFormatEx(WaveFormatEx, FInput.SampleRate, FInput.BitsPerSample, FInput.Channels);
 
-  r := APECompress.Start(
+  r:=APECompress.Start(
     PChar(FFileName),
     @WaveFormatEx,
     FMaxAudioBytes,
@@ -167,20 +119,17 @@ begin
     nil,
     CREATE_WAV_HEADER_ON_DECOMPRESSION);
 
-  CanOutput := (r = 0);
+  CanOutput:=(r = 0);
 
   if r <> 0 then
-  raise EAcsException.Create('Error starting APECompress.' + #13#10 +
-      macErrorExplanation(r));
+    raise EAcsException.Create('Error starting APECompress.' + #13#10 + macErrorExplanation(r));
 end;
 
-procedure TMACOut.Done;
+procedure TMACOut.Done();
 begin
   APECompress.Finish(nil, 0, 0);
-  APECompress.Free;
-  APECompress := nil;
-  FInput.Flush;
-  FreeMem(FBuffer);
+  FreeAndNil(APECompress);
+  inherited Done();
 end;
 
 function TMACOut.DoOutput(Abort: Boolean): Boolean;
@@ -189,42 +138,45 @@ var
   pBuffer: PByteArray;
   nAudioBytesLeft, nBufferBytesAvailable, nNoiseBytes, nRetVal: Integer;
 begin
-    // No exceptions Here
-  Result := True;
+  // No exceptions Here
+  Result:=True;
   if not CanOutput then Exit;
   if Abort or EndOfStream then
   begin
-      (* We don't close file here to avoide exceptions
-        if output componenet's Stop method is called *)
-    Result := False;
+    (* We don't close file here to avoide exceptions
+      if output componenet's Stop method is called *)
+    Result:=False;
     Exit;
   end;
-  Len := Finput.GetData(@FBuffer[0], FBufferSize);
-  x := 0;
+  //Len:=FInput.GetData(@FBuffer[0], FBufferSize);
+  Len:=FInput.GetData(FBuffer.Memory, FBuffer.Size);
+  x:=0;
   if Len <> 0 then
   begin
-    nAudioBytesLeft := Len;
+    nAudioBytesLeft:=Len;
     while (nAudioBytesLeft > 0) do
     begin
-      nBufferBytesAvailable := 0;
-      pBuffer := APECompress.LockBuffer(nBufferBytesAvailable);
+      nBufferBytesAvailable:=0;
+      pBuffer:=APECompress.LockBuffer(nBufferBytesAvailable);
 
-      nNoiseBytes := nBufferBytesAvailable;
+      nNoiseBytes:=nBufferBytesAvailable;
       if nNoiseBytes > nAudioBytesLeft then
-        nNoiseBytes := nAudioBytesLeft;
+        nNoiseBytes:=nAudioBytesLeft;
 
-      //whats this ? schoult System.Move not be faster ?
+      {//whats this ? schoult System.Move not be faster ?
       for z := 0 to nNoiseBytes - 1 do
       begin
         pBuffer[z] := FBuffer[x];
         inc(x);
-      end;
+      end; }
+      FBuffer.Position:=0;
+      FBuffer.Read(pBuffer, nNoiseBytes);
 
-      nRetVal := APECompress.UnlockBuffer(nNoiseBytes, TRUE);
+      nRetVal:=APECompress.UnlockBuffer(nNoiseBytes, TRUE);
       if (nRetVal <> 0) then
         raise EAcsException.Create('APECompress.UnlockBuffer Error: ' + inttostr(nRetVal));
 
-      dec(nAudioBytesLeft, nNoiseBytes);
+      Dec(nAudioBytesLeft, nNoiseBytes);
     end
   end
   else
@@ -232,7 +184,7 @@ begin
 end;
 
 
-constructor TMACIn.Create;
+constructor TMACIn.Create();
 begin
   inherited Create(AOwner);
   BufferSize := $2000;

@@ -63,10 +63,10 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    procedure Done; override;
     { Called from Thread }
-    function DoOutput(Abort: Boolean): Boolean; override;
     procedure Prepare; override;
+    function DoOutput(Abort: Boolean): Boolean; override;
+    procedure Done; override;
     procedure Pause; override;
     procedure Resume; override;
     (* Property: DeviceCount
@@ -232,17 +232,16 @@ type
 
 implementation
 
-procedure TDXAudioOut.Prepare;
+procedure TDXAudioOut.Prepare();
 var
   Res: HResult;
   Wnd: HWND;
   FormatExt: TWaveFormatExtensible;
 begin
-  Freed := False;
+  inherited Prepare();
+  Freed:=False;
   if (FDeviceNumber >= DeviceCount) then
     raise EAcsException.Create(Format(strChannelnotavailable, [FDeviceNumber]));
-  FInput.Init;
-  FBuffer:=AllocMem(FBufferSize);
   Chan:=FInput.Channels;
   SR:=FInput.SampleRate;
   if FSpeedFactor <> 1 then
@@ -269,9 +268,9 @@ begin
   Self.SetBufferSize(FFramesInBuffer*(BPS shr 3)*Chan);
 
   if BPS <> 8 then
-    FillByte := 0
+    FillByte:=0
   else
-    FillByte := 128;
+    FillByte:=128;
   //Res := DSW_InitOutputBuffer(DSW, Wnd, BPS, SR, Chan, _BufSize);
   FillChar(FormatExt, SizeOf(FormatExt), 0);
 
@@ -306,7 +305,7 @@ begin
   //FormatExt.wReserved:=0;
   //FormatExt.SubFormat:=1;
 
-  Res := DSW_InitOutputBufferEx(DSW, Wnd, FormatExt, FBufferSize);
+  Res:=DSW_InitOutputBufferEx(DSW, Wnd, FormatExt, FBuffer.Size);
   if Res <> 0 then
     raise EAcsException.Create(strFailedtoCreateDSbuf+' '+IntToHex(Res, 8));
   StartInput:=True;
@@ -314,14 +313,13 @@ begin
   _TmpUnderruns:=0;
 end;
 
-procedure TDXAudioOut.Done;
+procedure TDXAudioOut.Done();
 begin
   if not Freed then
   begin
-    FInput.Flush;
     DSW_Term(DSW);
-    FreeMem(FBuffer);
   end;
+  inherited Done();
   Freed:=True;
 end;
 
@@ -353,7 +351,7 @@ begin
   begin
     //FInput.FillBuffer(FBuffer, _BufSize, EndOfInput);
     Len:=Self.FillBufferFromInput(EndOfInput);
-    DSW_WriteBlock(DSW, @FBuffer[0], Len);
+    DSW_WriteBlock(DSW, FBuffer.Memory, Len);
     VolumeEx:=FVolumeEx; //DW
     DSW_StartOutput(DSW);
     StartInput:=False;
@@ -362,7 +360,7 @@ begin
   if EndOfInput then
   begin
     CanOutput:=False;
-    PlayTime:=Round(FBufferSize/(Chan*(BPS div 8)*SR))*1000;
+    PlayTime:=Round(FBuffer.Size/(Chan*(BPS div 8)*SR))*1000;
     CTime:=0;
     while CTime < PlayTime do
     begin
@@ -423,16 +421,16 @@ begin
     BytesAllowed:=BytesAllowed-(BytesAllowed mod DSW.dsw_BytesPerFrame);
   end;
 
-  Len:=Min(BytesAllowed, FBufferSize);
+  Len:=Min(BytesAllowed, FBuffer.Size);
   { // serbod@ Don't get idea about prefetch, it looks same as normal
   if FPrefetchData then
   begin
     FInput.GetData(TmpBuf, Len);
   end
   }
-  Len:=FInput.GetData(FBuffer, Len);
+  Len:=FInput.GetData(FBuffer.Memory, Len);
   EndOfInput:=(Len = 0);
-  DSW_WriteBlock(DSW, @FBuffer[0], Len);
+  DSW_WriteBlock(DSW, FBuffer.Memory, Len);
   if EndOfInput then
     Res:=DSW_FillEmptySpace(DSW, FillByte);
   if _TmpUnderruns <> DSW.dsw_OutputUnderflows then
@@ -460,9 +458,9 @@ begin
   FPollingInterval:=100;
   FLatency:=100;
   FVolumeEx:=0; //DW
-  FPrefetchData := True;
+  FPrefetchData:=True;
   //FDeviceCount:=0;
-  BufferSize := $40000;
+  FBufferSize:=$40000; // default buffer size
 
   if not (csDesigning in ComponentState) then
   begin
