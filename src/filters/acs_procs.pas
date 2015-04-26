@@ -17,7 +17,7 @@ type
   TAcsFilterWindowType = (fwHamming, fwHann, fwBlackman);
 
 {$IFDEF LINUX}
-  function FindLibs(const Pattern : String) : String;
+  function FindLibs(const Pattern: String): String;
 {$ENDIF}
 
 

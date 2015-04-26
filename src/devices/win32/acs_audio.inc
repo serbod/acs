@@ -1,11 +1,11 @@
 (*
   Windows standard audio
 
-  this file is a part of audio components suite v 2.3 (delphi version).
-  copyright (c) 2002-2005 andrei borovsky. all rights reserved.
-  see the license file for more details.
-  you can contact me at acs@compiler4.net
-  this is the acs for delphi (windows) version of the unit.
+  This file is a part of Audio Components Suite.
+  Copyright (C) 2002-2005 Andrei Borovsky. All rights reserved.
+  See the license file for more details.
+  You can contact me at acs@compiler4.net
+  This is the ACS for Windows version of the unit.
 *)
 
 function CountChannels(): Integer;

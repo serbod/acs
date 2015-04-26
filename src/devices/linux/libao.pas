@@ -8,51 +8,16 @@
   more modifications copyright (c) jack moffitt - october 2000
 *)
 
-{
-$Log: libao.pas,v $
-Revision 1.2  2006/01/01 18:46:40  z0m3ie
-*** empty log message ***
-
-Revision 1.1  2005/12/19 18:36:16  z0m3ie
-*** empty log message ***
-
-Revision 1.1  2005/09/14 21:19:37  z0m3ie
-*** empty log message ***
-
-Revision 1.1  2005/09/12 22:04:52  z0m3ie
-modified structure again, fileformats are now in an sperat folder.
-all File In/Out classes are capsulated from TFileIn and TFileOut
-
-Revision 1.1  2005/08/25 20:18:00  z0m3ie
-Version 2.4 restructure
-TCDPlayer removed (fits not in component structure)
-TMP3ToWavConverter removed (fits not in component structure)
-
-Revision 1.2  2005/08/22 20:17:01  z0m3ie
-changed Headers to log
-changed mail adress
-
-}
-
-
 unit libao;
-
-{$ifdef fpc}
-{$mode delphi}
-{$endif}
 
 interface
 
 uses
-  baseunix,dl, ACS_Procs;
-
-var
-  LibaoLoaded : Boolean = False;
+  baseunix, dl;
 
 const
 
   LibaoPath = 'libao.so*';  // '/usr/lib/libao.so';
-  {$DEFINE SEARCH_LIBS}
 
   AO_TYPE_LIVE = 1;
   AO_TYPE_FILE = 2;
@@ -77,69 +42,69 @@ type
   PAOInfo = ^ao_info;
   PPAOInfo = ^PAOInfo;
   ao_info = record
-    _type : Integer;    // live output or file output?
-    name : PChar;       // full name of driver
-    short_name : PChar; // short name of driver */
-    author : PChar;     // driver author
-    comment : PChar;    // driver comment
-    preferred_byte_format : Integer;
-    priority : Integer;
-    options : PPChar;
-    option_count : Integer;
+    _type: Integer;    // live output or file output?
+    name: PChar;       // full name of driver
+    short_name: PChar; // short name of driver */
+    author: PChar;     // driver author
+    comment: PChar;    // driver comment
+    preferred_byte_format: Integer;
+    priority: Integer;
+    options: PPChar;
+    option_count: Integer;
   end;
 
   PAOFunctions = ^ao_functions;
 
   PAODevice = ^ao_device;
   ao_device = packed record
-    _type : Integer;                // live output or file output?
-    driver_id : Integer;
-    funcs : PAOFunctions;
-    _file : Pointer;                // File for output if this is a file driver
-    client_byte_format : Integer;
-    machine_byte_format : Integer;
-    driver_byte_format : Integer;
-    swap_buffer : PChar;
-    swap_buffer_size : Integer;     // Bytes allocated to swap_buffer
-    internal : Pointer;             // Pointer to driver-specific data
+    _type: Integer;                // live output or file output?
+    driver_id: Integer;
+    funcs: PAOFunctions;
+    _file: Pointer;                // File for output if this is a file driver
+    client_byte_format: Integer;
+    machine_byte_format: Integer;
+    driver_byte_format: Integer;
+    swap_buffer: PChar;
+    swap_buffer_size: Integer;     // Bytes allocated to swap_buffer
+    internal: Pointer;             // Pointer to driver-specific data
   end;
 
   PAOSampleFormat = ^ao_sample_format;
   ao_sample_format = record
-    bits : Integer;             // bits per sample
-    rate : Integer;             // samples per second (in a single channel)
-    channels : Integer;         // number of audio channels
-    byte_format : Integer;      // Byte ordering in sample, see constants below
+    bits: Integer;             // bits per sample
+    rate: Integer;             // samples per second (in a single channel)
+    channels: Integer;         // number of audio channels
+    byte_format: Integer;      // Byte ordering in sample, see constants below
   end;
 
-  f_test = function : Integer; cdecl;
-  f_driver_info = function : PAOInfo; cdecl;
-  f_device_init = function(device : PAODevice) : Integer; cdecl;
-  f_set_option = function(device : PAODevice; const key, value : PChar) : Integer; cdecl;
-  f_open = function(device : PAODevice) : Integer; cdecl;
-  f_play = function(device : PAODevice; const output_samples : PChar; num_bytes : LongWord) : Integer; cdecl;
-  f_close = function(device : PAODevice) : Integer; cdecl;
-  f_device_clear = procedure(device : PAODevice); cdecl;
-  f_file_extension = function : PChar; cdecl;
+  f_test = function: Integer; cdecl;
+  f_driver_info = function: PAOInfo; cdecl;
+  f_device_init = function(device: PAODevice): Integer; cdecl;
+  f_set_option = function(device: PAODevice; const key, value: PChar): Integer; cdecl;
+  f_open = function(device: PAODevice): Integer; cdecl;
+  f_play = function(device: PAODevice; const output_samples: PChar; num_bytes: LongWord): Integer; cdecl;
+  f_close = function(device: PAODevice): Integer; cdecl;
+  f_device_clear = procedure(device: PAODevice); cdecl;
+  f_file_extension = function: PChar; cdecl;
 
   ao_functions = packed record
-    test : f_test;
-    driver_info : f_driver_info;
-    device_init : f_device_init;
-    set_option : f_set_option;
-    open : f_open;
-    play : f_play;
-    close : f_close;
-    device_clear : f_device_clear;
-    file_extension : f_file_extension;
+    test: f_test;
+    driver_info: f_driver_info;
+    device_init: f_device_init;
+    set_option: f_set_option;
+    open: f_open;
+    play: f_play;
+    close: f_close;
+    device_clear: f_device_clear;
+    file_extension: f_file_extension;
   end;
 
   PPAOOption = ^PAOOption;
   PAOOption = ^ao_option;
   ao_option = record
-    key : PChar;
-    value : PChar;
-    next : PAOOption;
+    key: PChar;
+    value: PChar;
+    next: PAOOption;
   end;
 
   (* --- Functions --- *)
@@ -150,107 +115,44 @@ type
   ao_shutdown_t = procedure; cdecl;
 
   (* device setup/playback/teardown *)
-  ao_append_option_t = function(options : PPAOOption; const key, value : PChar) : Integer; cdecl;
-  ao_free_options_t = procedure(options : PAOOption); cdecl;
-  ao_open_live_t = function(driver_id : Integer; format : PAOSampleFormat; option : PAOOption) : PAODevice; cdecl;
-  ao_open_file_t = function(driver_id : Integer; const filename : PChar; overwrite : Integer; format : PAOSampleFormat; option : PAOOption) : PAODevice; cdecl;
+  ao_append_option_t = function(options: PPAOOption; const key, value: PChar): Integer; cdecl;
+  ao_free_options_t = procedure(options: PAOOption); cdecl;
+  ao_open_live_t = function(driver_id: Integer; format: PAOSampleFormat; option: PAOOption): PAODevice; cdecl;
+  ao_open_file_t = function(driver_id: Integer; const filename: PChar; overwrite: Integer; format: PAOSampleFormat; option: PAOOption): PAODevice; cdecl;
 
-  ao_play_t = function(device : PAODevice; output_samples : PChar; num_bytes : LongWord) : Integer; cdecl;
-  ao_close_t = function(device : PAODevice) : Integer; cdecl;
+  ao_play_t = function(device: PAODevice; output_samples: PChar; num_bytes: LongWord): Integer; cdecl;
+  ao_close_t = function(device: PAODevice): Integer; cdecl;
 
   (* driver information *)
-  ao_driver_id_t = function(const short_name : PChar) : Integer; cdecl;
-  ao_default_driver_id_t = function : Integer; cdecl;
-  ao_driver_info_t = function(driver_id : Integer) : PAOInfo; cdecl;
-  ao_driver_info_list_t = function(var driver_count : Integer) : PPAOInfo; cdecl;
+  ao_driver_id_t = function(const short_name: PChar): Integer; cdecl;
+  ao_default_driver_id_t = function: Integer; cdecl;
+  ao_driver_info_t = function(driver_id: Integer): PAOInfo; cdecl;
+  ao_driver_info_list_t = function(var driver_count: Integer): PPAOInfo; cdecl;
   // The following function is declared in ao.h but not exported by libao.
-  //ao_file_extension_t = function(driver_id : Integer) : PChar; cdecl;
+  //ao_file_extension_t = function(driver_id: Integer): PChar; cdecl;
 
   (* miscellaneous *)
-  ao_is_big_endian_t = function : Integer; cdecl;
+  ao_is_big_endian_t = function: Integer; cdecl;
 
 var
 
-  ao_initialize : ao_initialize_t;
-  ao_shutdown : ao_shutdown_t;
-  ao_append_option : ao_append_option_t;
-  ao_free_options : ao_free_options_t;
-  ao_open_live : ao_open_live_t;
-  ao_open_file : ao_open_file_t;
-  ao_play : ao_play_t;
-  ao_close : ao_close_t;
-  ao_driver_id : ao_driver_id_t;
-  ao_default_driver_id : ao_default_driver_id_t;
-  ao_driver_info : ao_driver_info_t;
-  ao_driver_info_list : ao_driver_info_list_t;
-  //ao_file_extension : ao_file_extension_t;
-  ao_is_big_endian : ao_is_big_endian_t;
+  ao_initialize: ao_initialize_t;
+  ao_shutdown: ao_shutdown_t;
+  ao_append_option: ao_append_option_t;
+  ao_free_options: ao_free_options_t;
+  ao_open_live: ao_open_live_t;
+  ao_open_file: ao_open_file_t;
+  ao_play: ao_play_t;
+  ao_close: ao_close_t;
+  ao_driver_id: ao_driver_id_t;
+  ao_default_driver_id: ao_default_driver_id_t;
+  ao_driver_info: ao_driver_info_t;
+  ao_driver_info_list: ao_driver_info_list_t;
+  //ao_file_extension: ao_file_extension_t;
+  ao_is_big_endian: ao_is_big_endian_t;
   
-  AOInitialized : Integer = 0;
-
-  procedure FreeOptionsList(var OL : PAOOption);
+  AOInitialized: Integer = 0;
 
 implementation
-
-var
-  Libhandle : Pointer;
-
-{$IFDEF SEARCH_LIBS}
-  Path : String;
-{$ENDIF}
-
-
-procedure FreeOptionsList(var OL : PAOOption);
-var
-  NextOpt, tmp : PAOOption;
-begin
-  if OL = nil then Exit;
-  NextOpt := OL;
-  repeat
-    tmp := NextOpt;
-    NextOpt := NextOpt.next;
-    FreeMem(tmp);
-  until NextOpt = nil;
-end;
-
-initialization
-
-{$IFDEF SEARCH_LIBS}
-
-  Libhandle := nil;
-  Path := FindLibs(LibaoPath);
-  if Path <> '' then Libhandle := dlopen(@Path[1], RTLD_NOW or RTLD_GLOBAL);
-
-{$ELSE}
-
-  Libhandle := dlopen(LibaoPath, RTLD_NOW or RTLD_GLOBAL);
-
-{$ENDIF}
-
-  if Libhandle <> nil then
-  begin
-    LibaoLoaded := True;
-    ao_initialize := dlsym(Libhandle, 'ao_initialize');
-    ao_shutdown := dlsym(Libhandle, 'ao_shutdown');
-    ao_append_option := dlsym(Libhandle, 'ao_append_option');
-    ao_free_options := dlsym(Libhandle, 'ao_free_options');
-    ao_open_live := dlsym(Libhandle, 'ao_open_live');
-    ao_open_file := dlsym(Libhandle, 'ao_open_file');
-    ao_play := dlsym(Libhandle, 'ao_play');
-    ao_close := dlsym(Libhandle, 'ao_close');
-    ao_driver_id := dlsym(Libhandle, 'ao_driver_id');
-    ao_default_driver_id := dlsym(Libhandle, 'ao_default_driver_id');
-    ao_driver_info := dlsym(Libhandle, 'ao_driver_info');
-    ao_driver_info_list := dlsym(Libhandle, 'ao_driver_info_list');
-    //ao_file_extension := dlsym(Libhandle, 'ao_file_extension');
-    ao_is_big_endian := dlsym(Libhandle, 'ao_is_big_endian');
-  end;
-
-finalization
-
-  if Libhandle <> nil then
-  begin
-    dlclose(Libhandle);
-  end;
 
 end.

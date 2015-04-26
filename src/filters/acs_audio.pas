@@ -1,7 +1,9 @@
 (*
-  this file is a part of audio components suite
-  see the license file for more details.
-  you can contact me at mail@z0m3ie.de
+Base audio in/out classes
+
+This file is a part of Audio Components Suite.
+Copyright (C) 2002-2005 Andrei Borovsky. All rights reserved.
+See the license file for more details.
 *)
 
 {
