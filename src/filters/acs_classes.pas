@@ -124,16 +124,41 @@ type
     property BufferMode: TAcsBufferMode read FBufferMode write FBufferMode;
   end;
 
-  { TAcsBuffer }
-
-  TAcsBuffer = class(TMemoryStream)
+  { TAcsAudioBuffer }
+  { Audio sample buffer - store raw audio data }
+  TAcsAudioBuffer = class(TMemoryStream)
   protected
     FLock: TMultiReadExclusiveWriteSynchronizer;
+    function GetSamplesCount(): Integer; virtual;
+    procedure SetSamplesCount(AValue: Integer); virtual;
+    function GetByte(Index: Integer): Byte; virtual;
+    procedure SetByte(Index: Integer; AValue: Byte); virtual;
+    function GetSamplePtr(Index: Integer): Pointer; virtual;
   public
+    { 1-mono, 2-stereo, etc.. }
+    ChannelsCount: Integer;
+    { Bits per sample channel - 4, 8, 16, 20, 24, 32 }
+    BitDepth: Integer;
+    { Samples per second - 8000, 11025, 22050, 44100, 48000, 96000, 192000 (Hz)}
+    SampleRate: Integer;
+    { Time, when buffer content start play (milliseconds) }
+    Timestamp: Int64;
+    { Sound source position in 3D space }
+    //Position3D: TPoint3D;
+    { Sound source velocity, for Doppler effect }
+    //Velocity: Integer;
     constructor Create();
     destructor Destroy(); override;
     function Read(var Buffer; Count: Longint): Longint; override;
     function Write(const Buffer; Count: Longint): Longint; override;
+    { Size of sound sample in bytes }
+    function BytesPerSample(): Integer;
+    { Size of buffer in sound samples }
+    property SamplesCount: Integer read GetSamplesCount write SetSamplesCount;
+    { Access to bytes. Inline code from GetByte or SetByte for optimization. }
+    property Bytes[Index: Integer]: Byte read GetByte write SetByte;
+    { Access to samples. Inline code from GetSamplePtr for optimization. }
+    property Samples[Index: Integer]: Pointer read GetSamplePtr;
   end;
 
 
@@ -234,7 +259,7 @@ type
     FBufferSize: Integer;
     //FBuffer: PAcsBuffer8;
     //FBuffer: array of Byte;
-    FBuffer: TAcsBuffer;
+    FBuffer: TAcsAudioBuffer;
 
     { Read data from Input into Buffer, return bytes read
       AEndOfInput set to True if end of input buffer is reached }
@@ -576,28 +601,67 @@ type
 
 implementation
 
-{ TAcsBuffer }
+{ TAcsAudioBuffer }
 
-constructor TAcsBuffer.Create();
+constructor TAcsAudioBuffer.Create();
 begin
   inherited Create;
   FLock:=TMultiReadExclusiveWriteSynchronizer.Create();
 end;
 
-destructor TAcsBuffer.Destroy();
+destructor TAcsAudioBuffer.Destroy();
 begin
   FreeAndNil(FLock);
   inherited Destroy;
 end;
 
-function TAcsBuffer.Read(var Buffer; Count: Longint): Longint;
+function TAcsAudioBuffer.GetSamplesCount(): Integer;
+begin
+  Result:=(Self.Size div BytesPerSample());
+end;
+
+procedure TAcsAudioBuffer.SetSamplesCount(AValue: Integer);
+begin
+  if AValue >= 0 then
+  begin
+    if FLock.BeginWrite() then
+    begin
+      Self.Size:=AValue * BytesPerSample();
+      FLock.EndWrite();
+    end;
+  end;
+end;
+
+function TAcsAudioBuffer.GetByte(Index: Integer): Byte;
+begin
+  if (Index >= 0) and (Index < Size) then
+    Result:=PByte(Self.Memory)[Index]
+  else
+    Result:=0;
+end;
+
+procedure TAcsAudioBuffer.SetByte(Index: Integer; AValue: Byte);
+begin
+  if (Index >= 0) and (Index < Size) then
+    PByte(Self.Memory)[Index]:=AValue;
+end;
+
+function TAcsAudioBuffer.GetSamplePtr(Index: Integer): Pointer;
+begin
+  if (Index >= 0) and (Index < Size) then
+    Result:=Self.Memory + (Index * BytesPerSample())
+  else
+    Result:=nil;
+end;
+
+function TAcsAudioBuffer.Read(var Buffer; Count: Longint): Longint;
 begin
   FLock.BeginRead();
   Result:=inherited Read(Buffer, Count);
   FLock.EndRead();
 end;
 
-function TAcsBuffer.Write(const Buffer; Count: Longint): Longint;
+function TAcsAudioBuffer.Write(const Buffer; Count: Longint): Longint;
 begin
   if FLock.BeginWrite() then
   begin
@@ -605,6 +669,11 @@ begin
     FLock.EndWrite();
   end
   else Result:=0;
+end;
+
+function TAcsAudioBuffer.BytesPerSample(): Integer;
+begin
+  Result:=SampleRate * (BitDepth div 8) * ChannelsCount;
 end;
 
 { TAcsThread }
@@ -755,7 +824,7 @@ constructor TAcsCustomOutput.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FBusy:=False;
-  FBuffer:=TAcsBuffer.Create();
+  FBuffer:=TAcsAudioBuffer.Create();
   Thread:=TAcsThread.Create();
   Thread.Parent:=Self;
 //  Thread.DoOutput:=Self.DoOutput;

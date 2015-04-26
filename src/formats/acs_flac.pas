@@ -1,8 +1,9 @@
 (*
-  this file is a part of audio components suite v 2.3.
-  copyright (c) 2002-2005 andrei borovsky. all rights reserved.
-  see the license file for more details.
-  you can contact me at mail@z0m3ie.de
+FLAC (Free Lossless Audio Codec) components
+
+This file is a part of Audio Components Suite.
+Copyright (C) 2002-2005 Andrei Borovsky. All rights reserved.
+See the license file for more details.
 *)
 
 unit acs_flac;
@@ -11,7 +12,7 @@ interface
 
 uses
 
- ACS_File,Classes, SysUtils, ACS_Types, ACS_Classes, FLAC,
+ ACS_File, Classes, SysUtils, ACS_Types, ACS_Classes, FLAC,
 {$IFDEF LINUX}
   baseunix;
 {$ENDIF}
@@ -24,25 +25,25 @@ type
 
   TFLACOut = class(TAcsCustomFileOut)
   private
-    _encoder : PFLAC__SeekableStreamEncoder;
-    FBufSize : Integer;
-    FVerify : Boolean;
-    FBlockSize : Word;
-    FBestModelSearch : Boolean;
-    FEnableMidSideStereo : Boolean;
-    FMaxLPCOrder : Word;
-    EndOfInput : Boolean;
-    FEnableLooseMidSideStereo : Boolean;
-    FQLPCoeffPrecision : Word;
-    FQLPCoeffPrecisionSearch : Boolean;
-    FMaxResidualPartitionOrder : Word;
-    FMinResidualPartitionOrder : Word;
-    procedure SetEnableLooseMidSideStereo(val : Boolean);
-    procedure SetBestModelSearch(val : Boolean);
+    _encoder: PFLAC__SeekableStreamEncoder;
+    FBufSize: Integer;
+    FVerify: Boolean;
+    FBlockSize: Word;
+    FBestModelSearch: Boolean;
+    FEnableMidSideStereo: Boolean;
+    FMaxLPCOrder: Word;
+    EndOfInput: Boolean;
+    FEnableLooseMidSideStereo: Boolean;
+    FQLPCoeffPrecision: Word;
+    FQLPCoeffPrecisionSearch: Boolean;
+    FMaxResidualPartitionOrder: Word;
+    FMinResidualPartitionOrder: Word;
+    procedure SetEnableLooseMidSideStereo(val: Boolean);
+    procedure SetBestModelSearch(val: Boolean);
   protected
-    procedure Done(); override;
-    function DoOutput(Abort : Boolean):Boolean; override;
     procedure Prepare(); override;
+    procedure Done(); override;
+    function DoOutput(Abort: Boolean):Boolean; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
@@ -197,7 +198,7 @@ end;
 function DecWriteCBFunc(decoder: PFLAC__SeekableStreamDecoder;
                         frame: PFLAC__Frame;
                         buffer: PFLACChannels;
-                        client_data: Pointer) : Integer; cdecl;
+                        client_data: Pointer): Integer; cdecl;
 var
   FLACIn: TFLACIn;
   Header: PFLAC__FrameHeader;
@@ -280,7 +281,7 @@ begin
   if FLACIn.FChan > 16 then FLACIn.FValid:=False;
   FLACIn.FTotalSamples:=FI.total_samples1;
   if FLACIn.FTotalSamples = 0 then
-    FLACIn.FTotalSamples := FI.total_samples2;
+    FLACIn.FTotalSamples:=FI.total_samples2;
   FLACIn.FSize:=FLACIn.FTotalSamples * (FLACIn.FBPS div 8) * FLACIn.FChan;
   FLACIn.MinFrameSize:=FI.min_framesize;
 end;
@@ -362,71 +363,74 @@ begin
   inherited Done();
 end;
 
-function TFLACOut.DoOutput(Abort : Boolean):Boolean;
+function TFLACOut.DoOutput(Abort: Boolean):Boolean;
 var
-  Len, i, l, samples : Integer;
-  FB : PFLACBuf;
-  B16 : PAcsBuffer16;
+  Len, i, l, samples: Integer;
+  FB: PFLACBuf;
+  B16: PAcsBuffer16;
 begin
-  Result := True;
+  Result:=False;
   if not CanOutput then Exit;
-  if Abort or EndOfInput then
-  begin
-    Result := False;
-    Exit;
-  end;
+  if Abort or EndOfInput then Exit;
+
+  // get samples from input
+  // attempt to pull samples until buffer filled?
   while InputLock do;
-  InputLock := True;
-  Len := 0;
+  InputLock:=True;
+  Len:=0;
   while Len < FBufSize do
   begin
-    l := FInput.GetData(FBuffer.Memory+Len, FBufSize-Len);
+    l:=FInput.GetData(FBuffer.Memory+Len, FBufSize-Len);
     Inc(Len, l);
     if l = 0 then
     begin
-      EndOfInput := True;
+      EndOfInput:=True;
       Break;
     end;
   end;
-  InputLock := False;
-  if Len = 0 then
-  begin
-    Result := False;
-    Exit;
+  InputLock:=False;
+  if Len = 0 then Exit;
+
+  samples:=(Len shl 3) div FInput.BitsPerSample;
+  GetMem(FB, samples * SizeOF(FLAC__int32));
+  try
+    if FInput.BitsPerSample = 16 then
+    begin
+      //B16:=@FBuffer[0];
+      B16:=FBuffer.Memory;
+      for i:=0 to samples-1 do FB[i]:=B16[i];
+    end;
+    //else
+      //for i:=0 to samples-1 do FB[i]:=FBuffer[i];
+    FBuffer.Position:=0;
+    FBuffer.Read(FB, samples);
+    if not FLAC__seekable_stream_encoder_process_interleaved(_encoder, @FB[0], samples div FInput.Channels) then
+      raise EAcsException.Create('Failed to encode data.');
+    Result:=True;
+  finally
+    FreeMem(FB);
   end;
-  samples := (Len shl 3) div Finput.BitsPerSample;
-  GetMem(FB, samples*SizeOF(FLAC__int32));
-  if FInput.BitsPerSample = 16 then
-  begin
-    //B16 := @FBuffer[0];
-    B16 := FBuffer.Memory;
-    for i := 0 to samples - 1 do FB[i] := B16[i];
-  end else
-  //for i := 0 to samples - 1 do FB[i] := FBuffer[i];
-  FBuffer.Position:=0;
-  FBuffer.Read(FB, samples);
-  if not FLAC__seekable_stream_encoder_process_interleaved(_encoder, @FB[0], samples div FInput.Channels) then
-  raise EAcsException.Create('Failed to encode data.');
-  FreeMem(FB);
 end;
 
-procedure TFLACOut.SetEnableLooseMidSideStereo;
+procedure TFLACOut.SetEnableLooseMidSideStereo();
 begin
-  if Val then FEnableMidSideStereo := True;
-  FEnableLooseMidSideStereo := Val;
+  if Val then FEnableMidSideStereo:=True;
+  FEnableLooseMidSideStereo:=Val;
 end;
 
-procedure TFLACOut.SetBestModelSearch;
+procedure TFLACOut.SetBestModelSearch();
 begin
   if Val then
   begin
-    FEnableMidSideStereo := True;
-    FEnableLooseMidSideStereo := False;
+    FEnableMidSideStereo:=True;
+    FEnableLooseMidSideStereo:=False;
   end;
-  FBestModelSearch := Val;
+  FBestModelSearch:=Val;
 end;
 
-constructor TFLACIn.Create;
+{ TFLACIn }
+
+constructor TFLACIn.Create();
 begin
   inherited Create(AOwner);
   if not (csDesigning	in ComponentState) then
@@ -434,9 +438,9 @@ begin
   raise EAcsException.Create(LibFLACPath + ' library could not be loaded.');
 end;
 
-destructor TFLACIn.Destroy;
+destructor TFLACIn.Destroy();
 begin
-  CloseFile;
+  CloseFile();
   inherited Destroy;
 end;
 
@@ -447,7 +451,7 @@ begin
   begin
     if (FFileName = '') then
       raise EAcsException.Create('File name is not assigned');
-    if not Assigned(FStream) then FStream := TFileStream.Create(FFileName, fmOpenRead, fmShareDenyNone);
+    if not Assigned(FStream) then FStream:=TFileStream.Create(FFileName, fmOpenRead, fmShareDenyNone);
     FValid:=True;
     _decoder:=FLAC__seekable_stream_decoder_new;
     if _decoder = nil then
@@ -479,10 +483,10 @@ begin
       FLAC__seekable_stream_decoder_flush(_decoder);
       FLAC__seekable_stream_decoder_finish(_decoder);
       FLAC__seekable_stream_decoder_delete(_decoder);
-      _decoder := nil;
+      _decoder:=nil;
     end;
     if Buff <> nil then FreeMem(Buff);
-    Buff := nil;
+    Buff:=nil;
     if not FStreamAssigned then FStream.Free
     else FStream.Seek(0, soFromBeginning);
   end;
@@ -500,7 +504,7 @@ begin
     if FOffset <> 0 then
     begin
       offs:=Round((FOffset / 100) * Self.FTotalSamples);
-      FPosition := FPosition + offs * (FBPS div 8) * FChan;
+      FPosition:=FPosition + offs * (FBPS div 8) * FChan;
       if FPosition < 0 then FPosition:=0
       else if FPosition > FSize then FPosition:=FSize;
       Seek((FPosition div (FBPS div 8)) div FChan);
@@ -554,7 +558,14 @@ begin
 end;
 
 initialization
-  FileFormats.Add('flac', 'Free Lossless Audio Codec', TFLACIn);
-  FileFormats.Add('flac', 'Free Lossless Audio Codec', TFLACOut);
+  if LoadFlacLibrary() then
+  begin
+    FileFormats.Add('flac', 'Free Lossless Audio Codec', TFLACIn);
+    FileFormats.Add('flac', 'Free Lossless Audio Codec', TFLACOut);
+  end;
+
+finalization
+  UnloadFlacLibrary();
+
 
 end.

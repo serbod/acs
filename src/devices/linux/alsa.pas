@@ -30,49 +30,19 @@
    In order to decrease loading time, only the symbols needed by ACS
    are actually resolved. *)
 
-{
-$Log: alsa.pas,v $
-Revision 1.6  2006/08/30 18:59:51  z0m3ie
-*** empty log message ***
-
-Revision 1.5  2006/07/04 17:12:45  z0m3ie
-ACS 2.4 alt wiederhergestellt (unterschiedliche Sampleformate ...)
-
-Revision 1.3  2005/12/19 18:36:16  z0m3ie
-*** empty log message ***
-
-Revision 1.1  2005/09/14 21:19:37  z0m3ie
-*** empty log message ***
-
-Revision 1.1  2005/09/12 22:04:52  z0m3ie
-modified structure again, fileformats are now in an sperat folder.
-all File In/Out classes are capsulated from TFileIn and TFileOut
-
-Revision 1.1  2005/08/25 20:18:00  z0m3ie
-Version 2.4 restructure
-TCDPlayer removed (fits not in component structure)
-TMP3ToWavConverter removed (fits not in component structure)
-
-Revision 1.2  2005/08/22 20:17:01  z0m3ie
-changed Headers to log
-changed mail adress
-
-}
-
-
 unit alsa;
 
 interface
 
 uses
-  baseunix,ACS_Procs,ctypes,dl;
+  baseunix, ACS_Procs, ctypes, dl;
 
 const
   asoundlib_path = 'libasound.so*';
   asoundlib_path_ = 'libasound.so';
 
 var
-  AsoundlibLoaded : Boolean = False;
+  AsoundlibLoaded: Boolean = False;
 
 type
    Puchar_t = ^uchar_t;
@@ -893,8 +863,8 @@ type
 implementation
 
 var
-  Path : string;
-  Libhandle : Pointer;
+  Path: string;
+  Libhandle: Pointer;
 
 initialization
 

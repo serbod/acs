@@ -1,8 +1,9 @@
 (*
-  this file is a part of audio components suite v 2.3.
-  copyright (c) 2002-2005 andrei borovsky. all rights reserved.
-  see the license file for more details.
-  you can contact me at mail@z0m3ie.de
+LAME MP3 encoder components
+
+This file is a part of Audio Components Suite.
+Copyright (C) 2002-2005 Andrei Borovsky. All rights reserved.
+See the license file for more details.
 *)
 
 unit acs_lame;
@@ -100,7 +101,6 @@ implementation
 constructor TMP3Out.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  LoadLAME();
   FBitRate:=br128;
 
   FBufferSize:=$4000; // default buffer size
@@ -124,7 +124,6 @@ end;
 
 destructor TMP3Out.Destroy();
 begin
-  UnloadLAME();
   inherited Destroy();
 end;
 
@@ -293,8 +292,13 @@ begin
 end;
 
 initialization
+  if LoadLAME() then
+  begin
+    FileFormats.Add('mp3', 'LAME MP3 Encoder', TMP3Out);
+  end;
 
-  FileFormats.Add('mp3', 'Mpeg Layer III', TMP3Out);
+finalization
+  UnloadLAME();
 
 
 end.

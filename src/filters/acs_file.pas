@@ -1,14 +1,14 @@
 (*
-  this file is a part of audio components suite.
-  see the license file for more details.
-  you can contact me at mail@z0m3ie.de
+Base file in/out classes
+
+This file is a part of Audio Components Suite.
+Copyright (C) 2002-2005 Andrei Borovsky. All rights reserved.
+See the license file for more details.
 *)
 
 {
-@abstract(this unit introduces the base classes for acs)
+@abstract(this unit introduces basic fileformat support for acs)
 @author(Christian Ulrich (2005))
-
-this unit introduces basic fileformat support
 }
 
 unit acs_file;
@@ -54,64 +54,14 @@ type
   end;
 
 
-  { TAcsFileIn
-
-    This class is an wrapper for all fileformats
-  }
-  TAcsFileIn = CLASS(TAcsCustomFileIn)
-  private
-    FEndSample: Integer;
-    FFileName: string;
-    FInput: TAcsCustomFileIn;
-    FDialog: TOpenDialog;
-    FLoop: Boolean;
-    FStartSample: Integer;
-    FTotalSamples: Integer;
-    function GetTime: Integer;
-    function GetValid: Boolean;
-    procedure SetFileName(const AValue: String);
-    function GetSize: Integer;
-    function GetPosition: Integer;
-  protected
-    function GetBPS: Integer; override;
-    function GetCh: Integer; override;
-    function GetSR: Integer; override;
-    function GetTotalTime: Real; override;
-  public
-    constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
-    procedure Open;
-    procedure Flush; override;
-    procedure Init; override;
-    procedure Reset; override;
-    function Seek(SampleNum: Integer): Boolean; override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
-    function SetStartTime(Minutes, Seconds: Integer): Boolean;
-    function SetEndTime(Minutes, Seconds: Integer): Boolean;
-    procedure Jump(Offs: Real);
-    property Time: Integer read GetTime;
-    property TotalSamples: Integer read FTotalSamples;
-    property Valid: Boolean read GetValid;
-    property Size: Integer read GetSize;
-    property Position: Integer read GetPosition;
-  published
-    property EndSample: Integer read FEndSample write FEndSample;
-    property FileName: string read FFileName write SetFileName;
-    property Loop: Boolean read FLoop write FLoop;
-    property StartSample: Integer read FStartSample write FStartSample;
-  end;
-
-
-  { TAcsFileOut
-
-    This class is an wrapper for all fileformats
-  }
+  { TAcsFileOut }
+  { Wrapper for all fileformats }
   TAcsFileOut = class(TComponent)
   private
     FBufferSize: Integer;
     FFileMode: TAcsFileOutputMode;
     FFileName: string;
-    FOnDone:TAcsOutputDoneEvent;
+    FOnDone: TAcsOutputDoneEvent;
     FOnProgress: TAcsOutputProgressEvent;
     FOnThreadException: TAcsThreadExceptionEvent;
     FOutput: TAcsCustomFileOut;
@@ -164,6 +114,52 @@ type
     property OnProgress: TAcsOutputProgressEvent read FOnProgress write FOnProgress;
     property OnThreadException: TAcsThreadExceptionEvent read FOnThreadException write FOnThreadException;
   end;
+
+  { TAcsFileIn }
+  { Wrapper for all fileformats }
+  TAcsFileIn = CLASS(TAcsCustomFileIn)
+  private
+    FEndSample: Integer;
+    FFileName: string;
+    FInput: TAcsCustomFileIn;
+    FDialog: TOpenDialog;
+    FLoop: Boolean;
+    FStartSample: Integer;
+    FTotalSamples: Integer;
+    function GetTime: Integer;
+    function GetValid: Boolean;
+    procedure SetFileName(const AValue: String);
+    function GetSize: Integer;
+    function GetPosition: Integer;
+  protected
+    function GetBPS: Integer; override;
+    function GetCh: Integer; override;
+    function GetSR: Integer; override;
+    function GetTotalTime: Real; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    procedure Open;
+    procedure Flush; override;
+    procedure Init; override;
+    procedure Reset; override;
+    function Seek(SampleNum: Integer): Boolean; override;
+    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function SetStartTime(Minutes, Seconds: Integer): Boolean;
+    function SetEndTime(Minutes, Seconds: Integer): Boolean;
+    procedure Jump(Offs: Real);
+    property Time: Integer read GetTime;
+    property TotalSamples: Integer read FTotalSamples;
+    property Valid: Boolean read GetValid;
+    property Size: Integer read GetSize;
+    property Position: Integer read GetPosition;
+  published
+    property EndSample: Integer read FEndSample write FEndSample;
+    property FileName: string read FFileName write SetFileName;
+    property Loop: Boolean read FLoop write FLoop;
+    property StartSample: Integer read FStartSample write FStartSample;
+  end;
+
 
 var
   FileFormats: TAcsFileFormatsList;

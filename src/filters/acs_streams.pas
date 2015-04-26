@@ -1,8 +1,9 @@
 (*
-  this file is a part of audio components suite v 2.3.
-  copyright (c) 2002-2005 andrei borovsky. all rights reserved.
-  see the license file for more details.
-  you can contact me at mail@z0m3ie.de
+Stream in/out
+
+This file is a part of Audio Components Suite.
+Copyright (C) 2002-2005 Andrei Borovsky. All rights reserved.
+See the license file for more details.
 *)
 
 unit acs_streams;
@@ -21,15 +22,13 @@ type
 
   TAcsStreamOut = class(TAcsStreamedOutput)
   protected
-    function GetBPS: Integer;
-    function GetCh: Integer;
-    function GetSR: Integer;
+    function GetBPS(): Integer;
+    function GetCh(): Integer;
+    function GetSR(): Integer;
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
-    procedure Done; override;
+    destructor Destroy(); override;
     function DoOutput(Abort: Boolean): Boolean; override;
-    procedure Prepare; override;
     property OutSampleRate: Integer read GetSR;
     property OutBitsPerSample: Integer read GetBPS;
     property OutChannles: Integer read GetCh;
@@ -59,53 +58,41 @@ type
 
 implementation
 
-procedure TAcsStreamOut.Prepare();
+constructor TAcsStreamOut.Create();
 begin
-  if not Assigned(FStream) then
-    raise EAcsException.Create(strStreamObjectnotassigned);
-  FInput.Init();
+  inherited Create(AOwner);
+  FBufferSize:=OUTBUF_SIZE;
 end;
 
-procedure TAcsStreamOut.Done();
+destructor TAcsStreamOut.Destroy();
 begin
-  FInput.Flush();
+  inherited Destroy();
 end;
 
 function TAcsStreamOut.DoOutput(Abort: Boolean): Boolean;
 var
   Len: Integer;
-  P: Pointer;
 begin
   // No exceptions Here
-  Result:=True;
+  Result:=False;
   if not Busy then Exit;
-  if Abort or (not CanOutput) then
-  begin
-    Result:=False;
-    Exit;
-  end;
-  GetMem(P, OUTBUF_SIZE);
+  if Abort or (not CanOutput) then Exit;
+  if not Assigned(FStream) then Exit;
+
+  // copy samples from input
   while InputLock do;
   InputLock:=True;
-  Len:=FInput.GetData(P, OUTBUF_SIZE);
+  //Len:=FInput.GetData(FBuffer.Memory, FBuffer.Size);
+  Len:=FInput.GetData(FBuffer);
   InputLock:=False;
+
+  // write samples to stream
   if Len > 0 then
   begin
+    FBuffer.Position:=0;
+    FStream.CopyFrom(FBuffer, Len);
     Result:=True;
-    FStream.WriteBuffer(P^, Len);
-  end
-  else Result:=False;
-  FreeMem(P);
-end;
-
-constructor TAcsStreamOut.Create;
-begin
-  inherited Create(AOwner);
-end;
-
-destructor TAcsStreamOut.Destroy;
-begin
-  inherited Destroy;
+  end;
 end;
 
 constructor TAcsStreamIn.Create;

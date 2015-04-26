@@ -1,33 +1,23 @@
 (*
-  this file is a part of audio components suite v 2.3.
-  copyright (c) 2002-2005 andrei borovsky. all rights reserved.
-  see the license file for more details.
-  you can contact me at mail@z0m3ie.de
+libao: a cross platform audio library
+
+This file is a part of Audio Components Suite.
+Copyright (C) 2002-2005 Andrei Borovsky. All rights reserved.
+See the license file for more details.
+This is the ACS for Linux version of the unit.
 *)
 
-{$Log: acs_aolive.pas,v $
-{Revision 1.2  2006/01/01 18:46:40  z0m3ie
-{*** empty log message ***
-{
-{Revision 1.1  2005/12/19 18:36:05  z0m3ie
-{*** empty log message ***
-{
-{Revision 1.2  2005/09/14 21:19:37  z0m3ie
-{*** empty log message ***
-{
-{Revision 1.1  2005/09/13 21:53:45  z0m3ie
-{maked seperat driver (not complete jet)
-{}
+{$ifdef mswindows}{$message error 'unit not supported'}{$endif}
 
 unit acs_aolive;
 
 interface
 
 uses
-  Classes,ACS_Classes,ACS_Audio,libao,SysUtils,ACS_Strings,ACS_Types;
+  Classes, ACS_Classes, ACS_Audio, libao, SysUtils, ACS_Strings, ACS_Types, ACS_Procs;
 
 const
-  LATENCY = 45;//how to measure ?
+  LATENCY = 45; //how to measure ?
 
 type
 
@@ -35,177 +25,228 @@ type
 
   TAOLiveAudioOut = class(TAcsAudioOutDriver)
   private
-    _device : PAODevice;
-    FVolume : Byte;
-    FDrivers : TStringList;
-    FCurrentDriver,
-    FDefaultDriver : String;
-    function IsDevicePlayable(const Dev : String) : Boolean;
+    _device: PAODevice;
+    FVolume: Byte;
+    FDrivers: TStringList;
+    FCurrentDriver: String;
+    FDefaultDriver: String;
+    function IsDevicePlayable(const Dev: String): Boolean;
   protected
-    procedure Done; override;
-    function DoOutput(Abort : Boolean):Boolean; override;
-    procedure Prepare; override;
-    procedure SetDevice(Ch : Integer);override;
+    procedure Prepare(); override;
+    function DoOutput(Abort: Boolean): Boolean; override;
+    procedure Done(); override;
+    procedure SetDevice(Ch: Integer); override;
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
+    destructor Destroy(); override;
   end;
 
 implementation
 
-  constructor TAOLiveAudioOut.Create;
-  var
-    DrList : PPAOInfo;
-    DrCount, i : Integer;
-    Info : PAOInfo;
+{$DEFINE SEARCH_LIBS}
+var
+  LibaoLoaded: Boolean = False;
+  Libhandle: Pointer;
+{$IFDEF SEARCH_LIBS}
+  LibPath: string;
+{$ENDIF}
+
+procedure FreeOptionsList(var OL: PAOOption);
+var
+  NextOpt, tmp: PAOOption;
+begin
+  if OL = nil then Exit;
+  NextOpt:=OL;
+  repeat
+    tmp:=NextOpt;
+    NextOpt:=NextOpt.next;
+    FreeMem(tmp);
+  until NextOpt = nil;
+end;
+
+constructor TAOLiveAudioOut.Create(AOwner: TComponent);
+var
+  DrList: PPAOInfo;
+  DrCount, i: Integer;
+  Info: PAOInfo;
+begin
+  if not LibaoLoaded then
+    raise EACSException.Create(Format(strCoudntloadlib, [LibaoPath]));
+  inherited Create(AOwner);
+  if AOInitialized = 0 then ao_initialize();
+  Inc(AOInitialized);
+  FDrivers:=TStringList.Create();
+  DrList:=ao_driver_info_list(DrCount);
+  for i:=0 to DrCount-1 do
   begin
-    if not LibaoLoaded then
-    raise EACSException.Create(Format(strCoudntloadlib,[LibaoPath]));
-    inherited Create(AOwner);
-    if AOInitialized = 0 then
-    ao_initialize;
-    Inc(AOInitialized);
-    FDrivers := TStringList.Create;
-    DrList := ao_driver_info_list(DrCount);
-    for i := 0 to DrCount-1 do
+    if DrList^._type = AO_TYPE_LIVE then
     begin
-      if DrList^._type = AO_TYPE_LIVE then
-      begin
-        FDrivers.Add(String(DrList^.short_name));
-      end;
-      Inc(DrList);
+      FDrivers.Add(String(DrList^.short_name));
     end;
-    Info := ao_driver_info(ao_default_driver_id);
-    FDefaultDriver := Info.short_name;
-    FVolume := 255;
+    Inc(DrList);
   end;
+  Info:=ao_driver_info(ao_default_driver_id);
+  FDefaultDriver:=Info.short_name;
+  FVolume:=255;
+end;
 
-  destructor TAOLiveAudioOut.Destroy;
-  begin
-    FDrivers.Free;
-    if AOInitialized = 1 then
-    ao_shutdown;
-    Dec(AOInitialized);
-    inherited Destroy;
-  end;
-
-  procedure TAOLiveAudioOut.Prepare;
-  var
-    did : Integer;
-    sf : ao_sample_format;
-    opt : PAOOption;
-    Info : PAOInfo;
-  begin
-    FInput.Init;
-    if FCurrentDriver = '' then
-    begin
-      did := ao_default_driver_id;
-      Info := ao_driver_info(did);
-      FCurrentDriver := Info.short_name;
-    end
-    else did := ao_driver_id(@FCurrentDriver[1]);
-    opt := nil;
-    sf.bits := Finput.BitsPerSample;
-    sf.rate := Finput.SampleRate;
-    sf.channels := Finput.Channels;
-    sf.byte_format := AO_FMT_NATIVE;
-    _device := ao_open_live(did, @sf, opt);
-    FreeOptionsList(Opt);
-    if _device = nil then
-    raise EACSException.Create(Format(strDevnotplayable,['+FCurrentDriver+']));
-  end;
+destructor TAOLiveAudioOut.Destroy();
+begin
+  FDrivers.Free();
+  if AOInitialized = 1 then ao_shutdown();
+  Dec(AOInitialized);
+  inherited Destroy();
+end;
 
 procedure TAOLiveAudioOut.SetDevice(Ch: Integer);
 begin
   if ch < FDrivers.Count-1 then
     if IsDevicePlayable(FDrivers[ch]) then
-      FCurrentDriver := FDrivers[ch];
+      FCurrentDriver:=FDrivers[ch];
 end;
 
-procedure TAOLiveAudioOut.Done;
-begin
-  Finput.Flush;
-  if _device <> nil then
-  ao_close(_device);
-end;
-
-function TAOLiveAudioOut.DoOutput(Abort : Boolean):Boolean;
+procedure TAOLiveAudioOut.Prepare();
 var
-  Len, i : Integer;
-  P : Pointer;
-  P1 : PACSBuffer8;
-  P2 : PACSBuffer16;
+  did: Integer;
+  sf: ao_sample_format;
+  opt: PAOOption;
+  Info: PAOInfo;
+begin
+  inherited Prepare();
+  if FCurrentDriver = '' then
+  begin
+    did:=ao_default_driver_id;
+    Info:=ao_driver_info(did);
+    FCurrentDriver:=Info.short_name;
+  end
+  else
+    did:=ao_driver_id(@FCurrentDriver[1]);
+  opt:=nil;
+  sf.bits:=FInput.BitsPerSample;
+  sf.rate:=FInput.SampleRate;
+  sf.channels:=FInput.Channels;
+  sf.byte_format:=AO_FMT_NATIVE;
+  _device:=ao_open_live(did, @sf, opt);
+  //FreeOptionsList(Opt);  // may be dangerously
+  if _device = nil then
+    raise EACSException.Create(Format(strDevnotplayable, ['+FCurrentDriver+']));
+end;
+
+procedure TAOLiveAudioOut.Done();
+begin
+  if _device <> nil then ao_close(_device);
+  inherited Done();
+end;
+
+function TAOLiveAudioOut.DoOutput(Abort: Boolean): Boolean;
+var
+  Len, i: Integer;
+  P8: PACSBuffer8;
+  P16: PACSBuffer16;
 begin
   // No exceptions Here
-  Result := True;
+  Result:=True;
   if not CanOutput then Exit;
-  Len := 0;
+  Len:=0;
   if Abort then
   begin
     ao_close(_device);
-    _device := nil;
-    Result := False;
+    _device:=nil;
+    Result:=False;
     Exit;
   end;
   try
-    P := @FBuffer[0];
     while InputLock do;
-    InputLock := True;
-    Len := Finput.GetData(P, FBufferSize);
-    InputLock := False;
+    InputLock:=True;
+    Len:=FInput.GetData(FBuffer.Memory, FBuffer.Size);
+    InputLock:=False;
     if FVolume < 255 then
     begin
       if FInput.BitsPerSample = 16 then
       begin
-        P2 := @FBuffer[0];
-        for i := 0 to (Len shr 1) -1 do
-        P2[i] := Round(P2[i]*(FVolume/255));
+        P16:=FBuffer.Memory;
+        for i:=0 to (Len div 2)-1 do
+        P16[i]:=Round(P16[i] * (FVolume / 255));
       end else
       begin
-        P1 := @FBuffer[0];
-        for i := 0 to Len - 1 do
-        P1[i] := Round(P1[i]*(FVolume/255));
+        P8:=FBuffer.Memory;
+        for i:=0 to Len-1 do
+        P8[i]:=Round(P8[i] * (FVolume / 255));
       end;
     end;
-    ao_play(_device, P, Len);
+    ao_play(_device, FBuffer.Memory, Len);
   except
   end;
-  if Len > 0 then Result := True
-  else Result := False;
+  Result:=(Len > 0);
 end;
 
-  function TAOLiveAudioOut.IsDevicePlayable(const Dev : String) : Boolean;
-  var
-    i, did : Integer;
-    sf : ao_sample_format;
-    opt : PAOOption;
-  begin
-    Result := True;
-    if Dev = '' then Exit;
-    if Busy then
+function TAOLiveAudioOut.IsDevicePlayable(const Dev: String): Boolean;
+var
+  i, did: Integer;
+  sf: ao_sample_format;
+  opt: PAOOption;
+begin
+  Result:=True;
+  if Dev = '' then Exit;
+  if Busy then
     raise EACSException.Create(strBusy);
-    for i := 0 to FDrivers.Count-1 do
-    if FDrivers.Strings[i] = Dev then
+  for i:=0 to FDrivers.Count-1 do
+  if FDrivers.Strings[i] = Dev then
+  begin
+    did:=ao_driver_id(@Dev[1]);
+    sf.bits:=16;
+    sf.rate:=22050;
+    sf.channels:=2;
+    sf.byte_format:=AO_FMT_NATIVE;
+    opt:=nil;
+    _device:=ao_open_live(did, @sf, opt);
+    if _device <> nil then
     begin
-      did := ao_driver_id(@Dev[1]);
-      sf.bits := 16;
-      sf.rate := 22050;
-      sf.channels := 2;
-      sf.byte_format := AO_FMT_NATIVE;
-      opt := nil;
-      _device := ao_open_live(did, @sf, opt);
-      if _device <> nil then
-      begin
-        ao_close(_device);
-        FreeOptionsList(Opt);
-        Exit;
-      end else Break;
-    end;
-    Result := False;
+      ao_close(_device);
+      //FreeOptionsList(Opt);
+      Exit;
+    end
+    else Break;
   end;
+  Result:=False;
+end;
 
 initialization
-  RegisterAudioOut('AOlive',TAOLiveAudioOut,LATENCY);
+{$IFDEF SEARCH_LIBS}
+  Libhandle:=nil;
+  LibPath:=FindLibs(LibaoPath);
+  if LibPath <> '' then Libhandle:=dlopen(@LibPath[1], RTLD_NOW or RTLD_GLOBAL);
+{$ELSE}
+  Libhandle:=dlopen(LibaoPath, RTLD_NOW or RTLD_GLOBAL);
+{$ENDIF}
+
+  if Libhandle <> nil then
+  begin
+    LibaoLoaded:=True;
+    ao_initialize:=dlsym(Libhandle, 'ao_initialize');
+    ao_shutdown:=dlsym(Libhandle, 'ao_shutdown');
+    ao_append_option:=dlsym(Libhandle, 'ao_append_option');
+    ao_free_options:=dlsym(Libhandle, 'ao_free_options');
+    ao_open_live:=dlsym(Libhandle, 'ao_open_live');
+    ao_open_file:=dlsym(Libhandle, 'ao_open_file');
+    ao_play:=dlsym(Libhandle, 'ao_play');
+    ao_close:=dlsym(Libhandle, 'ao_close');
+    ao_driver_id:=dlsym(Libhandle, 'ao_driver_id');
+    ao_default_driver_id:=dlsym(Libhandle, 'ao_default_driver_id');
+    ao_driver_info:=dlsym(Libhandle, 'ao_driver_info');
+    ao_driver_info_list:=dlsym(Libhandle, 'ao_driver_info_list');
+    //ao_file_extension:=dlsym(Libhandle, 'ao_file_extension');
+    ao_is_big_endian:=dlsym(Libhandle, 'ao_is_big_endian');
+
+    RegisterAudioOut('AOLive', TAOLiveAudioOut, LATENCY);
+  end;
+
+finalization
+
+  if Libhandle <> nil then
+  begin
+    dlclose(Libhandle);
+  end;
 
 end.
 

@@ -1,32 +1,12 @@
 (*
-  this file is a part of audio components suite v 2.3.
-  copyright (c) 2002-2005 andrei borovsky. all rights reserved.
-  see the license file for more details.
-  you can contact me at mail@z0m3ie.de
+Souncard constants and structures for Linux
+
+This file is a part of Audio Components Suite.
+Copyright (C) 2002-2005 Andrei Borovsky. All rights reserved.
+See the license file for more details.
+This is the ACS for Linux version of the unit.
 *)
 
-{
-$Log: soundcard.pas,v $
-Revision 1.1  2005/12/19 18:36:16  z0m3ie
-*** empty log message ***
-
-Revision 1.1  2005/09/14 21:19:37  z0m3ie
-*** empty log message ***
-
-Revision 1.1  2005/09/12 22:04:52  z0m3ie
-modified structure again, fileformats are now in an sperat folder.
-all File In/Out classes are capsulated from TFileIn and TFileOut
-
-Revision 1.1  2005/08/25 20:18:00  z0m3ie
-Version 2.4 restructure
-TCDPlayer removed (fits not in component structure)
-TMP3ToWavConverter removed (fits not in component structure)
-
-Revision 1.2  2005/08/22 20:17:01  z0m3ie
-changed Headers to log
-changed mail adress
-
-}
 
 unit soundcard;
 
