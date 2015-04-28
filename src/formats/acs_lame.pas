@@ -2,8 +2,11 @@
 LAME MP3 encoder components
 
 This file is a part of Audio Components Suite.
-Copyright (C) 2002-2005 Andrei Borovsky. All rights reserved.
-See the license file for more details.
+All rights reserved. See the license file for more details.
+
+Copyright (c) 2002-2009, Andrei Borovsky, anb@symmetrica.net
+Copyright (c) 2005-2006  Christian Ulrich, mail@z0m3ie.de
+Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 *)
 
 unit acs_lame;
@@ -263,11 +266,8 @@ begin
   if Assigned(FStream) then Exit;
   if not CanOutput then Exit;
   if Abort then Exit;
-  while InputLock do;
-  InputLock:=True;
-  //Len := FInput.GetData(@FBuffer, FBufferSize);
-  Len:=FInput.GetData(FBuffer.Memory, FBuffer.Size);
-  InputLock:=False;
+
+  Len:=FillBufferFromInput();
   if Len <> 0 then
   begin
     if FInput.Channels = 2 then

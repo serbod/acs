@@ -1,8 +1,12 @@
 (*
-  this file is a part of audio components suite v 2.3.
-  copyright (c) 2002-2005 andrei borovsky. all rights reserved.
-  see the license file for more details.
-  you can contact me at mail@z0m3ie.de
+Base types
+
+This file is a part of Audio Components Suite.
+All rights reserved. See the license file for more details.
+
+Copyright (c) 2002-2009, Andrei Borovsky, anb@symmetrica.net
+Copyright (c) 2005-2006  Christian Ulrich, mail@z0m3ie.de
+Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 *)
 
 unit acs_types;

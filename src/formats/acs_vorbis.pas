@@ -326,7 +326,7 @@ end;
 
   function TVorbisOut.DoOutput(Abort : Boolean):Boolean;
   var
-    Len, i,chc : Integer;
+    Len, i, chc : Integer;
     out_buf : PPFloat;
     tmpBuf1, tmpBuf2 :  PFloat;
   begin
@@ -340,12 +340,9 @@ end;
       Result := False;
       Exit;
     end;
-    while InputLock do;
-    InputLock := True;
-    chc := Finput.Channels;
-    //Len := FInput.GetData(@FBuffer[0], FBufferSize);
-    Len := FInput.GetData(FBuffer.Memory, FBuffer.Size);
-    InputLock := False;
+
+    Len:=FillBufferFromInput();
+    chc:=FInput.Channels;
     if Len <> 0 then
     begin
       if chc = 2 then
@@ -434,15 +431,14 @@ end;
     Comment : PChar;
     Callbacks : OV_CALLBACKS;
   begin
-    if FOpened = 0 then
+    if not FOpened then
     begin
-      FValid := True;
+      FValid := False;
       EndOfStream := False;
       if not FStreamAssigned then
       try
         Stream := TFileStream.Create(FileName, fmOpenRead) as TFileStream;
       except
-        FValid := False;
         Exit;
       end;
       Callbacks.read_func := cbRead;
@@ -473,19 +469,20 @@ end;
       cursec := -1;
       FTime := Round(ov_time_total(VFile, -1));
   //    ov_pcm_seek(VFile, FOffset);
+      FValid := True;
+      FOpened := True;
     end;
-    Inc(FOpened);
   end;
 
   procedure TVorbisIn.CloseFile;
   begin
-    if FOpened = 1 then
-      begin
-        if ov_seekable(VFile) <> 0 then
-          ov_pcm_seek(VFile, 0);
-        ov_clear(VFile);
-      end;
-    if FOpened > 0 then Dec(FOpened);
+    if FOpened then
+    begin
+      if ov_seekable(VFile) <> 0 then
+        ov_pcm_seek(VFile, 0);
+      ov_clear(VFile);
+      FOpened:=False;
+    end;
   end;
 
   function TVorbisIn.GetData(Buffer : Pointer; BufferSize : Integer): Integer;

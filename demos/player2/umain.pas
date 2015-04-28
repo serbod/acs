@@ -176,24 +176,31 @@ end;
 
 procedure TfMain.Timer1Timer(Sender: TObject);
 var
-  tmp : real;
+  tmp : Real;
 begin
+  if FileIn1.Size = 0 then
+  begin
+    lTime.Caption := '00:00:00';
+    lLeft.Caption := '00:00:00';
+    Exit;
+  end;
+
   case TimeFormat of
   tfElapsed:
     begin
       tmp := ((FileIn1.Position * FileIn1.TotalTime) / FileIn1.Size);
-      lTime.Caption := Format('%.2d:%.2d:%.2d',[round((tmp-30) / 60) mod 120,round(tmp) mod 60,round(tmp*100) mod 100]);
+      lTime.Caption := Format('%.2d:%.2d:%.2d', [round((tmp-30) / 60) mod 120, round(tmp) mod 60, round(tmp*100) mod 100]);
       tmp := FileIn1.TotalTime-((FileIn1.Position * FileIn1.TotalTime) / FileIn1.Size);
-      lLeft.Caption := Format('%.2d:%.2d:%.2d',[round((tmp-30) / 60) mod 120,round(tmp) mod 60,round(tmp*100) mod 100]);
+      lLeft.Caption := Format('%.2d:%.2d:%.2d', [round((tmp-30) / 60) mod 120, round(tmp) mod 60, round(tmp*100) mod 100]);
       lTime1.Caption := 'Time elapsed';
       lTime2.Caption := 'left';
     end;
   tfRemain:
     begin
       tmp := ((FileIn1.Position * FileIn1.TotalTime) / FileIn1.Size);
-      lLeft.Caption := Format('%.2d:%.2d:%.2d',[round((tmp-30) / 60) mod 120,round(tmp) mod 60,round(tmp*100) mod 100]);
+      lLeft.Caption := Format('%.2d:%.2d:%.2d', [round((tmp-30) / 60) mod 120, round(tmp) mod 60, round(tmp*100) mod 100]);
       tmp := FileIn1.TotalTime-((FileIn1.Position * FileIn1.TotalTime) / FileIn1.Size);
-      lTime.Caption := Format('%.2d:%.2d:%.2d',[round((tmp-30) / 60) mod 120,round(tmp) mod 60,round(tmp*100) mod 100]);
+      lTime.Caption := Format('%.2d:%.2d:%.2d', [round((tmp-30) / 60) mod 120, round(tmp) mod 60, round(tmp*100) mod 100]);
       lTime1.Caption := 'Time remain';
       lTime2.Caption := 'elapsed';
     end;
@@ -241,25 +248,16 @@ var
   tmp : real;
 begin
   lFilename.Caption := Format('File:%s',[ExtractFileName(FileIn1.FileName)]);
+  lTime.Caption := '00:00:00';
+  lLeft.Caption := '00:00:00';
   case TimeFormat of
   tfElapsed:
     begin
-      tmp := 0;
-//      if FileIn1.Size > 0 then
-//        tmp := ((FileIn1.Position * FileIn1.TotalTime) / FileIn1.Size);
-      lTime.Caption := Format('%.2d:%.2d:%.2d',[round((tmp-30) / 60) mod 120,round(tmp) mod 60,round(tmp*100) mod 100]);
-//      tmp := FileIn1.TotalTime-((FileIn1.Position * FileIn1.TotalTime) / FileIn1.Size);
-      lLeft.Caption := Format('%.2d:%.2d:%.2d',[round((tmp-30) / 60) mod 120,round(tmp) mod 60,round(tmp*100) mod 100]);
       lTime1.Caption := 'Time elapsed';
       lTime2.Caption := 'left';
     end;
   tfRemain:
     begin
-//      if FileIn1.Size > 0 then
-//        tmp := ((FileIn1.Position * FileIn1.TotalTime) / FileIn1.Size);
-      lLeft.Caption := Format('%.2d:%.2d:%.2d',[round((tmp-30) / 60) mod 120,round(tmp) mod 60,round(tmp*100) mod 100]);
-//      tmp := FileIn1.TotalTime-((FileIn1.Position * FileIn1.TotalTime) / FileIn1.Size);
-      lTime.Caption := Format('%.2d:%.2d:%.2d',[round((tmp-30) / 60) mod 120,round(tmp) mod 60,round(tmp*100) mod 100]);
       lTime1.Caption := 'Time remain';
       lTime2.Caption := 'elapsed';
     end;

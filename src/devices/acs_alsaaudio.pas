@@ -351,10 +351,7 @@ begin
     Exit;
   end;
   try
-    while InputLock do;
-    InputLock:=True;
-    Len:=FInput.GetData(FBuffer.Memory, FBuffer.Size);
-    InputLock:=False;
+    Len:=FillBufferFromInput();
     if Len = 0 then
     begin
       Result:=False;
@@ -384,7 +381,7 @@ begin
          raise EALSABufferUnderrun.Create(strBufferunderrun);
       l:=snd_pcm_writei(_audio_handle, P, (Len div Finput.Channels) div (FInput.BitsPerSample div 8));
     end;
-    Result:=(l = (Len div Finput.Channels) div (FInput.BitsPerSample div 8));
+    Result:=(l = (Len div FInput.Channels) div (FInput.BitsPerSample div 8));
   except
   end;
 end;

@@ -1,7 +1,12 @@
 (*
-  this file is a part of audio components suite.
-  see the license file for more details.
-  you can contact me at mail@z0m3ie.de
+Base ACS classes
+
+This file is a part of Audio Components Suite.
+All rights reserved. See the license file for more details.
+
+Copyright (c) 2002-2009, Andrei Borovsky, anb@symmetrica.net
+Copyright (c) 2005-2006  Christian Ulrich, mail@z0m3ie.de
+Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 *)
 
 {
@@ -20,7 +25,7 @@ uses
 {$IFDEF MSWINDOWS}
   Windows, Dialogs,
 {$ENDIF}
-  acs_strings, Classes, SysUtils, acs_types;
+  acs_strings, Classes, SysUtils, syncobjs;
 
 const
 
@@ -51,16 +56,6 @@ const
 {$ENDIF}
 
 type
-{$IFNDEF FPC}
-{$IFDEF LINUX}
-  TTPriority = Integer;
-{$ENDIF}
-{$IFDEF MSWINDOWS}
-  TTPriority = TThreadPriority;
-{$ENDIF}
-{$ELSE}
-  TTPriority = TThreadPriority;
-{$ENDIF}
   {Basic exception class for ACS}
   EAcsException = class(Exception)
   end;
@@ -71,18 +66,21 @@ type
 
   TAcsThread = class(TThread)
   private
+    FHandleException: TAcsHandleThreadException;
     procedure CallOnProgress();
+    procedure CallOnDone();
   public
-    Parent: TObject;
-    Terminating: Boolean;
+    Parent: TComponent;
+    //Terminating: Boolean;
     Stop: Boolean;
-    HandleException: TAcsHandleThreadException;
     Delay: Integer;
     CS: TRTLCriticalSection;
     constructor Create();
+    destructor Destroy(); override;
     procedure DoPause();
     procedure DoResume();
     procedure Execute(); override;
+    property HandleException: TAcsHandleThreadException read FHandleException write FHandleException;
   end;
 
   TAcsVerySmallThread = class(TThread)
@@ -253,21 +251,18 @@ type
     FInput: TAcsCustomInput;
     FOnDone: TAcsOutputDoneEvent;
     FOnProgress: TAcsOutputProgressEvent;
-    FBusy: Boolean;  // Set to true by Run and to False by WhenDone.
+    FActive: Boolean;  // Set to true by Run and to False by WhenDone.
     FOnThreadException: TAcsThreadExceptionEvent;
     InputLock: Boolean;
     FBufferSize: Integer;
-    //FBuffer: PAcsBuffer8;
-    //FBuffer: array of Byte;
     FBuffer: TAcsAudioBuffer;
 
     { Read data from Input into Buffer, return bytes read
       AEndOfInput set to True if end of input buffer is reached }
-    function FillBufferFromInput(var AEndOfInput: Boolean): Integer; virtual;
-    function GetPriority(): TTPriority; virtual;
-    procedure SetPriority(Priority: TTPriority); virtual;
-    function GetSuspend(): Boolean; virtual;
-    procedure SetSuspend(v: Boolean); virtual;
+    function FillBufferFromInput(var AEndOfInput: Boolean): Integer; virtual; overload;
+    function FillBufferFromInput(): Integer; virtual; overload;
+    function GetPriority(): TThreadPriority; virtual;
+    procedure SetPriority(Priority: TThreadPriority); virtual;
     function GetProgress(): Real; virtual;
     procedure SetInput(AInput: TAcsCustomInput); virtual;
     { Called from Thread when thread stopped }
@@ -282,6 +277,7 @@ type
     function GetBufferSize(): Integer;
     procedure SetBufferSize(AValue: Integer); virtual;
   public
+    LastErrorDescription: string;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
 
@@ -292,9 +288,6 @@ type
     { Calls FInput.Flush() and reset buffer to zero }
     procedure Done(); virtual;
 
-    {$IFDEF MSWINDOWS}
-    procedure Abort();
-    {$ENDIF}
     { This is the most important method in the output components.
       After an input component has been assigned, call Run to start audio-processing chain. }
     procedure Run();
@@ -306,7 +299,7 @@ type
     procedure Resume(); virtual;
 
     { Set to true by Run and to False by WhenDone. }
-    property Busy: Boolean read FBusy;
+    property Active: Boolean read FActive;
     { Use this property to set the delay (in milliseconds) in output thread.
       This property allows the user to reduce the stress the output thread puts
       on the CPU (especially under Windows).
@@ -315,7 +308,7 @@ type
     property Delay: Integer read GetDelay write SetDelay;
     { Output components perform output in their own threads.
       Use this property to set the priority for the thread. }
-    property ThreadPriority: TTPriority read GetPriority write SetPriority;
+    property ThreadPriority: TThreadPriority read GetPriority write SetPriority;
     { Read Progress to get the output progress in percents.
       This value is meaningful only after the input component has been set
       and only if the input component can tell the size of its stream. }
@@ -333,14 +326,6 @@ type
     { This property allows you to set the input component for the output component.
       The valid input components must be descendants of TAcsInput. }
     property Input: TAcsCustomInput read FInput write SetInput;
-    { If this property is set to True the output thread suspends every time the
-      output component becomes inactive, otherwise the thread executes permanently.
-      This property is introduced to simplify the debugging process ander
-      Kylix IDE. Output components perform output in their own threads.
-      The signals received by multi-threaded applications under IDE can cause problems.
-      Set this property to False when debugging your application
-      and to True in the final release. }
-    property SuspendWhenIdle: Boolean read GetSuspend write SetSuspend;
     { This event is invoked when the output is finished.
 
       Note: don't try to start other output job before OnDone event from the
@@ -466,7 +451,7 @@ type
   protected
     FFileName: TFileName;
     FOffset: Real;
-    FOpened: Integer;
+    FOpened: Boolean;
     FValid: Boolean;
     FBPS, FSR, FChan: Integer;
     FTime: Integer;
@@ -676,42 +661,76 @@ begin
   Result:=SampleRate * (BitDepth div 8) * ChannelsCount;
 end;
 
-{ TAcsThread }
+{ TAcsVerySmallThread }
 
-procedure TAcsThread.CallOnProgress();
-var
-  ParentComponent: TAcsCustomOutput;
+procedure TAcsVerySmallThread.CallOnDone();
 begin
-  ParentComponent:=TAcsCustomOutput(Parent);
-  ParentComponent.FOnProgress(ParentComponent);
+ if Assigned(FOnDone) then FOnDone(Sender);
 end;
+
+procedure TAcsVerySmallThread.Execute();
+begin
+ Synchronize(CallOnDone);
+end;
+
+{ TAcsThread }
 
 constructor TAcsThread.Create();
 begin
  inherited Create(True);
+ InitCriticalSection(CS);
+end;
+
+destructor TAcsThread.Destroy();
+begin
+  DoneCriticalSection(CS);
+  inherited Destroy();
+end;
+
+procedure TAcsThread.CallOnProgress();
+begin
+  if Assigned((Parent as TAcsCustomOutput).OnProgress) then
+    (Parent as TAcsCustomOutput).OnProgress(Parent);
+end;
+
+procedure TAcsThread.CallOnDone();
+begin
+  if Assigned((Parent as TAcsCustomOutput).FOnDone) then
+    (Parent as TAcsCustomOutput).FOnDone(Parent);
 end;
 
 procedure TAcsThread.DoPause();
 begin
-  if not Suspended then Suspended:=True;
+  Suspended:=True;
 end;
 
 procedure TAcsThread.DoResume();
 begin
-  if Suspended then Suspended:=False;
+  Suspended:=False;
 end;
 
 procedure TAcsThread.Execute();
 var
-  DoneThread: TAcsVerySmallThread;
+  //DoneThread: TAcsVerySmallThread;
   ParentComponent: TAcsCustomOutput;
   Res: Boolean;
 begin
-  ParentComponent:=TAcsCustomOutput(Parent);
-  //    if not bSuspend then
-  while not Terminating do
+  ParentComponent:=(Parent as TAcsCustomOutput);
+  // init
+  try
+    ParentComponent.Prepare();
+  except
+    on E: Exception do
+    begin
+      if Assigned(Self.HandleException) then Self.HandleException(E);
+      Terminate();
+    end;
+  end;
+
+  // main loop
+  //EnterCriticalSection(CS);
+  while not Terminated do
   begin
-    EnterCriticalSection(CS);
     if Delay > 5 then Sleep(Delay);
     try
       if ParentComponent.Progress <> ParentComponent.CurProgr then
@@ -720,35 +739,38 @@ begin
         if Assigned(ParentComponent.FOnProgress) then Synchronize(CallOnProgress);
       end;
       Res:=ParentComponent.DoOutput(Stop);
-      if Stop or (not Res) then
-      begin
-        Stop:=False;
-        ParentComponent.WhenDone();
-        // This ensures that OnDone event is called outside this thread
-        DoneThread:=TAcsVerySmallThread.Create(True);
-        DoneThread.Sender:=ParentComponent;
-        DoneThread.FOnDone:=ParentComponent.FOnDone;
-        DoneThread.FreeOnTerminate:=True;
-        Stop:=True;
-        Res:=True;
-        DoneThread.Suspended:=False;
-        //Dont Suspend the thread maybe Stop has been set to false during OnDone
-        //check this first
-        if (Stop or (not Res)) then Self.Suspended:=True;
-      end;
+      if (not Res) then Terminate();
     except
       on E: Exception do
       begin
-        Stop:=False;
-        HandleException(E);
-        //if bSuspend then
-        Self.Suspended:=True;
+        if Assigned(Self.HandleException) then Self.HandleException(E);
+        Terminate();
       end;
     end;
-    LeaveCriticalSection(CS);
   end;
-  //DoOutput(True);  // Why I'm doing this? I don't remember :-)
-  Terminating:=False;
+  //LeaveCriticalSection(CS);
+
+  // done
+  try
+    ParentComponent.WhenDone();
+  except
+    on E: Exception do
+    begin
+      if Assigned(Self.HandleException) then Self.HandleException(E);
+      Terminate();
+    end;
+  end;
+
+  Synchronize(CallOnDone);
+
+  // This ensures that OnDone event is called outside this thread
+  { // !!! for what?
+  DoneThread:=TAcsVerySmallThread.Create(True);
+  DoneThread.Sender:=ParentComponent;
+  DoneThread.FOnDone:=ParentComponent.FOnDone;
+  DoneThread.FreeOnTerminate:=True;
+  DoneThread.Suspended:=False;
+  }
 end;
 
 { TAcsCustomInput }
@@ -823,30 +845,17 @@ end;
 constructor TAcsCustomOutput.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FBusy:=False;
+  FActive:=False;
   FBuffer:=TAcsAudioBuffer.Create();
-  Thread:=TAcsThread.Create();
-  Thread.Parent:=Self;
-//  Thread.DoOutput:=Self.DoOutput;
-//  Thread.FOnDone:=Self.WhenDone;
-  Thread.FreeOnTerminate:=True;
-  Thread.HandleException:=HandleThreadException;
-  {$IFDEF MSWINDOWS}
-  SetSuspend(True);
-  InitializeCriticalSection(Thread.CS);
-  {$ENDIF}
+  FBufferSize:=$4000; // default buffer size
+  Thread:=nil;
 end;
 
 destructor TAcsCustomOutput.Destroy();
 begin
-//  if Thread.Suspended then
-//  Thread.Resume;
-  if not Thread.Suspended then
-  Thread.Terminating:=True;
-  while Thread.Terminating do;
-  {$IFDEF MSWINDOWS}
-  DeleteCriticalSection(Thread.CS);
-  {$ENDIF}
+  //if not Thread.Suspended then Thread.Terminating:=True;
+  //while Thread.Terminating do Sleep(1);
+  if Assigned(Thread) then FreeAndNil(Thread);
   FreeAndNil(FBuffer);
   inherited Destroy;
 end;
@@ -865,25 +874,20 @@ begin
   SetBufferSize(0);
 end;
 
-{$IFDEF MSWINDOWS}
-procedure TAcsCustomOutput.Abort();
-begin
-  TerminateThread(Thread.Handle, 0);
-  WhenDone();
-end;
-{$ENDIF}
-
 procedure TAcsCustomOutput.Run();
 begin
-  if Busy then
-    raise EAcsException.Create(strBusy);
+  if Active then Exit();
   if not Assigned(FInput) then
     raise EAcsException.Create(strInputnotAssigned);
   InputLock:=False;
-  Thread.Suspended:=True;
+  FActive:=True;
+
+  Thread:=TAcsThread.Create();
+  Thread.Parent:=Self;
+//  Thread.DoOutput:=Self.DoOutput;
+//  Thread.FOnDone:=Self.WhenDone;
+  Thread.HandleException:=HandleThreadException;
   try
-    Prepare();
-    FBusy:=True;
     Thread.Stop:=False;
     CanOutput:=True;
     Thread.Suspended:=False;
@@ -894,30 +898,31 @@ end;
 
 procedure TAcsCustomOutput.Stop();
 begin
-  Thread.Stop:=True;
+  //Thread.Stop:=True;
+  FreeAndNil(Thread);
 end;
 
 procedure TAcsCustomOutput.Pause();
 begin
-  Thread.DoPause();
+  if Assigned(Thread) then Thread.DoPause();
 end;
 
 procedure TAcsCustomOutput.Resume();
 begin
-  Thread.DoResume();
+  if Assigned(Thread) then Thread.DoResume();
 end;
 
 procedure TAcsCustomOutput.WhenDone();
 begin
-  if not Busy then Exit;
+  if not Active then Exit;
   CanOutput:=False;
   Done();
-  FBusy:=False;
+  FActive:=False;
 end;
 
 function TAcsCustomOutput.GetStatus(): TAcsOutputStatus;
 begin
-  if Busy then
+  if Active then
   begin
     if Self.Thread.Suspended then
       Result:=tosPaused
@@ -928,9 +933,15 @@ begin
     Result:=tosIdle
 end;
 
-procedure TAcsCustomOutput.SetPriority(Priority: TTPriority);
+function TAcsCustomOutput.GetPriority(): TThreadPriority;
 begin
-  Thread.Priority:=Priority;
+  Result:=tpNormal;
+  if Assigned(Thread) then Result:=Thread.Priority;
+end;
+
+procedure TAcsCustomOutput.SetPriority(Priority: TThreadPriority);
+begin
+  if Assigned(Thread) then Thread.Priority:=Priority;
 end;
 
 function TAcsCustomOutput.FillBufferFromInput(var AEndOfInput: Boolean
@@ -940,6 +951,8 @@ var
 begin
   Result:=0;
   if not Assigned(FInput) then Exit;
+  while InputLock do;
+  InputLock:=True;
   while Result < FBuffer.Size do
   begin
     n:=FInput.GetData(FBuffer.Memory+Result, FBuffer.Size-Result);
@@ -950,18 +963,24 @@ begin
     end;
     Inc(Result, n);
   end;
+  InputLock:=False;
 end;
 
-function TAcsCustomOutput.GetPriority(): TTPriority;
+function TAcsCustomOutput.FillBufferFromInput(): Integer;
 begin
-  Result:=Thread.Priority;
+  Result:=0;
+  if not Assigned(FInput) then Exit;
+  while InputLock do;
+  InputLock:=True;
+  Result:=FInput.GetData(FBuffer);
+  InputLock:=False;
 end;
 
 procedure TAcsCustomOutput.SetInput(AInput: TAcsCustomInput);
 var
   OldInput, NewInput: TAcsCustomInput;
 begin
-  if Busy then
+  if Active then
   begin
     NewInput:=AInput;
     NewInput.Init;
@@ -988,16 +1007,6 @@ begin
     -1: Result:=-1;
     else Result:=(FInput.Position/FInput.Size)*100;
   end;
-end;
-
-function TAcsCustomOutput.GetSuspend(): Boolean;
-begin
-  Result:=Thread.Suspended;
-end;
-
-procedure TAcsCustomOutput.SetSuspend(v: Boolean);
-begin
-  Thread.Suspended:=v;
 end;
 
 function TAcsCustomOutput.GetTE(): Integer;
@@ -1050,7 +1059,7 @@ begin
    end;
  end;
  CanOutput:=False;
- FBusy:=False;
+ FActive:=False;
  if Assigned(FOnThreadException) then FOnThreadException(Self, E);
 end;
 
@@ -1061,9 +1070,6 @@ end;
 
 procedure TAcsCustomOutput.SetBufferSize(AValue: Integer);
 begin
-  if Busy then
-    raise EAcsException.Create(strBusy);
-  //if AValue > 0 then FBufferSize:=AValue;
   if AValue > 0 then FBuffer.Size:=AValue;
 end;
 
@@ -1088,7 +1094,7 @@ end;
 procedure TAcsCustomFileIn.Reset();
 begin
   inherited Reset();
-  FOpened:=0;
+  FOpened:=False;
 end;
 
 procedure TAcsCustomFileIn.Flush();
@@ -1118,58 +1124,44 @@ end;
 
 function TAcsCustomFileIn.GetBPS(): Integer;
 begin
-  if FSeekable then
-  begin
-    { TODO : Optimize }
-    OpenFile();
-    Result:=FBPS;
-    CloseFile;
-  end
-  else Result:=FBPS;
+  Result:=0;
+  if Valid then Result:=FBPS;
 end;
 
 function TAcsCustomFileIn.GetCh(): Integer;
 begin
-  if FSeekable then
-  begin
-    OpenFile;
-    Result:=FChan;
-    CloseFile;
-  end
-  else Result:=FChan;
+  Result:=0;
+  if Valid then Result:=FChan;
 end;
 
 function TAcsCustomFileIn.GetSR(): Integer;
 begin
-  if FSeekable then
-  begin
-    OpenFile;
-    Result:=FSR;
-    CloseFile;
-  end
-  else Result:=FSR;
+  Result:=0;
+  if Valid then Result:=FSR;
 end;
 
 function TAcsCustomFileIn.GetTime(): Integer;
 begin
-  if FSeekable then
-  begin
-    OpenFile();
-    Result:=FTime;
-    CloseFile();
-  end
-  else Result:=FTime;
+  Result:=0;
+  if Valid then Result:=FTime;
 end;
 
 function TAcsCustomFileIn.GetValid(): Boolean;
+var
+  WasOpened: Boolean;
 begin
   Result:=False;
-  if (not Assigned(FStream)) or (FileName = '') then Exit;
+  WasOpened:=FOpened;
+  if (not Assigned(FStream)) or (FileName = '') then
+  begin
+    FValid:=False;
+    Exit;
+  end;
   if FSeekable then
   begin
     OpenFile();
     Result:=FValid;
-    CloseFile();
+    if not WasOpened then CloseFile();
   end
   else Result:=FValid;
 end;
@@ -1189,14 +1181,14 @@ begin
   FOffset:=Offs;
 end;
 
-function TAcsCustomFileIn.GetTotalTime: Real;
+function TAcsCustomFileIn.GetTotalTime(): Real;
 begin
-  OpenFile;
   Result:=0;
+  if (not FSeekable) or (not Valid) then Exit;
+
   if (SampleRate = 0) or (Channels = 0) or (BitsPerSample = 0) then
   else
-    Result:=Size/(SampleRate*Channels*(BitsPerSample shr 3));
-  CloseFile;
+    Result:=Size / (SampleRate * Channels * (BitsPerSample div 8));
 end;
 
 function TAcsCustomFileIn.SetStartTime(Minutes, Seconds: Integer): Boolean;
@@ -1204,9 +1196,8 @@ var
   Sample: Integer;
 begin
   Result:=False;
-  if not FSeekable then Exit;
-  OpenFile;
-  CloseFile;
+  if (not FSeekable) or Valid then Exit;
+
   Sample:=(Minutes*60+Seconds)*FSR;
   if Sample > FTotalSamples then Exit;
   FStartSample:=Sample;
@@ -1218,9 +1209,8 @@ var
   Sample: Integer;
 begin
   Result:=False;
-  if not FSeekable then Exit;
-  OpenFile;
-  CloseFile;
+  if (not FSeekable) or Valid then Exit;
+
   Sample:=(Minutes*60+Seconds)*FSR;
   if Sample > FTotalSamples then Exit;
   FEndSample:=Sample;
@@ -1311,18 +1301,6 @@ begin
     Conv:=(FInput as TAcsCustomConverter);
     Conv.UnlockInput();
   end;
-end;
-
-{ TAcsVerySmallThread }
-
-procedure TAcsVerySmallThread.Execute();
-begin
- Synchronize(CallOnDone);
-end;
-
-procedure TAcsVerySmallThread.CallOnDone();
-begin
- if Assigned(FOnDone) then FOnDone(Sender);
 end;
 
 { TAcsCircularBuffer }

@@ -1,11 +1,12 @@
 (*
-  Windows standard audio
+  Windows standard audio for acs_audio.pas
 
   This file is a part of Audio Components Suite.
-  Copyright (C) 2002-2005 Andrei Borovsky. All rights reserved.
-  See the license file for more details.
-  You can contact me at acs@compiler4.net
-  This is the ACS for Windows version of the unit.
+  All rights reserved. See the license file for more details.
+
+  Copyright (c) 2002-2009, Andrei Borovsky, anb@symmetrica.net
+  Copyright (c) 2005-2006  Christian Ulrich, mail@z0m3ie.de
+  Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 *)
 
 function CountChannels(): Integer;
@@ -108,7 +109,7 @@ end;
 
 procedure TStdAudioOut.SetDevice(Ch: Integer);
 begin
-  if Busy then
+  if Active then
     raise EAcsException.Create(strBusy);
   if OutputChannelsCount = 0 then
     FBaseChannel:=0
@@ -188,7 +189,7 @@ begin
   Result:=False;
   if not Assigned(FInput) then Exit;
   if Abort or (not CanOutput) then Exit;
-  if not Busy then Exit;
+  if not Active then Exit;
   Tmp:=BlockChain; // clear pending data blocks
   while Tmp <> nil do
   begin
@@ -207,6 +208,7 @@ begin
     InputLock:=True;
     Len:=FInput.GetData(FBuffer.Memory, (FBuffer.Size div FReadChunks));
     InputLock:=False;
+
     if Len <= 0 then Break;
     if FVolume < 255 then
     begin
@@ -214,12 +216,12 @@ begin
       if FInput.BitsPerSample = 16 then
       begin
         P16:=FBuffer.Memory;
-        for i:=0 to (Len shr 1)-1 do P16[i]:=P16[i]*vCoef;
+        for i:=0 to (Len div 2)-1 do P16[i]:=P16[i] * vCoef;
       end
       else if FInput.BitsPerSample = 8 then
       begin
         P8:=FBuffer.Memory;
-        for i:=0 to Len-1 do P8[i]:=P8[i]*vCoef;
+        for i:=0 to Len-1 do P8[i]:=P8[i] * vCoef;
       end;
     end;
     WriteBlock(FBuffer.Memory, Len);
