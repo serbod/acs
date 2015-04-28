@@ -75,7 +75,7 @@ var
 begin
   // No exceptions Here
   Result:=False;
-  if not Busy then Exit;
+  if not Active then Exit;
   if Abort or (not CanOutput) then Exit;
   if not Assigned(FStream) then Exit;
 

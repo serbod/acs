@@ -86,7 +86,7 @@ unit acs_cdrom;
 interface
 
 uses
-  Classes, SysUtils, ACS_Classes, ACS_Strings, ACS_Types
+  Classes, SysUtils, ACS_Classes, ACS_Strings
   {$IFDEF MSWINDOWS}
   ,Windows, MMSystem, akrip32
   {$ELSE}

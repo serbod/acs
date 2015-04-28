@@ -1,9 +1,12 @@
 (*
-  this file is a part of audio components suite v 2.3 (delphi version).
-  copyright (c) 2002-2005 andrei borovsky. all rights reserved.
-  see the license file for more details.
-  you can contact me at acs@compiler4.net
-  this is the acs for delphi (windows) version of the unit.
+Standard audio
+
+This file is a part of Audio Components Suite.
+All rights reserved. See the license file for more details.
+
+Copyright (c) 2002-2009, Andrei Borovsky, anb@symmetrica.net
+Copyright (c) 2005-2006  Christian Ulrich, mail@z0m3ie.de
+Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 *)
 
 unit acs_stdaudio;
@@ -12,18 +15,18 @@ interface
 
 uses
   Classes, SysUtils, ACS_Types, ACS_Classes, ACS_Audio, ACS_Strings
-  {$IFDEF MSWINDOWS}
+{$IFDEF MSWINDOWS}
   , Windows, MMSystem
-  {$ELSE}
+{$ELSE}
   , Soundcard
-  {$ENDIF}
+{$ENDIF}
   ;
 
 const
   LATENCY = 110;
 
 type
-  {$IFDEF MSWINDOWS}
+{$IFDEF MSWINDOWS}
   {$IFDEF FPC}
   TWaveInCapsA = WAVEINCAPSA;
   TWaveInCaps = TWaveInCapsA;
@@ -32,23 +35,23 @@ type
   {$ENDIF}
 
   PPWaveHdr = ^PWaveHdr;
-  {$ENDIF}
+{$ENDIF}
 
   { TStdAudioOut }
 
   TStdAudioOut = class(TAcsAudioOutDriver)
   private
-    {$IFDEF MSWINDOWS}
+{$IFDEF MSWINDOWS}
     BlockChain: PWaveHdr;
     aBlock: Integer;
     EOC: PPWaveHdr;
     FReadChunks: Integer;
-    {$ENDIF}
+{$ENDIF}
     _audio_fd: Integer;
-    {$IFDEF MSWINDOWS}
+{$IFDEF MSWINDOWS}
     procedure WriteBlock(P: Pointer; Len: Integer);
     procedure AddBlockToChain(WH: PWaveHdr);
-    {$ENDIF}
+{$ENDIF}
   protected
     function GetDeviceCount(): Integer; override;
     procedure SetDevice(Ch: Integer); override;
@@ -109,9 +112,9 @@ var
   CrSecI, CrSecO: TRTLCriticalSection;
   
 {$IFDEF MSWINDOWS}
-{$I win32\acs_audio.inc}
+  {$I win32\acs_audio.inc}
 {$ELSE}
-{$I linux\acs_audio.inc}
+  {$I linux\acs_audio.inc}
 {$ENDIF}
 
 function TStdAudioOut.GetDeviceName(ADeviceNumber: Integer): string;
@@ -167,7 +170,7 @@ initialization
   InitializeCriticalSection(CrSecI);
   InitializeCriticalSection(CrSecO);
   {$ENDIF}
-  CountChannels;
+  CountChannels();
   RegisterAudioOut('Wavemapper', TStdAudioOut, LATENCY);
   RegisterAudioIn('Wavemapper', TStdAudioIn, LATENCY);
 

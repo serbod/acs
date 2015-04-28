@@ -156,10 +156,7 @@ begin
     Exit;
   end;
   try
-    while InputLock do;
-    InputLock:=True;
-    Len:=FInput.GetData(FBuffer.Memory, FBuffer.Size);
-    InputLock:=False;
+    Len:=FillBufferFromInput();
     if FVolume < 255 then
     begin
       if FInput.BitsPerSample = 16 then

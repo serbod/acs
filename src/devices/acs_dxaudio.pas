@@ -1,12 +1,12 @@
 (*
-  This file is a part of Audio Components Suite
+DirectX audio in/out components
 
-  Copyright (c) 2002-2009, Andrei Borovsky, anb@symmetrica.net
-  Copyright (c) 2005-2006  mail@z0m3ie.de
-  Copyright (c) 2014, Sergey Bodrov, serbod@gmail.com
+This file is a part of Audio Components Suite.
+All rights reserved. See the license file for more details.
 
-  All rights reserved.
-  see the license file for more details.
+Copyright (c) 2002-2009, Andrei Borovsky, anb@symmetrica.net
+Copyright (c) 2005-2006  Christian Ulrich, mail@z0m3ie.de
+Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 *)
 
 {$ifdef linux}{$message error 'unit not supported'}{$endif linux}
@@ -35,7 +35,7 @@ type
     If you decrease the buffer size you may also want to decrease the DS_POLLING_INTERVAL value which determines how often the component requests data from its input. *)
   TDXAudioOut = class(TAcsAudioOutDriver)
   private
-    Freed: Boolean;
+    DSW_Initialized: Boolean;
     FLatency: LongWord;
     FFramesInBuffer: LongWord;
     FPollingInterval: LongWord;
@@ -46,7 +46,7 @@ type
     FDeviceNumber: Integer; // FBaseChannel
     //FDeviceCount: Integer;
     //_BufSize: Integer; // FBufSize
-    FillByte: Byte;
+    FFillByte: Byte;
     FUnderruns, _TmpUnderruns: LongWord;
     FOnUnderrun: TNotifyEvent;
     FVolumeEx: longint; // DW - for more reliable volume control
@@ -54,21 +54,21 @@ type
     FSpeedFactor: Single;
     procedure Usleep(Interval: Word; Prefetch: Boolean);
   protected
-    procedure SetDeviceNumber(i : Integer);
-    function GetVolumeEx: Integer;
+    procedure SetDeviceNumber(i: Integer);
+    function GetVolumeEx(): Integer;
     procedure SetVolumeEx(Value: Integer);
     procedure SetFramesInBuffer(Value: LongWord);
     // old
     procedure SetDevice(Ch: Integer); override;
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
+    destructor Destroy(); override;
     { Called from Thread }
-    procedure Prepare; override;
+    procedure Prepare(); override;
     function DoOutput(Abort: Boolean): Boolean; override;
-    procedure Done; override;
-    procedure Pause; override;
-    procedure Resume; override;
+    procedure Done(); override;
+    procedure Pause(); override;
+    procedure Resume(); override;
     (* Property: DeviceCount
          This read only property returns the number of logical output DirectSound devices. *)
     property DeviceCount: Integer read GetDeviceCount;
@@ -154,13 +154,13 @@ type
     // old
     FBytesToRead : Integer;
     procedure SetDeviceNumber(i: Integer);
-    procedure OpenAudio;
-    procedure CloseAudio;
+    procedure OpenAudio();
+    procedure CloseAudio();
     procedure SetRecTime(aRecTime: Integer);
     procedure SetFramesInBuffer(Value: LongWord);
   protected
     procedure SetDevice(i: Integer); override;
-    function GetTotalTime: Real; override;
+    function GetTotalTime(): Real; override;
     function GetDeviceName(ADeviceNumber: Integer): string; override;
 
     //function GetTotalTime : LongWord; override;
@@ -173,8 +173,8 @@ type
     destructor Destroy; override;
 
     function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
-    procedure Init; override;
-    procedure Flush; override;
+    procedure Init(); override;
+    procedure Flush(); override;
 
     //procedure Pause; override;
     //procedure Resume; override;
@@ -183,7 +183,7 @@ type
          input devices. *)
     property DeviceCount: Integer read GetDeviceCount;
     (* Property: DeviceName[Number : Integer]
-         This read only array property returns the name of the device
+         This read only array property returns the name of the DeviceNumber
          specified by its number. Valid numbers range from 0 to
          <DeviceCount> - 1. *)
     property DeviceName[Number: Integer]: String read GetDeviceName;
@@ -205,7 +205,7 @@ type
     property SamplesToRead: Int64 read FSamplesToRead write FSamplesToRead;
     (* Property: EchoRecording
          When this property is set to True, the component plays back audio data what is being recorded.
-         Currently this option works only if you choose the primary recording driver as the input device.
+         Currently this option works only if you choose the primary recording driver as the input DeviceNumber.
          If you want to echo recording you should set this property to True before you start recording.
          Later you can set it to False to turn echoing off and then back to True to turn it on. *)
     property EchoRecording: Boolean read FEchoRecording write FEchoRecording;
@@ -217,7 +217,7 @@ type
          Smaller values result in lower latency and (possibly) more overruns. See also <PollingInterval>. *)
     property FramesInBuffer: LongWord read FFramesInBuffer write SetFramesInBuffer;
     (* Property: PollingInterval
-         This property sets the audio input device polling interval in milliseconds. The less <FramesInBuffer> value is the less this polling interval should be.
+         This property sets the audio input DeviceNumber polling interval in milliseconds. The less <FramesInBuffer> value is the less this polling interval should be.
          Otherwise many overruns will occur. *)
     property  PollingInterval: LongWord read FPollingInterval write FPollingInterval;
     (* Property: OnOverrun
@@ -232,16 +232,57 @@ type
 
 implementation
 
+constructor TDXAudioOut.Create(AOwner: TComponent);
+var
+  i: Integer;
+begin
+  inherited Create(AOwner);
+  FSpeedFactor:=1;
+  FFramesInBuffer:=$6000;
+  FPollingInterval:=100;
+  FLatency:=100;
+  FVolumeEx:=0; //DW
+  FPrefetchData:=True;
+  //FDeviceCount:=0;
+  FBufferSize:=$40000; // default buffer size
+
+  if not (csDesigning in ComponentState) then
+  begin
+    DSW_EnumerateOutputDevices(@Devices);
+    //FDeviceCount:=Devices.devcount;
+    ThreadPriority:=tpHighest;
+
+    // fill device info
+    SetLength(FDeviceInfoArray, Devices.devcount);
+    for i:=0 to Devices.devcount-1 do
+    begin
+      {$ifdef FPC}
+      FDeviceInfoArray[i].DeviceName:=AnsiToUtf8(Devices.dinfo[i].name);
+      {$else}
+      FDeviceInfoArray[i].DeviceName:=Devices.dinfo[i].name;
+      {$endif}
+    end;
+  end;
+end;
+
+destructor TDXAudioOut.Destroy();
+begin
+  inherited Destroy();
+end;
+
 procedure TDXAudioOut.Prepare();
 var
   Res: HResult;
   Wnd: HWND;
   FormatExt: TWaveFormatExtensible;
 begin
-  inherited Prepare();
-  Freed:=False;
   if (FDeviceNumber >= DeviceCount) then
+  begin
     raise EAcsException.Create(Format(strChannelnotavailable, [FDeviceNumber]));
+  end;
+
+  inherited Prepare();
+
   Chan:=FInput.Channels;
   SR:=FInput.SampleRate;
   if FSpeedFactor <> 1 then
@@ -259,19 +300,18 @@ begin
   Res:=DSW_InitOutputDevice(DSW, @(Devices.dinfo[FDeviceNumber].guid));
   if Res <> 0 then
     raise EAcsException.Create(strFailedtoCreateDSdev);
-  if (Owner is TForm) then
-  begin
-    Wnd:=(Owner as TForm).Handle;
-  end
-  else
-    Wnd:=0;
-  Self.SetBufferSize(FFramesInBuffer*(BPS shr 3)*Chan);
+  DSW_Initialized:=True;
+
+  Wnd:=0;
+  if (Owner is TForm) then Wnd:=(Owner as TForm).Handle;
+
+  Self.SetBufferSize(FFramesInBuffer * (BPS div 8) * Chan);
 
   if BPS <> 8 then
-    FillByte:=0
+    FFillByte:=0
   else
-    FillByte:=128;
-  //Res := DSW_InitOutputBuffer(DSW, Wnd, BPS, SR, Chan, _BufSize);
+    FFillByte:=128;
+
   FillChar(FormatExt, SizeOf(FormatExt), 0);
 
   {$ifdef USE_EXTENDED_SPEC_FOR_24_BPS }
@@ -315,12 +355,13 @@ end;
 
 procedure TDXAudioOut.Done();
 begin
-  if not Freed then
+  if DSW_Initialized then
   begin
+    DSW_StopOutput(DSW);
     DSW_Term(DSW);
+    DSW_Initialized:=False;
   end;
   inherited Done();
-  Freed:=True;
 end;
 
 function TDXAudioOut.DoOutput(Abort: Boolean): Boolean;
@@ -331,21 +372,10 @@ var
   PlayTime, CTime: LongWord;
   //TmpBuf: Pointer;
 begin
-  Result:=True;
-  if not Busy then Exit;
-  if not CanOutput then
-  begin
-    Result:=False;
-    Exit;
-  end;
-
-  if Abort then
-  begin
-    DSW_StopOutput(DSW);
-    CanOutput:=False;
-    Result:=False;
-    Exit;
-  end;
+  Result:=False;
+  if not Active then Exit;
+  if Abort then Exit;
+  if not CanOutput then Exit;
 
   if StartInput then
   begin
@@ -357,6 +387,7 @@ begin
     StartInput:=False;
   end;
 
+  { TODO : Is it really needed? }
   if EndOfInput then
   begin
     CanOutput:=False;
@@ -366,13 +397,13 @@ begin
     begin
       Sleep(100);
       //DSW_ZeroEmptySpace(@DSW);
-      DSW_FillEmptySpace(DSW, FillByte);
+      DSW_FillEmptySpace(DSW, FFillByte);
       Inc(CTime, 100);
     end;
     DSW_StopOutput(DSW);
-    Result:=False;
     Exit;
   end;
+
   {
   Sleep(DS_POLLING_INTERVAL);
   DSW_QueryOutputSpace(@DSW, lb);
@@ -432,58 +463,20 @@ begin
   EndOfInput:=(Len = 0);
   DSW_WriteBlock(DSW, FBuffer.Memory, Len);
   if EndOfInput then
-    Res:=DSW_FillEmptySpace(DSW, FillByte);
+    Res:=DSW_FillEmptySpace(DSW, FFillByte);
   if _TmpUnderruns <> DSW.dsw_OutputUnderflows then
   begin
     FUnderruns:=DSW.dsw_OutputUnderflows;
     _TmpUnderruns:=DSW.dsw_OutputUnderflows;
     DSW_StopOutput(DSW);
-    DSW_FillEmptySpace(DSW, FillByte);
+    DSW_FillEmptySpace(DSW, FFillByte);
     if Assigned(OnUnderrun) then
       OnUnderrun(Self);
       //EventHandler.PostGenericEvent(Self, FOnUnderrun);
     //Usleep(FPollingInterval, FPrefetchData);
     DSW_RestartOutput(DSW); //StartInput := True;
   end;
-
-end;
-
-constructor TDXAudioOut.Create(AOwner: TComponent);
-var
-  i: Integer;
-begin
-  inherited Create(AOwner);
-  FSpeedFactor:=1;
-  FFramesInBuffer:=$6000;
-  FPollingInterval:=100;
-  FLatency:=100;
-  FVolumeEx:=0; //DW
-  FPrefetchData:=True;
-  //FDeviceCount:=0;
-  FBufferSize:=$40000; // default buffer size
-
-  if not (csDesigning in ComponentState) then
-  begin
-    DSW_EnumerateOutputDevices(@Devices);
-    //FDeviceCount:=Devices.devcount;
-    Thread.Priority:=tpHighest;
-
-    // fill device info
-    SetLength(FDeviceInfoArray, Devices.devcount);
-    for i:=0 to Devices.devcount-1 do
-    begin
-      {$ifdef FPC}
-      FDeviceInfoArray[i].DeviceName:=AnsiToUtf8(Devices.dinfo[i].name);
-      {$else}
-      FDeviceInfoArray[i].DeviceName:=Devices.dinfo[i].name;
-      {$endif}
-    end;
-  end;
-end;
-
-destructor TDXAudioOut.Destroy;
-begin
-  inherited Destroy;
+  Result:=True;
 end;
 
 procedure TDXAudioOut.Pause;
@@ -540,7 +533,7 @@ end;
 
 procedure TDXAudioOut.SetFramesInBuffer(Value: LongWord);
 begin
-  if not Busy then FFramesInBuffer:=Value;
+  if not Active then FFramesInBuffer:=Value;
 end;
 
 procedure TDXAudioOut.SetDevice(Ch: Integer);
@@ -572,7 +565,7 @@ begin
   begin
     DSW_EnumerateInputDevices(@Devices);
     //FDeviceCount:=Devices.devcount;
-    // fill device info
+    // fill DeviceNumber info
     SetLength(FDeviceInfoArray, Devices.devcount);
     for i:=0 to Devices.devcount-1 do
     begin

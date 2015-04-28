@@ -2,8 +2,11 @@
 Base audio in/out classes
 
 This file is a part of Audio Components Suite.
-Copyright (C) 2002-2005 Andrei Borovsky. All rights reserved.
-See the license file for more details.
+All rights reserved. See the license file for more details.
+
+Copyright (c) 2002-2009, Andrei Borovsky, anb@symmetrica.net
+Copyright (c) 2005-2006  Christian Ulrich, mail@z0m3ie.de
+Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 *)
 
 {
@@ -18,7 +21,7 @@ unit acs_audio;
 interface
 
 uses
-  acs_types, acs_classes, Classes, ACS_Strings, SysUtils;
+  acs_classes, Classes, ACS_Strings, SysUtils;
 
 const
   DefaultBufferSize = $8000;
@@ -76,10 +79,8 @@ type
     procedure SetBufferSize(const AValue: Integer);
     function GetDelay: Integer;
     procedure SetDelay(const AValue: Integer);
-    function GetPriority: TTPriority;
-    procedure SetPriority(const AValue: TTPriority);
-    function GetSuspend: Boolean;
-    procedure SetSuspend(const AValue: Boolean);
+    function GetPriority: TThreadPriority;
+    procedure SetPriority(const AValue: TThreadPriority);
     function GetBusy: Boolean;
     function GetProgress: real;
     function GetStatus: TAcsOutputStatus;
@@ -103,9 +104,9 @@ type
     procedure SetDriver(ADriver: string); virtual;
     procedure SetDefaultDriver();
 
-    procedure Done;
-    function DoOutput(Abort: Boolean):Boolean;
-    procedure Prepare;
+    procedure Done();
+    function DoOutput(Abort: Boolean): Boolean;
+    procedure Prepare();
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -120,18 +121,20 @@ type
     property Drivers[idx: Integer]: string read GetDriverName;
     { Returns the total count of avalible drivers }
     property DriversCount: Integer read GetDriversCount;
-    { pauses the output. }
-    procedure Pause(); virtual;
-    { Resumes previously paused output. }
-    procedure Resume(); virtual;
+
     { This is the most important method in the output components.
       After an input component has been assigned, call Run to start audio-processing chain. }
     procedure Run();
     { Stops the running output process. }
     procedure Stop();
+    { pauses the output. }
+    procedure Pause(); virtual;
+    { Resumes previously paused output. }
+    procedure Resume(); virtual;
+
     { Output components perform output in their own threads.
       Use this property to set the priority for the thread. }
-    property ThreadPriority: TTPriority read GetPriority write SetPriority;
+    property ThreadPriority: TThreadPriority read GetPriority write SetPriority;
     { Read Progress to get the output progress in percents.
       This value is meaningful only after the input component has been set
       and only if the input component can tell the size of its stream. }
@@ -163,7 +166,6 @@ type
       Be careful with this property when using TAudioOut component.
       Assigning too large values to it can cause dropouts in audio playback. }
     property Delay: Integer read GetDelay write SetDelay;
-    property SuspendWhenIdle: Boolean read GetSuspend write SetSuspend;
     property OnDone: TAcsOutputDoneEvent read FOnDone write FOndone;
     property OnProgress: TAcsOutputProgressEvent read FOnProgress write FOnProgress;
     property OnThreadException: TAcsThreadExceptionEvent read FOnThreadException write FOnThreadException;
@@ -270,16 +272,16 @@ type
     FRecTime: Integer;
     FBaseChannel: Integer;
     FDeviceInfoArray: array of TAcsDeviceInfo;
-    function GetBPS: Integer; virtual;
-    function GetCh: Integer; virtual;
-    function GetSR: Integer; virtual;
+    function GetBPS(): Integer; override;
+    function GetCh(): Integer; override;
+    function GetSR(): Integer; override;
     procedure SetDevice(Ch: Integer); virtual; abstract;
     function GetDeviceCount: Integer; virtual;
     function GetDeviceName(ADeviceNumber: Integer): string; virtual;
     function GetDeviceInfo(ADeviceNumber: Integer): TAcsDeviceInfo; virtual;
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
+    destructor Destroy(); override;
     property DeviceCount: Integer read GetDeviceCount;
     property DeviceName[ADeviceNumber: Integer]: string read GetDeviceName;
     property DeviceInfo[ADeviceNumber: Integer]: TAcsDeviceInfo read GetDeviceInfo;
@@ -289,7 +291,7 @@ type
          property default value is 0 which corresponds to the default audio
          input device in your system. Valid numbers range from 0 to
          <DeviceCount> - 1. *)
-    property Device: Integer read FBaseChannel write SetDevice;
+    property DeviceNumber: Integer read FBaseChannel write SetDevice;
     (* Property: InBitsPerSample
         Use this property to set the number of bits per sample in the audio
         stream the component will provide. Possible values are 8, 16, and 24
@@ -346,6 +348,53 @@ implementation
 
 { TAudioOut }
 
+constructor TAcsAudioOut.Create(AOwner: TComponent);
+//var
+  //lowestindex, lowest, minlat, i: Integer;
+  //exc: Boolean;
+//label retry;
+begin
+  inherited Create(AOwner);
+  FDriverName:='';
+  FOutputDriver:=nil;
+  FInput:=nil;
+  { // serbod 2014-10-05
+    // dangerous code for constructor
+  minlat:=0;
+retry:
+  lowest:=99999;
+  for i:=0 to Length(OutDriverInfos)-1 do
+  begin
+    if (OutDriverInfos[i].Latency < lowest) and (OutDriverInfos[i].Latency > minlat) then
+    begin
+      lowest:=OutDriverInfos[i].Latency;
+      lowestindex:=i;
+    end;
+  end;
+
+  if lowest < 99999 then
+  begin
+    try
+      SetDriver(OutDriverInfos[lowestindex].DriverName);
+      exc:=false;
+    except
+      minlat:=lowest+1;
+      exc:=true;
+    end;
+    if exc then
+      goto retry;
+  end
+  else
+    FDriverName := 'No Driver';
+  }
+end;
+
+destructor TAcsAudioOut.Destroy();
+begin
+  FreeAndNil(FOutputDriver);
+  inherited Destroy;
+end;
+
 function TAcsAudioOut.GetDelay(): Integer;
 begin
   if Assigned(FOutputDriver) then
@@ -376,12 +425,12 @@ end;
 function TAcsAudioOut.GetBusy(): Boolean;
 begin
   if Assigned(FOutputDriver) then
-    Result:=FOutputDriver.Busy
+    Result:=FOutputDriver.Active
   else
     Result:=False;
 end;
 
-function TAcsAudioOut.GetPriority(): TTPriority;
+function TAcsAudioOut.GetPriority(): TThreadPriority;
 begin
   if Assigned(FOutputDriver) then
     Result:=FOutputDriver.GetPriority
@@ -407,14 +456,6 @@ begin
     Result:=tosUndefined;
 end;
 
-function TAcsAudioOut.GetSuspend(): Boolean;
-begin
-  if Assigned(FOutputDriver) then
-    Result:=FOutputDriver.GetSuspend
-  else
-    Result:=False;
-end;
-
 function TAcsAudioOut.GetTE(): Integer;
 begin
   if Assigned(FOutputDriver) then
@@ -424,14 +465,9 @@ begin
   //  raise EAcsException.Create(strNoDriverselected);
 end;
 
-procedure TAcsAudioOut.SetPriority(const AValue: TTPriority);
+procedure TAcsAudioOut.SetPriority(const AValue: TThreadPriority);
 begin
   if Assigned(FOutputDriver) then FOutputDriver.SetPriority(AValue);
-end;
-
-procedure TAcsAudioOut.SetSuspend(const AValue: Boolean);
-begin
-  if Assigned(FOutputDriver) then FOutputDriver.SetSuspend(AValue);
 end;
 
 procedure TAcsAudioOut.ThreadException(Sender: TComponent; E: Exception);
@@ -549,15 +585,19 @@ begin
   Result:=OutDriverInfos[idx].DriverName;
 end;
 
-function TAcsAudioOut.GetDriversCount: Integer;
+function TAcsAudioOut.GetDriversCount(): Integer;
 begin
   Result:=Length(OutDriverInfos);
 end;
 
+procedure TAcsAudioOut.Prepare();
+begin
+  if Assigned(FOutputDriver) then FOutputDriver.Prepare();
+end;
+
 procedure TAcsAudioOut.Done();
 begin
-  if Assigned(FOutputDriver) then FOutputDriver.Done;
-    //raise EAcsException.Create(strNoDriverselected);
+  if Assigned(FOutputDriver) then FOutputDriver.Done();
 end;
 
 function TAcsAudioOut.DoOutput(Abort: Boolean): Boolean;
@@ -566,60 +606,6 @@ begin
     Result:=FOutputDriver.DoOutput(Abort)
   else
     Result:=False;
-  //  raise EAcsException.Create(strNoDriverselected);
-end;
-
-procedure TAcsAudioOut.Prepare();
-begin
-  if Assigned(FOutputDriver) then FOutputDriver.Prepare;
-  //  raise EAcsException.Create(strNoDriverselected);
-end;
-
-constructor TAcsAudioOut.Create(AOwner: TComponent);
-//var
-  //lowestindex, lowest, minlat, i: Integer;
-  //exc: Boolean;
-//label retry;
-begin
-  inherited Create(AOwner);
-  FDriverName:='';
-  FOutputDriver:=nil;
-  FInput:=nil;
-  { // serbod 2014-10-05
-    // dangerous code for constructor
-  minlat:=0;
-retry:
-  lowest:=99999;
-  for i:=0 to Length(OutDriverInfos)-1 do
-  begin
-    if (OutDriverInfos[i].Latency < lowest) and (OutDriverInfos[i].Latency > minlat) then
-    begin
-      lowest:=OutDriverInfos[i].Latency;
-      lowestindex:=i;
-    end;
-  end;
-
-  if lowest < 99999 then
-  begin
-    try
-      SetDriver(OutDriverInfos[lowestindex].DriverName);
-      exc:=false;
-    except
-      minlat:=lowest+1;
-      exc:=true;
-    end;
-    if exc then
-      goto retry;
-  end
-  else
-    FDriverName := 'No Driver';
-  }
-end;
-
-destructor TAcsAudioOut.Destroy();
-begin
-  FreeAndNil(FOutputDriver);
-  inherited Destroy;
 end;
 
 procedure TAcsAudioOut.Pause();
@@ -660,7 +646,7 @@ end;
 
 function TAcsAudioIn.GetSR(): Integer;
 begin
-  if Assigned(FInput) then Result := FInput.GetSR
+  if Assigned(FInput) then Result:=FInput.GetSR
   else Result:=inherited GetSR();
   //  raise EAcsException.Create(strNoDriverselected);
 end;

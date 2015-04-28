@@ -2,8 +2,11 @@
 FLAC (Free Lossless Audio Codec) components
 
 This file is a part of Audio Components Suite.
-Copyright (C) 2002-2005 Andrei Borovsky. All rights reserved.
-See the license file for more details.
+All rights reserved. See the license file for more details.
+
+Copyright (c) 2002-2009, Andrei Borovsky, anb@symmetrica.net
+Copyright (c) 2005-2006  Christian Ulrich, mail@z0m3ie.de
+Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 *)
 
 unit acs_flac;
@@ -374,21 +377,7 @@ begin
   if Abort or EndOfInput then Exit;
 
   // get samples from input
-  // attempt to pull samples until buffer filled?
-  while InputLock do;
-  InputLock:=True;
-  Len:=0;
-  while Len < FBufSize do
-  begin
-    l:=FInput.GetData(FBuffer.Memory+Len, FBufSize-Len);
-    Inc(Len, l);
-    if l = 0 then
-    begin
-      EndOfInput:=True;
-      Break;
-    end;
-  end;
-  InputLock:=False;
+  Len:=FillBufferFromInput(EndOfInput);
   if Len = 0 then Exit;
 
   samples:=(Len shl 3) div FInput.BitsPerSample;
@@ -446,8 +435,7 @@ end;
 
 procedure TFLACIn.OpenFile();
 begin
-  Inc(FOpened);
-  if FOpened = 1 then
+  if not FOpened then
   begin
     if (FFileName = '') then
       raise EAcsException.Create('File name is not assigned');
@@ -471,12 +459,13 @@ begin
     if not FLAC__seekable_stream_decoder_process_until_end_of_metadata(_decoder) then
       FValid:=False;
     EndOfStream:=False;
+    FOpened:=True;
   end;
 end;
 
 procedure TFlacIn.CloseFile();
 begin
-  if FOpened = 1 then
+  if FOpened then
   begin
     if _decoder <> nil then
     begin
@@ -489,8 +478,8 @@ begin
     Buff:=nil;
     if not FStreamAssigned then FStream.Free
     else FStream.Seek(0, soFromBeginning);
+    FOpened:=False;
   end;
-  if FOpened > 0 then Dec(FOpened);
 end;
 
 function TFLACIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;

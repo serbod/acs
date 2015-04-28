@@ -177,6 +177,43 @@ const
 
 type
 
+  { TWaveOut }
+
+  TWaveOut = class(TAcsCustomFileOut)
+  private
+    EndOfInput: Boolean;
+    FWavType: TWavType;
+    FEncodeState: TDVI_ADPCM_ENCODE_STATE_STEREO;
+    FPrevSR: Integer;
+    FPrevCh: Word;
+    FPrevBPS: Word;
+    FPrevLen: Integer;
+    FLenOffs: Integer;
+    FPrevDataSize: Integer;
+    FDataSizeOffs: Integer;
+    FPrevWavType: TWavType;
+    HeaderSize: Integer;
+    FBlockAlign: Word;
+    procedure SetWavType(WT: TWavType);
+    procedure ReadRIFFHeader();
+    procedure FillHeaderPCM(var Header: TWaveHeader);
+    procedure FillHeaderDVIADPCM(var Header: TDVIADPCMHeader);
+    procedure SetBlockSize(BS: Word);
+    procedure EncodeDVIADPCMMono(InData: PAcsBuffer16; OutData: PAcsBuffer8);
+    procedure EncodeDVIADPCMStereo(InData: PAcsBuffer16; OutData: PAcsBuffer8);
+  protected
+    procedure SetFileMode(AMode: TAcsFileOutputMode); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy(); override;
+    procedure Prepare(); override;
+    procedure Done(); override;
+    function DoOutput(Abort: Boolean): Boolean; override;
+  published
+    property WavType: TWavType read FWavType write SetWavType;
+    property BlockSize: Word read FBlockAlign write SetBlockSize;
+  end;
+
   { TWaveIn }
 
   TWaveIn = class(TAcsCustomFileIn)
@@ -200,63 +237,26 @@ type
     {$ENDIF}
     function ReadDVIADPCMBlock(aData: Pointer): Boolean;
     function ReadMSADPCMBlock(bData: Pointer): Boolean;
-    function GetWavType: TWavType;
-    procedure ReadRIFFHeader;
+    function GetWavType(): TWavType;
+    procedure ReadRIFFHeader();
     procedure DecodeDVIADPCMMono(InData: PAcsBuffer8; OutData: PAcsBuffer16; var Len: Integer);
     procedure DecodeDVIADPCMStereo(InData: PAcsBuffer8; OutData: PAcsBuffer16; var Len: Integer);
     procedure DecodeMSADPCMMono(InData: PAcsBuffer8; OutData: PAcsBuffer16; var Len: Integer);
     procedure DecodeMSADPCMStereo(InData: PAcsBuffer8; OutData: PAcsBuffer16; var Len: Integer);
   protected
-    procedure SetBufferSize(ASize: Integer); override;
-    procedure OpenFile; override;
-    procedure CloseFile; override;
+    procedure OpenFile(); override;
+    procedure CloseFile(); override;
   public
     property WavType: TWavType read GetWavType;
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
+    destructor Destroy(); override;
     function GetData(Buffer: Pointer; aBufferSize: Integer): Integer; override;
     function Seek(SampleNum: Integer): Boolean; override;
-  end;
-
-  TWaveOut = class(TAcsCustomFileOut)
-  private
-    EndOfInput: Boolean;
-    FWavType: TWavType;
-    FEncodeState: TDVI_ADPCM_ENCODE_STATE_STEREO;
-    FPrevSR: Integer;
-    FPrevCh: Word;
-    FPrevBPS: Word;
-    FPrevLen: Integer;
-    FLenOffs: Integer;
-    FPrevDataSize: Integer;
-    FDataSizeOffs: Integer;
-    FPrevWavType: TWavType;
-    HeaderSize: Integer;
-    FBlockAlign: Word;
-    procedure SetWavType(WT: TWavType);
-    procedure ReadRIFFHeader;
-    procedure FillHeaderPCM(var Header: TWaveHeader);
-    procedure FillHeaderDVIADPCM(var Header: TDVIADPCMHeader);
-    procedure SetBlockSize(BS: Word);
-    procedure EncodeDVIADPCMMono(InData: PAcsBuffer16; OutData: PAcsBuffer8);
-    procedure EncodeDVIADPCMStereo(InData: PAcsBuffer16; OutData: PAcsBuffer8);
-  protected
-    procedure SetFileMode(AMode: TAcsFileOutputMode); override;
-  public
-    constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
-    procedure Done; override;
-    function DoOutput(Abort: Boolean): Boolean; override;
-    procedure Prepare; override;
-  published
-    property WavType: TWavType read FWavType write SetWavType;
-    property BlockSize: Word read FBlockAlign write SetBlockSize;
   end;
 
 implementation
 
 const
-
   WaveHeaderOffs = 44;
   DataSizeOffs = 40;
   WAVE_FORMAT_PCM = 1;
@@ -267,18 +267,7 @@ const
   WAVE_FORMAT_IMA_ADPCM = 17;
   WAVE_FORMAT_MP3 = 85;
 
-type
-
-  TDVIADPCMBlockHeader = packed record
-    Samp0: SmallInt;
-    StepTableIndex: Byte;
-    Reserved: Byte;
-  end;
-
-const
-
   // DVI IMA ADPCM stuff
-
   StepTab: array[0..88] of Integer = (
                     7,     8,     9,    10,    11,    12,    13,    14,
                    16,    17,    19,    21,    23,    25,    28,    31,
@@ -297,725 +286,367 @@ const
                                -1, -1, -1, -1, 2, 4, 6, 8 );
 
   // MS ADPCM Stuff
-
   adaptive: array[0..15] of SmallInt =
-	(
-		230, 230, 230, 230, 307, 409, 512, 614,
-		768, 614, 512, 409, 307, 230, 230, 230
-	);
+        (
+  	      230, 230, 230, 230, 307, 409, 512, 614,
+  	      768, 614, 512, 409, 307, 230, 230, 230
+        );
 
-
-
-procedure TWaveIn.DecodeDVIADPCMMono(InData: PAcsBuffer8; OutData: PAcsBuffer16; var Len: Integer);
-var
-  i, j, SP: Integer;
-  Diff, PSample: Integer;
-  Code: Byte;
-  Index: Integer;
-begin
-  OutData^[0]:=DVI_ADPCM_STATE.valprev_l;
-  SP:=0;
-  PSample:=DVI_ADPCM_STATE.valprev_l;
-  Index:=DVI_ADPCM_STATE.index_l;
-  for i:=0 to (Len shl 1)-1 do
-  begin
-    j:=(i shr 1);
-    Code:=InData^[j];
-    if (i and 1) = 0 then
-      Code:=(Code and 15)
-    else
-      Code:=(Code shr 4);
-    Diff:=(StepTab[Index] shr 3 );
-    if (Code and 4) <> 0 then
-      Diff:=Diff+StepTab[Index];
-    if (Code and 2) <> 0 then
-      Diff:=Diff+(StepTab[Index] shr 1);
-    if (Code and 1) <> 0 then
-      Diff:=Diff+(StepTab[Index] shr 2);
-    if (Code and 8) <> 0 then
-      Diff:=-Diff;
-    PSample:=PSample+Diff;
-    if PSample > 32767 then PSample := 32767;
-    if PSample < -32767 then PSample := -32767;
-    SP:=SP+1;
-    OutData^[SP]:=PSample;
-    Index:=Index+IndexTab[Code];
-    if Index > 88 then Index:=88;
-    if Index < 0 then Index:=0;
-  end;
-  Len:=SP+1;
-end;
-
-procedure TWaveIn.DecodeDVIADPCMStereo(InData: PAcsBuffer8; OutData: PAcsBuffer16; var Len: Integer);
-var
-  i, j, SP: Integer;
-  Diff, PSample: Integer;
-  Code: Byte;
-  Index: Integer;
-begin
-  { TODO : function for decodin single channel }
-  OutData^[0]:=DVI_ADPCM_STATE.valprev_l;
-  SP:=0;
-  PSample:=DVI_ADPCM_STATE.valprev_l;
-  Index:=DVI_ADPCM_STATE.index_l;
-  for i:=0 to (Len-1) do
-  begin
-    j:=(i shr 1);
-    Code:=InData^[(j div 4)*8+(j mod 4)];
-    if (i and 1) = 0 then
-      Code:=(Code and 15)
-    else
-      Code:=(Code shr 4);
-
-    Diff:=(StepTab[Index] shr 3 );
-    if (Code and 4) <> 0 then
-      Diff:=Diff+StepTab[Index];
-    if (Code and 2) <> 0 then
-      Diff:=Diff+(StepTab[Index] shr 1);
-    if (Code and 1) <> 0 then
-      Diff:=Diff+(StepTab[Index] shr 2);
-    if (Code and 8) <> 0 then
-      Diff:=-Diff;
-
-    PSample:=PSample+Diff;
-    if PSample > 32767 then PSample:=32767;
-    if PSample < -32767 then PSample:=-32767;
-    SP:=SP+2;
-    OutData^[SP]:=PSample;
-    Index:=Index+IndexTab[Code];
-    if Index > 88 then Index:=88;
-    if Index < 0 then Index:=0;
-  end;
-
-  i:=1;
-  OutData^[i]:=DVI_ADPCM_STATE.valprev_r;
-  SP:=1;
-  PSample:=DVI_ADPCM_STATE.valprev_r;
-  Index:=DVI_ADPCM_STATE.index_r;
-  for i:=0 to (Len-1) do
-  begin
-    j:=(i shr 1);
-    Code:=InData^[(j div 4)*8+(j mod 4)+4];
-    if (i and 1) = 0 then
-      Code:=(Code and 15)
-    else
-      Code:=(Code shr 4);
-
-    Diff:=(StepTab[Index] shr 3);
-    if (Code and 4) <> 0 then
-      Diff:=Diff+StepTab[Index];
-    if (Code and 2) <> 0 then
-      Diff:=Diff+(StepTab[Index] shr 1);
-    if (Code and 1) <> 0 then
-      Diff:=Diff+(StepTab[Index] shr 2);
-    if (Code and 8) <> 0 then
-      Diff:=-Diff;
-
-    PSample:=PSample+Diff;
-    if PSample > 32767 then PSample:=32767;
-    if PSample < -32767 then PSample:=-32767;
-    SP:=SP+2;
-    OutData^[SP]:=PSample;
-    Index:=Index+IndexTab[Code];
-    if Index > 88 then Index:=88;
-    if Index < 0 then Index:=0;
-  end;
-  Len:=(SP div 2)+1;
-end;
-
-procedure TWaveIn.DecodeMSADPCMMono(InData : PAcsBuffer8; OutData : PAcsBuffer16; var Len : Integer);
-var
-  pos, i, PredSamp, ErrorDelta: Integer;
-begin
-  pos:=0;
-  OutData^[pos]:=MS_ADPCM_STATE.Samp2[0];
-  Inc(pos);
-  OutData^[pos]:=MS_ADPCM_STATE.Samp1[0];
-  Inc(pos);
-  for i:=0 to (Len shr 1)-1 do
-  begin
-    PredSamp:=(MS_ADPCM_STATE.Samp1[0]*MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[0]].Coef1 +
-               MS_ADPCM_STATE.Samp2[0]*MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[0]].Coef2) div 256;
-    ErrorDelta:=(InData^[i] shr 4);
-    if (ErrorDelta and 8) <> 0 then
-      PredSamp:=PredSamp+MS_ADPCM_STATE.Delta[0]*(ErrorDelta-16)
-    else
-      PredSamp:=PredSamp+MS_ADPCM_STATE.Delta[0]*(ErrorDelta);
-    if PredSamp > 32767 then PredSamp:=32767;
-    if PredSamp < -32768 then PredSamp:=-32768;
-    OutData^[pos]:=PredSamp;
-    Inc(pos);
-    MS_ADPCM_STATE.Delta[0]:=(MS_ADPCM_STATE.Delta[0]*adaptive[ErrorDelta]) div 256;
-    if MS_ADPCM_STATE.Delta[0] < 16 then MS_ADPCM_STATE.Delta[0]:=16;
-    MS_ADPCM_STATE.Samp2[0]:=MS_ADPCM_STATE.Samp1[0];
-    MS_ADPCM_STATE.Samp1[0]:=PredSamp;
-
-    { TODO : Is it correct for mono? }
-    PredSamp:=(MS_ADPCM_STATE.Samp1[0]*MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[0]].Coef1 +
-               MS_ADPCM_STATE.Samp2[0]*MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[0]].Coef2) div 256;
-    ErrorDelta:=InData^[i] and 15;
-    if (ErrorDelta and 8) <> 0 then
-      PredSamp:=PredSamp+MS_ADPCM_STATE.Delta[0]*(ErrorDelta-16)
-    else
-      PredSamp:=PredSamp+MS_ADPCM_STATE.Delta[0]*(ErrorDelta);
-    if PredSamp > 32767 then PredSamp:=32767;
-    if PredSamp < -32768 then PredSamp:=-32768;
-    OutData^[pos]:=PredSamp;
-    Inc(pos);
-    MS_ADPCM_STATE.Delta[0]:=(MS_ADPCM_STATE.Delta[0]*adaptive[ErrorDelta]) div 256;
-    if MS_ADPCM_STATE.Delta[0] < 16 then MS_ADPCM_STATE.Delta[0]:=16;
-    MS_ADPCM_STATE.Samp2[0]:=MS_ADPCM_STATE.Samp1[0];
-    MS_ADPCM_STATE.Samp1[0]:=PredSamp;
-  end;
-  Len:=pos*2;
-end;
-
-  procedure TWaveIn.DecodeMSADPCMStereo(InData : PAcsBuffer8; OutData : PAcsBuffer16; var Len : Integer);
-  var
-    pos, i, PredSamp, ErrorDelta : Integer;
-  begin
-    pos := 0;
-    OutData^[pos] := MS_ADPCM_STATE.Samp2[0];
-    Inc(pos);
-    OutData^[pos] := MS_ADPCM_STATE.Samp2[1];
-    Inc(pos);
-    OutData^[pos] := MS_ADPCM_STATE.Samp1[0];
-    Inc(pos);
-    OutData^[pos] := MS_ADPCM_STATE.Samp1[1];
-    Inc(pos);
-    for i := 0 to Len - 1 do
-    begin
-      PredSamp := (MS_ADPCM_STATE.Samp1[0]*MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[0]].Coef1 +
-                   MS_ADPCM_STATE.Samp2[0]*MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[0]].Coef2) div 256;
-      ErrorDelta := InData^[i] shr 4;
-      if (ErrorDelta and 8) <> 0 then
-      PredSamp := PredSamp + MS_ADPCM_STATE.Delta[0]*(ErrorDelta - 16)
-      else
-      PredSamp := PredSamp + MS_ADPCM_STATE.Delta[0]*(ErrorDelta);
-      if PredSamp > 32767 then PredSamp := 32767;
-      if PredSamp < -32768 then PredSamp := -32768;
-      OutData^[pos] := PredSamp;
-      Inc(pos);
-      MS_ADPCM_STATE.Delta[0] := (MS_ADPCM_STATE.Delta[0]*adaptive[ErrorDelta]) div 256;
-      if MS_ADPCM_STATE.Delta[0] < 16 then MS_ADPCM_STATE.Delta[0] := 16;
-      MS_ADPCM_STATE.Samp2[0] := MS_ADPCM_STATE.Samp1[0];
-      MS_ADPCM_STATE.Samp1[0] := PredSamp;
-
-      PredSamp := (MS_ADPCM_STATE.Samp1[1]*MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[1]].Coef1 +
-                   MS_ADPCM_STATE.Samp2[1]*MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[1]].Coef2) div 256;
-      ErrorDelta := InData^[i] and 15;
-      if (ErrorDelta and 8) <> 0 then
-      PredSamp := PredSamp + MS_ADPCM_STATE.Delta[1]*(ErrorDelta - 16)
-      else
-      PredSamp := PredSamp + MS_ADPCM_STATE.Delta[1]*(ErrorDelta);
-      if PredSamp > 32767 then PredSamp := 32767;
-      if PredSamp < -32768 then PredSamp := -32768;
-      OutData^[pos] := PredSamp;
-      Inc(pos);
-      MS_ADPCM_STATE.Delta[1] := (MS_ADPCM_STATE.Delta[1]*adaptive[ErrorDelta]) div 256;
-      if MS_ADPCM_STATE.Delta[1] < 16 then MS_ADPCM_STATE.Delta[1] := 16;
-      MS_ADPCM_STATE.Samp2[1] := MS_ADPCM_STATE.Samp1[1];
-      MS_ADPCM_STATE.Samp1[1] := PredSamp;
-    end;
-    Len := pos*2;
-  end;
-
-  function Compare4(S1, S2 : PChar) : Boolean;
-  var
-    i, Diff : Byte;
-  begin
-    Result := False;
-    for i := 0 to 3 do
-    begin
-      Diff := Byte(S1[i]) - Byte(S2[i]);
-      if not (Diff in [0, 32, 224]) then Exit;
-    end;
-    Result := True;
-  end;
-
-{$IFDEF LINUX}
-
-   function InputFunc(CData : Pointer; Stream : p_mad_stream) : Integer; cdecl;
-   var
-     WI : TWaveIn;
-   begin
-     WI := TWaveIn(CData);
-     if WI.InputDone then
-     begin
-       Result := MAD_FLOW_STOP;
-       Exit;
-     end;
-     WI.InputDone := True;
-     mad_stream_buffer(Stream, WI.Data, WI.DataLen);
-     Result := MAD_FLOW_CONTINUE;
-   end;
-
-   function OutputFunc(CData : Pointer; Header : p_mad_header; pcm : p_mad_pcm) : Integer; cdecl;
-   var
-     WI : TWaveIn;
-     WH : TWaveHeader;
-     i, framesize : Integer;
-     outsamples : array[0..2303] of SmallInt;
-     text : array[0..4] of Char;
-   begin
-     WI := TWaveIn(CData);
-     if not WI.HasFirstFrame then
-     begin
-       WI.FSR := pcm^.samplerate;
-       WI.FChan := pcm^.channels;
-       WI.FBPS := 16;
-       framesize := Ceil(144*Header^.bitrate/Header^.samplerate);
-       WI.FSize := Round(WI.DataLen/framesize*1152)*WI.FChan*2;
-       WI.FValid := True;
-       text := 'RIFF';
-       Move(text[0], WH.RIFF[0], 4);
-       WH.FileSize := WI.FSize + 44;
-       text := 'WAVE';
-       Move(text[0], WH.RIFFType[0], 4);
-       text := 'fmt ';
-       Move(text[0], WH.FmtChunkId[0], 4);
-       WH.FmtChunkSize := 16;
-       WH.FormatTag := 1;
-       WH.Channels := WI.FChan;
-       WH.SampleRate := WI.FSR;
-       WH.BitsPerSample := 16;
-       WH.BlockAlign := 2*WI.FChan;
-       WH.BytesPerSecond := WI.FSR * WH.BlockAlign;
-       text := 'data';
-       Move(text[0], WH.DataChunkId[0], 4);
-       WH.DataSize := WI.FSize;
-       WI.FStream.Size :=WI.FSize + 44;
-       WI.FStream.Seek(0, soFromBeginning);
-       WI.FStream.Write(WH, 44);
-       WI.HasFirstFrame := True;
-     end;
-     if pcm^.channels = 2 then
-     begin
-       for i := 0 to pcm^.length -1 do
-       begin
-         if pcm^.samples[0][i] >= MAD_F_ONE then
-         pcm^.samples[0][i] := MAD_F_ONE - 1;
-         if pcm^.samples[0][i] < -MAD_F_ONE then
-         pcm^.samples[0][i] := -MAD_F_ONE;
-         pcm^.samples[0][i] := pcm^.samples[0][i] shr (MAD_F_FRACBITS + 1 - 16);
-         outsamples[i shl 1] := pcm^.samples[0][i];
-         if pcm^.samples[1][i] >= MAD_F_ONE then
-         pcm^.samples[1][i] := MAD_F_ONE - 1;
-         if pcm^.samples[1][i] < -MAD_F_ONE then
-         pcm^.samples[1][i] := -MAD_F_ONE;
-         pcm^.samples[1][i] := pcm^.samples[1][i] shr (MAD_F_FRACBITS + 1 - 16);
-         outsamples[(i shl 1)+1] := pcm^.samples[1][i];
-       end;
-       WI.FStream.Write(outsamples[0], pcm^.length*4);
-     end else
-     begin
-       for i := 0 to pcm^.length -1 do
-       begin
-         if pcm^.samples[0][i] >= MAD_F_ONE then
-         pcm^.samples[0][i] := MAD_F_ONE - 1;
-         if pcm^.samples[0][i] < -MAD_F_ONE then
-         pcm^.samples[0][i] := -MAD_F_ONE;
-         pcm^.samples[0][i] := pcm^.samples[0][i] shr (MAD_F_FRACBITS + 1 - 16);
-         outsamples[i] := pcm^.samples[0][i];
-       end;
-       WI.FStream.Write(outsamples[0], pcm^.length*2);
-     end;
-     Result := MAD_FLOW_CONTINUE;
-   end;
-
-   function ErrorFunc(CData : Pointer; Stream : p_mad_stream; Frame : p_mad_frame) : Integer; cdecl;
-   begin
-     Result := MAD_FLOW_CONTINUE;
-   end;
-
-{$ENDIF}
-
-const
   LookingForRIFF = 0;
   LookingForWave = 1;
   LookingForFMT = 2;
   LookingForFACT = 3;
   LookingForDATA = 4;
 
-  constructor TWaveIn.Create(AOwner: TComponent);
-  begin
-    inherited Create(AOwner);
-    BufferSize := $8000;
-    _WavType := wtUnsupported;
+type
+  TDVIADPCMBlockHeader = packed record
+    Samp0: SmallInt;
+    StepTableIndex: Byte;
+    Reserved: Byte;
   end;
 
-  destructor TWaveIn.Destroy;
+function Compare4(S1, S2: PChar): Boolean;
+var
+  i, Diff: Byte;
+begin
+  Result:=False;
+  for i:=0 to 3 do
   begin
-    inherited Destroy;
+    Diff:=Byte(S1[i]) - Byte(S2[i]);
+    if not (Diff in [0, 32, 224]) then Exit;
   end;
+  Result:=True;
+end;
 
-  procedure TWaveIn.OpenFile;
-  var
-  {$IFDEF WIN32}
-    WaveConverter: TWaveConverter;
-    ValidItems: LongWord;
-    Res: MMResult;
-  {$ENDIF}
-  {$IFDEF LINUX}
-    _decoder : mad_decoder;
-  {$ENDIF}
-  begin
-    FValid := True;
-    if FOpened = 0 then
-    begin
-      _WavType := wtUnsupported;
-      if not FStreamAssigned then
-      FStream := TFileStream.Create(FFileName, fmOpenRead) as TFileStream;
-      ReadRIFFHeader;
-      case Self._WavType of
-        wtUnsupported :
-        begin
-          FValid := False;
-          Inc(FOpened);
-          Exit;
-        end;
-        wtPCM:
-        begin
-          FSize := FStream.Size;
-          FTotalSamples := FSize div ((FBPS shr 3) * FChan);
-        end;
-        wtDVIADPCM :
-        begin
-          if FBPS <> 4 then
-          FValid := False;
-          FBPS := 16;
-          FTotalSamples := DVI_ADPCM_INFO.DataSize;
-          FSize := FTotalSamples*2*FChan;
-        end;
-        wtMSADPCM :
-        begin
-          FBPS := 16;
-          FSize := MS_ADPCM_INFO.DataSize*2*FChan;
-          FTotalSamples := MS_ADPCM_INFO.DataSize;
-        end;
-        wtACM :
-        begin
-
-{$IFDEF WIN32}
-
-          (* Checking if the file is ACM encoded and if it is, decoding it.
-             Thanks to Jan Henrik Ejme, <jan.h.ejme@xhlp.com> for the
-             provided converter units. *)
-          try
-            WaveConverter := TWaveConverter.Create;
-            FStream.Position := 0;
-            WaveConverter.LoadStream(FStream);
-            with WaveConverter.NewFormat.Format do
-            begin
-              wFormatTag := WAVE_FORMAT_PCM;
-              ValidItems := ACM_FORMATSUGGESTF_WFORMATTAG;
-              Res := acmFormatSuggest(nil, WaveConverter.CurrentFormat.format,
-              WaveConverter.NewFormat.Format, SizeOf(TACMWaveFormat), ValidItems);
-            end;
-            if Res <> 0 then
-            begin
-              FValid := False;
-              WaveConverter.Free;
-              Exit;
-            end;
-            if WaveConverter.Convert <> 0 then
-            begin
-              FValid := False;
-              WaveConverter.Free;
-              Exit;
-            end else
-            begin
-              _MS := TMemoryStream.Create;
-              OldStream := FStream;
-              OldStreamAssigned := FStreamAssigned;
-              FStream := _MS;
-              _MS.Position := 0;
-              WaveConverter.SaveWavToStream(_MS);
-              FSize := _MS.Size;
-              _MS.Seek(0, soFromBeginning);
-              ReadRIFFHeader;
-              //WaveConverter.CurrentFormat.Format.wFormatTag;
-              WaveConverter.Free;
-              _wavType := wtACM;
-            end;
-          except
-            WaveConverter.Free;
-          end;
-{$ENDIF}
 {$IFDEF LINUX}
-          if not MADLibLoaded then
-          raise EACSException.Create(Format(strCoudntloadLib,['madlib']));
-          DataLen := FStream.Size;
-          GetMem(Data, DataLen);
-          FStream.Read(Data^, DataLen);
-          _MS := TMemoryStream.Create;
-          OldStream := FStream;
-          OldStreamAssigned := FStreamAssigned;
-          FStream := _MS;
-          HasFirstFrame := False;
-          InputDone := False;
-          mad_decoder_init(@_decoder, Self, InputFunc, nil, nil, OutputFunc, ErrorFunc, nil);
-          mad_decoder_run(@_decoder, MAD_DECODER_MODE_SYNC);
-          mad_decoder_finish(@_decoder);
-          FreeMem(Data);
-          FStream.Seek(0, soFromBeginning);
-          ReadRIFFHeader;
-          _wavType := wtACM;
+
+function InputFunc(CData : Pointer; Stream : p_mad_stream) : Integer; cdecl;
+var
+  WI : TWaveIn;
+begin
+  WI := TWaveIn(CData);
+  if WI.InputDone then
+  begin
+    Result := MAD_FLOW_STOP;
+    Exit;
+  end;
+  WI.InputDone := True;
+  mad_stream_buffer(Stream, WI.Data, WI.DataLen);
+  Result := MAD_FLOW_CONTINUE;
+end;
+
+function OutputFunc(CData : Pointer; Header : p_mad_header; pcm : p_mad_pcm) : Integer; cdecl;
+var
+  WI : TWaveIn;
+  WH : TWaveHeader;
+  i, framesize : Integer;
+  outsamples : array[0..2303] of SmallInt;
+  text : array[0..4] of Char;
+begin
+  WI := TWaveIn(CData);
+  if not WI.HasFirstFrame then
+  begin
+    WI.FSR := pcm^.samplerate;
+    WI.FChan := pcm^.channels;
+    WI.FBPS := 16;
+    framesize := Ceil(144*Header^.bitrate/Header^.samplerate);
+    WI.FSize := Round(WI.DataLen/framesize*1152)*WI.FChan*2;
+    WI.FValid := True;
+    text := 'RIFF';
+    Move(text[0], WH.RIFF[0], 4);
+    WH.FileSize := WI.FSize + 44;
+    text := 'WAVE';
+    Move(text[0], WH.RIFFType[0], 4);
+    text := 'fmt ';
+    Move(text[0], WH.FmtChunkId[0], 4);
+    WH.FmtChunkSize := 16;
+    WH.FormatTag := 1;
+    WH.Channels := WI.FChan;
+    WH.SampleRate := WI.FSR;
+    WH.BitsPerSample := 16;
+    WH.BlockAlign := 2*WI.FChan;
+    WH.BytesPerSecond := WI.FSR * WH.BlockAlign;
+    text := 'data';
+    Move(text[0], WH.DataChunkId[0], 4);
+    WH.DataSize := WI.FSize;
+    WI.FStream.Size :=WI.FSize + 44;
+    WI.FStream.Seek(0, soFromBeginning);
+    WI.FStream.Write(WH, 44);
+    WI.HasFirstFrame := True;
+  end;
+  if pcm^.channels = 2 then
+  begin
+    for i := 0 to pcm^.length -1 do
+    begin
+      if pcm^.samples[0][i] >= MAD_F_ONE then
+      pcm^.samples[0][i] := MAD_F_ONE - 1;
+      if pcm^.samples[0][i] < -MAD_F_ONE then
+      pcm^.samples[0][i] := -MAD_F_ONE;
+      pcm^.samples[0][i] := pcm^.samples[0][i] shr (MAD_F_FRACBITS + 1 - 16);
+      outsamples[i shl 1] := pcm^.samples[0][i];
+      if pcm^.samples[1][i] >= MAD_F_ONE then
+      pcm^.samples[1][i] := MAD_F_ONE - 1;
+      if pcm^.samples[1][i] < -MAD_F_ONE then
+      pcm^.samples[1][i] := -MAD_F_ONE;
+      pcm^.samples[1][i] := pcm^.samples[1][i] shr (MAD_F_FRACBITS + 1 - 16);
+      outsamples[(i shl 1)+1] := pcm^.samples[1][i];
+    end;
+    WI.FStream.Write(outsamples[0], pcm^.length*4);
+  end
+  else
+  begin
+    for i := 0 to pcm^.length -1 do
+    begin
+      if pcm^.samples[0][i] >= MAD_F_ONE then
+      pcm^.samples[0][i] := MAD_F_ONE - 1;
+      if pcm^.samples[0][i] < -MAD_F_ONE then
+      pcm^.samples[0][i] := -MAD_F_ONE;
+      pcm^.samples[0][i] := pcm^.samples[0][i] shr (MAD_F_FRACBITS + 1 - 16);
+      outsamples[i] := pcm^.samples[0][i];
+    end;
+    WI.FStream.Write(outsamples[0], pcm^.length*2);
+  end;
+  Result := MAD_FLOW_CONTINUE;
+end;
+
+function ErrorFunc(CData : Pointer; Stream : p_mad_stream; Frame : p_mad_frame) : Integer; cdecl;
+begin
+  Result := MAD_FLOW_CONTINUE;
+end;
+
 {$ENDIF}
-        end;
-      end;
-    end;
-    Inc(FOpened);
-  end;
 
-  procedure TWaveIn.CloseFile;
+{ TWaveOut }
+
+constructor TWaveOut.Create();
+begin
+  inherited Create(AOwner);
+  FBufferSize:=$4000; // default buffer size
+  FWavType:=wtPCM;
+  FBlockAlign:=512;
+end;
+
+destructor TWaveOut.Destroy();
+begin
+  inherited Destroy;
+end;
+
+procedure TWaveOut.SetWavType();
+begin
+  if Active then Exit;
+  if (WT = wtPCM) or (WT = wtDVIADPCM) then
+    FWavType:=WT;
+end;
+
+procedure TWaveOut.SetFileMode();
+begin
+  FFileMode:=aMode;
+end;
+
+procedure TWaveOut.Prepare();
+var
+  Header: TWaveHeader;
+  DVIADPCMHeader: TDVIADPCMHeader;
+begin
+  inherited Prepare();
+  EndOfInput:=False;
+  if (FFileMode = foAppend) and (FStream.Size <> 0) then
   begin
-    if FOpened = 1 then
+    ReadRIFFHeader();
+    if not (FPrevWavType in [wtPCM, wtDVIADPCM]) then
     begin
-      if not FStreamAssigned then FStream.Free
-      else if FSeekable then FStream.Seek(0, soFromBeginning);
-      if _WavType = wtACM then
-      begin
-        if Assigned(_MS) then
-        begin
-          if OldStreamAssigned then
-          FStream := OldStream
-          else
-          begin
-            FStream := nil;
-            OldStream.Free;
-          end;
-//        _MS.Free;
-          _MS := nil;
-        end;
-      end;
+      inherited Done();
+      raise EAcsException.Create('Cannot append data to this .wav file.');
     end;
-    if FOpened > 0 then Dec(FOpened);
+    FWavType:=FPrevWavType;
   end;
-
-  function TWaveIn.GetData(Buffer : Pointer; aBufferSize : Integer): Integer;
-  var
-    l, csize : Integer;
-    offs : Integer;
-    Data : Pointer;
-  begin
-    if not Busy then  raise EAcsException.Create(strStreamnotopen);
-    if BufStart > BufEnd then
+  case FWavType of
+    wtPCM:
     begin
-      case _WavType of
-        wtDVIADPCM :
-        begin
-          if FOffset <> 0 then
-          begin
-            offs := (FStream.Position div DVI_ADPCM_INFO.BlockLength)
-            * DVI_ADPCM_INFO.SamplesPerBlock + Round((FOffset/100)*FTotalSamples);
-            if offs < 0 then offs := 0;
-            Seek(offs);
-            FPosition := (FStream.Position div DVI_ADPCM_INFO.BlockLength)
-            * DVI_ADPCM_INFO.SamplesPerBlock;
-            FPosition := FPosition*2*FChan;
-            FOffset := 0;
-          end;
-          if FSeekable then
-          begin
-            if FPosition >= FSize then
-            begin
-              if FLoop then
-              begin
-                Flush;
-                Init;
-              end else
-              begin
-                Result := 0;
-                Exit;
-              end;
-            end;
-          end;
-          BufStart := 1;
-          csize := DVI_ADPCM_INFO.BlockLength - FChan*4;
-          GetMem(Data, csize);
-          if ReadDVIADPCMBlock(Data) then
-          begin
-            if FChan = 2 then
-            begin
-              DecodeDVIADPCMStereo(Data, @buf[1], csize);
-              BufEnd := (csize)*4;
-            end else
-            begin
-              DecodeDVIADPCMMono(Data, @buf[1], csize);
-              BufEnd := (csize)*2;
-              FreeMem(Data);
-            end;
-          end else
-          begin
-            FreeMem(Data);
-            if not Seekable then
-            begin
-             Result := 0;
-             Exit;
-            end
-            else BufEnd := 0;
-          end;
-        end;
-        wtMSADPCM :
-        begin
-          if FOffset <> 0 then
-          begin
-            offs := (FStream.Position div MS_ADPCM_INFO.BlockLength)
-            * MS_ADPCM_INFO.SamplesPerBlock + Round((FOffset/100)*FTotalSamples);
-            if offs < 0 then offs := 0;
-            Seek(offs);
-            FPosition := (FStream.Position div MS_ADPCM_INFO.BlockLength)
-            * MS_ADPCM_INFO.SamplesPerBlock;
-            FPosition := FPosition*2*FChan;
-            FOffset := 0;
-          end;
-          if FPosition >= FSize then
-          begin
-            if FLoop then
-            begin
-              Flush;
-              Init;
-            end else
-            begin
-              Result := 0;
-              Exit;
-            end;
-          end;
-          BufStart := 1;
-          if FChan = 2 then
-          begin
-            csize := MS_ADPCM_INFO.BlockLength-SizeOf(TMSADPCMBlockHeaderStereo);
-            GetMem(Data, csize);
-            if ReadMSADPCMBlock(Data) then
-            begin
-              csize := MS_ADPCM_INFO.SamplesPerBlock-2;
-              DecodeMSADPCMStereo(Data, @buf, csize);
-              BufEnd := csize;
-              FreeMem(Data);
-            end else BufEnd := 0;
-          end else
-          begin
-            csize := MS_ADPCM_INFO.BlockLength-SizeOf(TMSADPCMBlockHeaderMono);
-            GetMem(Data, csize);
-            if ReadMSADPCMBlock(Data) then
-            begin
-              csize := MS_ADPCM_INFO.SamplesPerBlock-2;
-              DecodeMSADPCMMono(Data, @buf, csize);
-              BufEnd := csize;
-              FreeMem(Data);
-            end else BufEnd := 0;
-          end;
-        end;
-        wtPCM:
-        begin
-          if FOffset <> 0 then
-          begin
-            offs := Round((FOffset/100)*FSize);
-            FPosition := FPosition + offs;
-            if FPosition < 0 then FPosition := 0
-            else if FPosition > FSize then FPosition := FSize;
-            FStream.Seek((FPosition shr 2) shl 2, soFromBeginning); // align to 4-byte frame
-            FOffset := 0;
-          end;
-          BufStart := 1;
-          l := FStream.Read(buf, aBufferSize);
-          if FPosition+l >= FSize then
-            l := FSize - FPosition;
-          if l <=0 then
-          begin
-            if FLoop then
-            begin
-              Flush;
-              Init;
-            end else
-            begin
-              Result := 0;
-              Exit;
-            end;
-          end;
-          if l = 0 then
-          begin
-            if FLoop then
-            begin
-              Flush;
-              Init;
-              l := FStream.Read(buf, aBufferSize);
-            end else
-            begin
-              Result := 0;
-              Exit;
-            end;
-          end;
-          BufEnd := l;
-        end;
-        wtACM:
-        begin
-          if FOffset <> 0 then
-          begin
-            offs := Round((FOffset/100)*FSize);
-            FPosition := FPosition + offs;
-            if FPosition < 0 then FPosition := 0
-            else if FPosition > FSize then FPosition := FSize;
-            FStream.Seek((FPosition shr 2) shl 2, soFromBeginning); // align to 4-byte frame
-            FOffset := 0;
-          end;
-          BufStart := 1;
-          l := FStream.Read(buf, aBufferSize);
-          if FPosition+l >= FSize then
-            l := FSize - FPosition;
-          if l <=0 then
-          begin
-            if FLoop then
-            begin
-              Flush;
-              Init;
-            end else
-            begin
-              Result := 0;
-              Exit;
-            end;
-          end;
-          BufEnd := l;
-        end;
-      end;
-    end;
-    if aBufferSize < (BufEnd - BufStart + 1) then
-      Result := aBufferSize
-    else
-      Result := BufEnd - BufStart + 1;
-
-    Move(buf[BufStart-1], Buffer^, Result);
-    Inc(BufStart, Result);
-    Inc(FPosition, Result);
-  end;
-
-  function TWaveIn.Seek(SampleNum : Integer) : Boolean;
-  begin
-    Result := False;
-    if not FSeekable then Exit;
-    Result := True;
-    OpenFile;
-    case _WavType of
-      wtPCM :
+      if (FFileMode = foAppend) and (FStream.Size <> 0) then
       begin
-        Stream.Seek(SampleNum*(Self.FBPS shr 3)*FChan+HeaderSize, soFromBeginning);
-      end;
-      wtDVIADPCM:
-      begin
-        Stream.Seek((SampleNum div DVI_ADPCM_INFO.SamplesPerBlock)*DVI_ADPCM_INFO.BlockLength + HeaderSize, soFromBeginning);
-      end;
-      wtMSADPCM:
-      begin
-        Stream.Seek((SampleNum div MS_ADPCM_INFO.SamplesPerBlock)*MS_ADPCM_INFO.BlockLength + HeaderSize, soFromBeginning);
-      end;
+        if (FPrevSR <> FInput.SampleRate) or
+           (FPrevBPS <> FInput.BitsPerSample) or
+           (FPrevCh <> FInput.Channels) then
+        begin
+          inherited Done();
+          raise EAcsException.Create('Cannot append data in different audio format.');
+        end;
+        FStream.Seek(0, soFromEnd);
+      end
       else
       begin
-        Result := False;
+        FillHeaderPCM(Header);
+        FStream.Write(Header, WaveHeaderOffs);
       end;
     end;
-    CloseFile;
+
+    wtDVIADPCM:
+    begin
+      if FInput.BitsPerSample <> 16 then
+      begin
+        inherited Done();
+        raise EAcsException.Create('Cannot encode 8 bit sound into ADPCM.');
+      end;
+      //FBlockAlign := 512;
+      if (FFileMode = foAppend) and (FStream.Size <> 0) then
+      begin
+        if (FPrevSR <> FInput.SampleRate) or
+           (FPrevCh <> FInput.Channels) then
+        begin
+          inherited Done();
+          raise EAcsException.Create('Cannot append data in different audio format.');
+        end;
+        FStream.Seek(0, soFromEnd);
+      end
+      else
+      begin
+        FillHeaderDVIADPCM(DVIADPCMHeader);
+        FStream.Write(DVIADPCMHeader, SizeOf(DVIADPCMHeader));
+        FEncodeState.Index_l:=0;
+        FEncodeState.Index_r:=0;
+      end;
+    end;
   end;
+end;
+
+procedure TWaveOut.Done();
+var
+  Size: Integer;
+  Hdr: TDVIADPCMHeader;
+begin
+  if ((FInput.Size < 0) or (FFileMode = foAppend)) and (FStream <> nil) then
+  begin
+    case FWavType of
+      wtPCM:
+      begin
+        if FFileMode = foAppend then
+        begin
+          FStream.Seek(FDataSizeOffs, soFromBeginning);
+          Size:=FStream.Size - HeaderSize;
+          FStream.Write(Size, 4);
+        end else
+        begin
+          Size:=FStream.Size - 44;
+          FStream.Seek(DataSizeOffs, soFromBeginning);
+          FStream.Write(Size, 4);
+        end;
+      end;
+
+      wtDVIADPCM:
+      begin
+        if FFileMode = foAppend then
+        begin
+          FStream.Seek(FDataSizeOffs, soFromBeginning);
+          Size:=FStream.Size - HeaderSize;
+          FStream.Write(Size, 4);
+          FStream.Seek(FLenOffs, soFromBeginning);
+          Size:=(Size div FBlockAlign) * ((FBlockAlign - FPrevCh * 4) * (2 div FPrevCh) + 1);
+          FStream.Write(Size, 4);
+        end
+        else
+        begin
+          Size:=FStream.Size - SizeOf(TDVIADPCMHeader);
+          FStream.Seek(0, soFromBeginning);
+          Fstream.Read(Hdr, SizeOf(Hdr));
+          Hdr.DataSize:=Size;
+          Hdr.DataLength:=(Hdr.DataSize div Hdr.BlockAlign) * Hdr.SamplesPerBlock;
+          FStream.Seek(0, soFromBeginning);
+          FStream.Write(Hdr, SizeOf(Hdr));
+        end;
+      end;
+    end;
+    Size:=FStream.Size;
+    FStream.Seek(4, soFromBeginning);
+    FStream.Write(Size, 4);
+  end;
+  inherited Done();
+end;
+
+function TWaveOut.DoOutput(Abort: Boolean): Boolean;
+var
+  Len, l, m: Integer;
+  DVIInBuf: PAcsBuffer16;
+  DVIOutBuf: PAcsBuffer8;
+  P8: PAcsBuffer8;
+  BlockDataSize: Integer;
+begin
+  // No exceptions Here
+  (* We don't close file here to avoide exceptions
+    if output componenet's Stop method is called *)
+  Result:=False;
+  if not CanOutput then Exit;
+  if Abort then Exit;
+  if EndOfInput then Exit;
+
+  Len := 0;
+  case FWavType of
+    wtPCM :
+    begin
+      try
+        Len:=FillBufferFromInput();
+        FBuffer.Position:=0;
+        FStream.CopyFrom(FBuffer, Len);
+      except
+        Exit;
+      end;
+      Result:=(Len > 0);
+    end;
+
+    wtDVIADPCM :
+    begin
+      BlockDataSize:=(FBlockAlign - (4 * FInput.Channels)) * 4 + (2 * FInput.Channels);
+      GetMem(DVIInBuf, BlockDataSize);
+      GetMem(DVIOutBuf, FBlockAlign);
+      P8:=PAcsBuffer8(DVIInBuf);
+      try
+        l:=0;
+        FillChar(DVIInBuf[0], BlockDataSize, 0);
+
+        while InputLock do;
+        InputLock := True;
+        while l <> BlockDataSize do
+        begin
+          m:=FInput.GetData(@P8[l], BlockDataSize-l);
+          if m = 0 then
+          begin
+            EndOfInput := True;
+            Break;
+          end;
+          Inc(l, m);
+        end;
+        Len:=FBlockAlign;
+        InputLock:=False;
+
+        if FInput.Channels = 2 then
+        begin
+          FEncodeState.PredSamp_l:=DVIInBuf[0];
+          m:=1;
+          FEncodeState.PredSamp_r:=DVIInBuf[m];
+          m:=2;
+          EncodeDVIADPCMStereo(@DVIInBuf[m], @DVIOutBuf[0]);
+          FStream.Write(DVIOutBuf[0], FBlockAlign);
+        end
+        else
+        begin
+          FEncodeState.PredSamp_l:=DVIInBuf[0];
+          m:=1;
+          EncodeDVIADPCMMono(@DVIInBuf[m], @DVIOutBuf[0]);
+          FStream.Write(DVIOutBuf[0], FBlockAlign);
+        end;
+      finally
+        FreeMem(DVIInBuf);
+        FreeMem(DVIOutBuf);
+      end;
+      Result:=(Len > 0);
+    end;
+  end;
+end;
+
+procedure TWaveOut.SetBlockSize();
+begin
+  if (not Active) and (BS <> 0) and ((BS mod 4) = 0) then FBlockAlign:=BS;
+end;
 
 procedure TWaveOut.FillHeaderPCM(var Header : TWaveHeader);
 var
@@ -1224,607 +855,955 @@ begin
    FEncodeState.PredSamp_r := PredSamp;
 end;
 
-constructor TWaveOut.Create();
+procedure TWaveOut.ReadRIFFHeader;
+var
+  i: Integer;
+  WordVal: Word;
+  Buff: array[0..$fff] of Char;
+  State: Integer;
+  ChunkSize: Integer;
 begin
-  inherited Create(AOwner);
-  FBufferSize:=$4000; // default buffer size
-  FWavType:=wtPCM;
-  FBlockAlign:=512;
+  FPrevWavType := wtUnsupported;
+  State := LookingForRIFF;
+  i := 4;
+  FStream.Read(Buff[0], 4);
+  while i < $2000 do
+  begin
+    case State of
+      LookingForRIFF:
+      begin
+        if not Compare4(@Buff[i-4], 'RIFF') then
+        begin
+          FStream.Read(Buff[i], 1);
+          Inc(i);
+        end
+        else
+        begin
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+          State := LookingForWAVE;
+        end;
+      end;
+
+      LookingForWAVE:
+      begin
+        if not Compare4(@Buff[i-4], 'WAVE') then
+        begin
+          FStream.Read(Buff[i], 1);
+          Inc(i);
+        end
+        else
+        begin
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+          State := LookingForFMT;
+        end;
+      end;
+
+      LookingForFMT:
+      begin
+        if not Compare4(@Buff[i-4], 'fmt ') then
+        begin
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+          Move(Buff[i-4], ChunkSize, 4);
+          FStream.Read(Buff[i], ChunkSize);
+          Inc(i, ChunkSize);
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+        end
+        else
+        begin
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+          Move(Buff[i-4], ChunkSize, 4);
+          FStream.Read(Buff[i], ChunkSize);
+          Inc(i, ChunkSize);
+          Move(Buff[i-ChunkSize], WordVal, 2);
+          case WordVal of
+            WAVE_FORMAT_PCM : FPrevWavType := wtPCM;
+            WAVE_FORMAT_IMA_ADPCM : FPrevWavType := wtDVIADPCM;
+            else Exit;
+          end;
+          Move(Buff[i+2-ChunkSize], FPrevCh, 2);
+          Move(Buff[i+4-ChunkSize], FPrevSR, 4);
+          Move(Buff[i+12-ChunkSize], FBlockAlign, 2);
+          Move(Buff[i+14-ChunkSize], FPrevBPS, 2);
+          if FPrevWavType = wtDVIADPCM then
+          State := LookingForFACT
+          else State := LookingForDATA;
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+        end;
+      end;
+
+      LookingForFACT :
+      begin
+        if not Compare4(@Buff[i-4], 'fact') then
+        begin
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+          Move(Buff[i-4], ChunkSize, 4);
+          FStream.Read(Buff[i], ChunkSize);
+          Inc(i, ChunkSize);
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+        end
+        else
+        begin
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+          Move(Buff[i-4], ChunkSize, 4);
+          FLenOffs := i;
+          FStream.Read(Buff[i], ChunkSize);
+          Inc(i, ChunkSize);
+          Move(Buff[i-ChunkSize], FPrevLen, 4);
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+          State := LookingForDATA;
+        end;
+      end;
+
+      LookingForDATA :
+      begin
+        if not Compare4(@Buff[i-4], 'data') then
+        begin
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+          Move(Buff[i-4], ChunkSize, 4);
+          FStream.Read(Buff[i], ChunkSize);
+          Inc(i, ChunkSize);
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+        end else
+        begin
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+          FDataSizeOffs := i-4;
+          Move(Buff[i-4], FPrevDataSize, 4);
+          HeaderSize := i;
+          Exit;
+        end;
+      end;
+    end;
+    if FStream.Position >= FStream.Size then Break;
+  end;
+  FPrevWavType := wtUnsupported
 end;
 
-destructor TWaveOut.Destroy();
+
+{ TWaveIn }
+
+constructor TWaveIn.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  BufferSize := $8000;
+  _WavType := wtUnsupported;
+end;
+
+destructor TWaveIn.Destroy;
 begin
   inherited Destroy;
 end;
 
-procedure TWaveOut.SetWavType();
-begin
-  if Busy then Exit;
-  if (WT = wtPCM) or (WT = wtDVIADPCM) then
-    FWavType:=WT;
-end;
-
-procedure TWaveOut.Prepare();
+procedure TWaveIn.OpenFile;
 var
-  Header: TWaveHeader;
-  DVIADPCMHeader: TDVIADPCMHeader;
+{$IFDEF WIN32}
+  WaveConverter: TWaveConverter;
+  ValidItems: LongWord;
+  Res: MMResult;
+{$ENDIF}
+{$IFDEF LINUX}
+  _decoder : mad_decoder;
+{$ENDIF}
 begin
-  inherited Prepare();
-  EndOfInput:=False;
-  if (FFileMode = foAppend) and (FStream.Size <> 0) then
-  begin
-    ReadRIFFHeader();
-    if not (FPrevWavType in [wtPCM, wtDVIADPCM]) then
-    begin
-      inherited Done();
-      raise EAcsException.Create('Cannot append data to this .wav file.');
-    end;
-    FWavType:=FPrevWavType;
-  end;
-  case FWavType of
-    wtPCM:
-    begin
-      if (FFileMode = foAppend) and (FStream.Size <> 0) then
-      begin
-        if (FPrevSR <> FInput.SampleRate) or
-           (FPrevBPS <> FInput.BitsPerSample) or
-           (FPrevCh <> FInput.Channels) then
-        begin
-          inherited Done();
-          raise EAcsException.Create('Cannot append data in different audio format.');
-        end;
-        FStream.Seek(0, soFromEnd);
-      end
-      else
-      begin
-        FillHeaderPCM(Header);
-        FStream.Write(Header, WaveHeaderOffs);
-      end;
-    end;
-
-    wtDVIADPCM:
-    begin
-      if FInput.BitsPerSample <> 16 then
-      begin
-        inherited Done();
-        raise EAcsException.Create('Cannot encode 8 bit sound into ADPCM.');
-      end;
-      //FBlockAlign := 512;
-      if (FFileMode = foAppend) and (FStream.Size <> 0) then
-      begin
-        if (FPrevSR <> FInput.SampleRate) or
-           (FPrevCh <> FInput.Channels) then
-        begin
-          inherited Done();
-          raise EAcsException.Create('Cannot append data in different audio format.');
-        end;
-        FStream.Seek(0, soFromEnd);
-      end
-      else
-      begin
-        FillHeaderDVIADPCM(DVIADPCMHeader);
-        FStream.Write(DVIADPCMHeader, SizeOf(DVIADPCMHeader));
-        FEncodeState.Index_l:=0;
-        FEncodeState.Index_r:=0;
-      end;
-    end;
-  end;
-end;
-
-procedure TWaveOut.Done();
-var
-  Size: Integer;
-  Hdr: TDVIADPCMHeader;
-begin
-  if ((FInput.Size < 0) or (FFileMode = foAppend)) and (FStream <> nil) then
-  begin
-    case FWavType of
-      wtPCM:
-      begin
-        if FFileMode = foAppend then
-        begin
-          FStream.Seek(FDataSizeOffs, soFromBeginning);
-          Size:=FStream.Size - HeaderSize;
-          FStream.Write(Size, 4);
-        end else
-        begin
-          Size:=FStream.Size - 44;
-          FStream.Seek(DataSizeOffs, soFromBeginning);
-          FStream.Write(Size, 4);
-        end;
-      end;
-
-      wtDVIADPCM:
-      begin
-        if FFileMode = foAppend then
-        begin
-          FStream.Seek(FDataSizeOffs, soFromBeginning);
-          Size:=FStream.Size - HeaderSize;
-          FStream.Write(Size, 4);
-          FStream.Seek(FLenOffs, soFromBeginning);
-          Size:=(Size div FBlockAlign) * ((FBlockAlign - FPrevCh * 4) * (2 div FPrevCh) + 1);
-          FStream.Write(Size, 4);
-        end
-        else
-        begin
-          Size:=FStream.Size - SizeOf(TDVIADPCMHeader);
-          FStream.Seek(0, soFromBeginning);
-          Fstream.Read(Hdr, SizeOf(Hdr));
-          Hdr.DataSize:=Size;
-          Hdr.DataLength:=(Hdr.DataSize div Hdr.BlockAlign) * Hdr.SamplesPerBlock;
-          FStream.Seek(0, soFromBeginning);
-          FStream.Write(Hdr, SizeOf(Hdr));
-        end;
-      end;
-    end;
-    Size:=FStream.Size;
-    FStream.Seek(4, soFromBeginning);
-    FStream.Write(Size, 4);
-  end;
-  inherited Done();
-end;
-
-  function TWaveOut.DoOutput(Abort : Boolean):Boolean;
-  var
-    Len, l, m : Integer;
-    DVIInBuf : PAcsBuffer16;
-    DVIOutBuf : PAcsBuffer8;
-    P : PAcsBuffer8;
-    BlockDataSize : Integer;
-  begin
-    // No exceptions Here
-    Result := True;
-    if not CanOutput then Exit;
-    Len := 0;
-    if Abort then
-    begin
-      (* We don't close file here to avoide exceptions
-        if output componenet's Stop method is called *)
-      Result := False;
-      Exit;
-    end;
-    if EndOfInput then
-    begin
-      Result := False;
-      Exit;
-    end;
-    case FWavType of
-      wtPCM :
-      begin
-        try
-          while InputLock do;
-          InputLock := True;
-          //Len := Finput.GetData(@FBuffer[0], FBufferSize);
-          Len := FInput.GetData(FBuffer.Memory, FBuffer.Size);
-          InputLock := False;
-          //FStream.Write(FBuffer[0], Len);
-          FStream.Write(FBuffer.Memory, Len);
-        except
-        end;
-        if Len > 0 then Result := True
-        else Result := False;
-      end;
-      wtDVIADPCM :
-      begin
-        BlockDataSize := (FBlockAlign - 4*FInput.Channels)*4 +2*FInput.Channels;
-        GetMem(DVIInBuf, BlockDataSize);
-        GetMem(DVIOutBuf, FBlockAlign);
-        P := PAcsBuffer8(DVIInBuf);
-        try
-          if FInput.Channels = 2 then
-          begin
-            l := 0;
-            FillChar (DVIInBuf[0], BlockDataSize, 0);
-            while InputLock do;
-            InputLock := True;
-            while l <> BlockDataSize do
-            begin
-              m := Finput.GetData(@P[l], BlockDataSize-l);
-              if m = 0 then
-              begin
-                EndOfInput := True;
-                Break;
-              end;
-              Inc(l, m);
-            end;
-            Len := FBlockAlign;
-            InputLock := False;
-            FEncodeState.PredSamp_l := DVIInBuf[0];
-            m := 1;
-            FEncodeState.PredSamp_r := DVIInBuf[m];
-            m := 2;
-            EncodeDVIADPCMStereo(@DVIInBuf[m], @DVIOutBuf[0]);
-            FStream.Write(DVIOutBuf[0], FBlockAlign);
-          end else
-          begin
-            l := 0;
-            FillChar (DVIInBuf[0], BlockDataSize, 0);
-            while InputLock do;
-            InputLock := True;
-            while l <> BlockDataSize do
-            begin
-              m := Finput.GetData(@P[l], BlockDataSize-l);
-              if m = 0 then
-              begin
-                EndOfInput := True;
-                Break;
-              end;
-              Inc(l, m);
-            end;
-            Len := FBlockAlign;
-            InputLock := False;
-            FEncodeState.PredSamp_l := DVIInBuf[0];
-            m := 1;
-            EncodeDVIADPCMMono(@DVIInBuf[m], @DVIOutBuf[0]);
-            FStream.Write(DVIOutBuf[0], FBlockAlign);
-          end;
-        except
-        end;
-        FreeMem(DVIInBuf);
-        FreeMem(DVIOutBuf);
-        if Len > 0 then Result := True
-        else Result := False;
-      end;
-    end;
-  end;
-
-  function TWaveIn.GetWavType : TWavType;
-  begin
-    OpenFile;
-    Result := _WavType;
-    CloseFile;
-  end;
-
-  procedure TWaveOut.SetFileMode;
-  begin
-    FFileMode := aMode;
-  end;
-
-  procedure TWaveIn.SetBufferSize(ASize: Integer);
-  begin
-  end;
-
-  function TWaveIn.ReadDVIADPCMBlock(aData : Pointer) : Boolean;
-  var
-    block : array of Byte;
-    BH : TDVIADPCMBlockHeader;
-  begin
-    Result := False;
-    if Seekable then
-    if FStream.Position >= FStream.Size then Exit;
-    SetLength(Block, DVI_ADPCM_INFO.BlockLength);
-    if FStream.Read(Block[0], Length(Block))= 0 then Exit;
-    Result := True;
-    Move(Block[0], BH, SizeOf(BH));
-    DVI_ADPCM_STATE.valprev_l := BH.Samp0;
-    DVI_ADPCM_STATE.index_l := BH.StepTableIndex;
-    if FChan = 2 then
-    begin
-      Move(Block[4], BH, SizeOf(BH));
-      DVI_ADPCM_STATE.valprev_r := BH.Samp0;
-      DVI_ADPCM_STATE.index_r := BH.StepTableIndex;
-      Move(Block[8], aData^, DVI_ADPCM_INFO.BlockLength-8);
-    end else
-    Move(Block[4], aData^, DVI_ADPCM_INFO.BlockLength-4);
-  end;
-
-  function TWaveIn.ReadMSADPCMBlock(bData : Pointer) : Boolean;
-  var
-    block : array of Byte;
-    BHM : TMSADPCMBlockHeaderMono;
-    BHS : TMSADPCMBlockHeaderStereo;
-  begin
-    Result := False;
-    if FStream.Position >= FStream.Size then Exit;
-    Result := True;
-    SetLength(Block, MS_ADPCM_INFO.BlockLength);
-    FStream.Read(Block[0], Length(Block));
-    if FChan = 1 then
-    begin
-      Move(Block[0], BHM, SizeOf(BHM));
-      MS_ADPCM_STATE.predictor[0] := BHM.predictor;
-      MS_ADPCM_STATE.Delta[0] := BHM.Delta;
-      MS_ADPCM_STATE.Samp1[0] := BHM.Samp1;
-      MS_ADPCM_STATE.Samp2[0] := BHM.Samp2;
-      Move(Block[SizeOf(BHM)], bData^, MS_ADPCM_INFO.BlockLength-SizeOf(BHM));
-    end else
-    begin
-      Move(Block[0], BHS, SizeOf(BHS));
-      MS_ADPCM_STATE := BHS;
-      Move(Block[SizeOf(BHS)], bData^, MS_ADPCM_INFO.BlockLength-SizeOf(BHS));
-    end;
-  end;
-
-  procedure TWaveIn.ReadRIFFHeader;
-  var
-    i : Integer;
-    WordVal : Word;
-    IntVal : Integer;
-    Buff : array[0..$fff] of Char;
-    State : Integer;
-    ChunkSize : Integer;
+  FValid := True;
+  if not FOpened then
   begin
     _WavType := wtUnsupported;
-    State := LookingForRIFF;
-    i := 4;
-    FStream.Read(Buff[0], 4);
-    while i < $2000 do
+    if not FStreamAssigned then
+    FStream := TFileStream.Create(FFileName, fmOpenRead) as TFileStream;
+    ReadRIFFHeader;
+    case Self._WavType of
+      wtUnsupported :
+      begin
+        FValid := False;
+        Exit;
+      end;
+
+      wtPCM:
+      begin
+        FSize := FStream.Size;
+        FTotalSamples := FSize div ((FBPS shr 3) * FChan);
+      end;
+
+      wtDVIADPCM :
+      begin
+        if FBPS <> 4 then
+        FValid := False;
+        FBPS := 16;
+        FTotalSamples := DVI_ADPCM_INFO.DataSize;
+        FSize := FTotalSamples*2*FChan;
+      end;
+
+      wtMSADPCM :
+      begin
+        FBPS := 16;
+        FSize := MS_ADPCM_INFO.DataSize*2*FChan;
+        FTotalSamples := MS_ADPCM_INFO.DataSize;
+      end;
+
+      wtACM :
+      begin
+
+{$IFDEF WIN32}
+
+        (* Checking if the file is ACM encoded and if it is, decoding it.
+           Thanks to Jan Henrik Ejme, <jan.h.ejme@xhlp.com> for the
+           provided converter units. *)
+        try
+          WaveConverter := TWaveConverter.Create;
+          FStream.Position := 0;
+          WaveConverter.LoadStream(FStream);
+          with WaveConverter.NewFormat.Format do
+          begin
+            wFormatTag := WAVE_FORMAT_PCM;
+            ValidItems := ACM_FORMATSUGGESTF_WFORMATTAG;
+            Res := acmFormatSuggest(nil, WaveConverter.CurrentFormat.format,
+            WaveConverter.NewFormat.Format, SizeOf(TACMWaveFormat), ValidItems);
+          end;
+          if Res <> 0 then
+          begin
+            FValid := False;
+            WaveConverter.Free;
+            Exit;
+          end;
+          if WaveConverter.Convert <> 0 then
+          begin
+            FValid := False;
+            WaveConverter.Free;
+            Exit;
+          end else
+          begin
+            _MS := TMemoryStream.Create;
+            OldStream := FStream;
+            OldStreamAssigned := FStreamAssigned;
+            FStream := _MS;
+            _MS.Position := 0;
+            WaveConverter.SaveWavToStream(_MS);
+            FSize := _MS.Size;
+            _MS.Seek(0, soFromBeginning);
+            ReadRIFFHeader;
+            //WaveConverter.CurrentFormat.Format.wFormatTag;
+            WaveConverter.Free;
+            _wavType := wtACM;
+          end;
+        except
+          WaveConverter.Free;
+        end;
+{$ENDIF}
+{$IFDEF LINUX}
+        if not MADLibLoaded then
+        raise EACSException.Create(Format(strCoudntloadLib,['madlib']));
+        DataLen := FStream.Size;
+        GetMem(Data, DataLen);
+        FStream.Read(Data^, DataLen);
+        _MS := TMemoryStream.Create;
+        OldStream := FStream;
+        OldStreamAssigned := FStreamAssigned;
+        FStream := _MS;
+        HasFirstFrame := False;
+        InputDone := False;
+        mad_decoder_init(@_decoder, Self, InputFunc, nil, nil, OutputFunc, ErrorFunc, nil);
+        mad_decoder_run(@_decoder, MAD_DECODER_MODE_SYNC);
+        mad_decoder_finish(@_decoder);
+        FreeMem(Data);
+        FStream.Seek(0, soFromBeginning);
+        ReadRIFFHeader;
+        _wavType := wtACM;
+{$ENDIF}
+      end;
+    end;
+    FOpened:=True;
+  end;
+end;
+
+procedure TWaveIn.CloseFile;
+begin
+  if FOpened then
+  begin
+    if not FStreamAssigned then FStream.Free
+    else if FSeekable then FStream.Seek(0, soFromBeginning);
+    if _WavType = wtACM then
     begin
-      case State of
-        LookingForRIFF :
+      if Assigned(_MS) then
+      begin
+        if OldStreamAssigned then
+        FStream := OldStream
+        else
         begin
-          if not Compare4(@Buff[i-4], 'RIFF') then
-          begin
-            FStream.Read(Buff[i], 1);
-            Inc(i);
-          end else
-          begin
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-            State := LookingForWAVE;
-          end;
+          FStream := nil;
+          OldStream.Free;
         end;
-        LookingForWAVE :
+        //_MS.Free;
+        _MS := nil;
+      end;
+    end;
+    FOpened:=False;
+  end;
+end;
+
+function TWaveIn.GetData(Buffer : Pointer; aBufferSize : Integer): Integer;
+var
+  l, csize : Integer;
+  offs : Integer;
+  Data : Pointer;
+begin
+  if not Busy then  raise EAcsException.Create(strStreamnotopen);
+  if BufStart > BufEnd then
+  begin
+    case _WavType of
+      wtDVIADPCM :
+      begin
+        if FOffset <> 0 then
         begin
-          if not Compare4(@Buff[i-4], 'WAVE') then
-          begin
-            FStream.Read(Buff[i], 1);
-            Inc(i);
-          end else
-          begin
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-            State := LookingForFMT;
-          end;
+          offs := (FStream.Position div DVI_ADPCM_INFO.BlockLength)
+          * DVI_ADPCM_INFO.SamplesPerBlock + Round((FOffset/100)*FTotalSamples);
+          if offs < 0 then offs := 0;
+          Seek(offs);
+          FPosition := (FStream.Position div DVI_ADPCM_INFO.BlockLength)
+          * DVI_ADPCM_INFO.SamplesPerBlock;
+          FPosition := FPosition*2*FChan;
+          FOffset := 0;
         end;
-        LookingForFMT :
+        if FSeekable then
         begin
-          if not Compare4(@Buff[i-4], 'fmt ') then
+          if FPosition >= FSize then
           begin
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-            Move(Buff[i-4], ChunkSize, 4);
-            FStream.Read(Buff[i], ChunkSize);
-            Inc(i, ChunkSize);
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-          end else
-          begin
-            Stream.Read(Buff[i], 4);
-            Inc(i, 4);
-            Move(Buff[i-4], ChunkSize, 4);
-            FStream.Read(Buff[i], ChunkSize);
-            Inc(i, ChunkSize);
-            Move(Buff[i-ChunkSize], WordVal, 2);
-            case WordVal of
-              WAVE_FORMAT_PCM : _WavType := wtPCM;
-              WAVE_FORMAT_IMA_ADPCM : _WavType := wtDVIADPCM;
-              WAVE_FORMAT_ADPCM : _WavType := wtMSADPCM;
-              WAVE_FORMAT_MP3 : _WavType := wtACM;
-              else Exit;
-            end;
-            Move(Buff[i+2-ChunkSize], WordVal, 2);
-            FChan := WordVal;
-            Move(Buff[i+4-ChunkSize], IntVal, 4);
-            FSR := IntVal;
-            Move(Buff[i+12-ChunkSize], WordVal, 2);
-            if _WavType = wtDVIADPCM then
-            DVI_ADPCM_INFO.BlockLength := WordVal else
-            MS_ADPCM_INFO.BlockLength := WordVal;
-            Move(Buff[i+14-ChunkSize], WordVal, 2);
-            FBPS := WordVal;
-            if _WavType in [wtDVIADPCM, wtMSADPCM, wtACM] then
+            if FLoop then
             begin
-              Move(Buff[i+18-ChunkSize], WordVal, 2);
-              if _WavType = wtDVIADPCM then
-              DVI_ADPCM_INFO.SamplesPerBlock := WordVal
-              else MS_ADPCM_INFO.SamplesPerBlock := WordVal;
-              if _WavType = wtMSADPCM then
-              begin
-                Move(Buff[i+20-ChunkSize], WordVal, 2);
-                MS_ADPCM_INFO.NumCoeff := WordVal;
-                Move(Buff[i+22-ChunkSize], MS_ADPCM_INFO.CoefSets[0], MS_ADPCM_INFO.NumCoeff*SizeOf(TMS_ADPCM_COEF_SET));
-              end;
-              State := LookingForFACT;
-            end else State := LookingForDATA;
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-          end;
-        end;
-        LookingForFACT :
-        begin
-          if not Compare4(@Buff[i-4], 'fact') then
-          begin
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-            Move(Buff[i-4], ChunkSize, 4);
-            FStream.Read(Buff[i], ChunkSize);
-            Inc(i, ChunkSize);
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-          end else
-          begin
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-            Move(Buff[i-4], ChunkSize, 4);
-            FStream.Read(Buff[i], ChunkSize);
-            Inc(i, ChunkSize);
-            Move(Buff[i-ChunkSize], IntVal, 4);
-            if _WavType = wtDVIADPCM then
-            DVI_ADPCM_INFO.DataSize := IntVal
-            else
-            MS_ADPCM_INFO.DataSize := IntVal;
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-            State := LookingForDATA;
-          end;
-        end;
-        LookingForDATA :
-        begin
-          if not Compare4(@Buff[i-4], 'data') then
-          begin
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-            Move(Buff[i-4], ChunkSize, 4);
-            FStream.Read(Buff[i], ChunkSize);
-            Inc(i, ChunkSize);
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-          end else
-          begin
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-            if _WavType = wtPCM then
-            Move(Buff[i-4], FSize, 4);
-            HeaderSize := i;
-            Exit;
-          end;
-        end;
-      end;
-      if Seekable then
-      if FStream.Position >= FStream.Size then Break;
-    end;
-    _WavType := wtUnsupported
-  end;
-
-  procedure TWaveOut.ReadRIFFHeader;
-  var
-    i : Integer;
-    WordVal : Word;
-    Buff : array[0..$fff] of Char;
-    State : Integer;
-    ChunkSize : Integer;
-  begin
-    FPrevWavType := wtUnsupported;
-    State := LookingForRIFF;
-    i := 4;
-    FStream.Read(Buff[0], 4);
-    while i < $2000 do
-    begin
-      case State of
-        LookingForRIFF :
-        begin
-          if not Compare4(@Buff[i-4], 'RIFF') then
-          begin
-            FStream.Read(Buff[i], 1);
-            Inc(i);
-          end else
-          begin
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-            State := LookingForWAVE;
-          end;
-        end;
-        LookingForWAVE :
-        begin
-          if not Compare4(@Buff[i-4], 'WAVE') then
-          begin
-            FStream.Read(Buff[i], 1);
-            Inc(i);
-          end else
-          begin
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-            State := LookingForFMT;
-          end;
-        end;
-        LookingForFMT :
-        begin
-          if not Compare4(@Buff[i-4], 'fmt ') then
-          begin
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-            Move(Buff[i-4], ChunkSize, 4);
-            FStream.Read(Buff[i], ChunkSize);
-            Inc(i, ChunkSize);
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-          end else
-          begin
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-            Move(Buff[i-4], ChunkSize, 4);
-            FStream.Read(Buff[i], ChunkSize);
-            Inc(i, ChunkSize);
-            Move(Buff[i-ChunkSize], WordVal, 2);
-            case WordVal of
-              WAVE_FORMAT_PCM : FPrevWavType := wtPCM;
-              WAVE_FORMAT_IMA_ADPCM : FPrevWavType := wtDVIADPCM;
-              else Exit;
+              Flush;
+              Init;
+            end else
+            begin
+              Result := 0;
+              Exit;
             end;
-            Move(Buff[i+2-ChunkSize], FPrevCh, 2);
-            Move(Buff[i+4-ChunkSize], FPrevSR, 4);
-            Move(Buff[i+12-ChunkSize], FBlockAlign, 2);
-            Move(Buff[i+14-ChunkSize], FPrevBPS, 2);
-            if FPrevWavType = wtDVIADPCM then
-            State := LookingForFACT
-            else State := LookingForDATA;
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
           end;
         end;
-        LookingForFACT :
+        BufStart := 1;
+        csize := DVI_ADPCM_INFO.BlockLength - FChan*4;
+        GetMem(Data, csize);
+        if ReadDVIADPCMBlock(Data) then
         begin
-          if not Compare4(@Buff[i-4], 'fact') then
+          if FChan = 2 then
           begin
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-            Move(Buff[i-4], ChunkSize, 4);
-            FStream.Read(Buff[i], ChunkSize);
-            Inc(i, ChunkSize);
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
+            DecodeDVIADPCMStereo(Data, @buf[1], csize);
+            BufEnd := (csize)*4;
           end else
           begin
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-            Move(Buff[i-4], ChunkSize, 4);
-            FLenOffs := i;
-            FStream.Read(Buff[i], ChunkSize);
-            Inc(i, ChunkSize);
-            Move(Buff[i-ChunkSize], FPrevLen, 4);
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-            State := LookingForDATA;
+            DecodeDVIADPCMMono(Data, @buf[1], csize);
+            BufEnd := (csize)*2;
+            FreeMem(Data);
           end;
-        end;
-        LookingForDATA :
+        end else
         begin
-          if not Compare4(@Buff[i-4], 'data') then
+          FreeMem(Data);
+          if not Seekable then
           begin
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-            Move(Buff[i-4], ChunkSize, 4);
-            FStream.Read(Buff[i], ChunkSize);
-            Inc(i, ChunkSize);
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
+           Result := 0;
+           Exit;
+          end
+          else BufEnd := 0;
+        end;
+      end;
+      wtMSADPCM :
+      begin
+        if FOffset <> 0 then
+        begin
+          offs := (FStream.Position div MS_ADPCM_INFO.BlockLength)
+          * MS_ADPCM_INFO.SamplesPerBlock + Round((FOffset/100)*FTotalSamples);
+          if offs < 0 then offs := 0;
+          Seek(offs);
+          FPosition := (FStream.Position div MS_ADPCM_INFO.BlockLength)
+          * MS_ADPCM_INFO.SamplesPerBlock;
+          FPosition := FPosition*2*FChan;
+          FOffset := 0;
+        end;
+        if FPosition >= FSize then
+        begin
+          if FLoop then
+          begin
+            Flush;
+            Init;
           end else
           begin
-            FStream.Read(Buff[i], 4);
-            Inc(i, 4);
-            FDataSizeOffs := i-4;
-            Move(Buff[i-4], FPrevDataSize, 4);
-            HeaderSize := i;
+            Result := 0;
             Exit;
           end;
         end;
+        BufStart := 1;
+        if FChan = 2 then
+        begin
+          csize := MS_ADPCM_INFO.BlockLength-SizeOf(TMSADPCMBlockHeaderStereo);
+          GetMem(Data, csize);
+          if ReadMSADPCMBlock(Data) then
+          begin
+            csize := MS_ADPCM_INFO.SamplesPerBlock-2;
+            DecodeMSADPCMStereo(Data, @buf, csize);
+            BufEnd := csize;
+            FreeMem(Data);
+          end else BufEnd := 0;
+        end else
+        begin
+          csize := MS_ADPCM_INFO.BlockLength-SizeOf(TMSADPCMBlockHeaderMono);
+          GetMem(Data, csize);
+          if ReadMSADPCMBlock(Data) then
+          begin
+            csize := MS_ADPCM_INFO.SamplesPerBlock-2;
+            DecodeMSADPCMMono(Data, @buf, csize);
+            BufEnd := csize;
+            FreeMem(Data);
+          end else BufEnd := 0;
+        end;
       end;
-      if FStream.Position >= FStream.Size then Break;
+      wtPCM:
+      begin
+        if FOffset <> 0 then
+        begin
+          offs := Round((FOffset/100)*FSize);
+          FPosition := FPosition + offs;
+          if FPosition < 0 then FPosition := 0
+          else if FPosition > FSize then FPosition := FSize;
+          FStream.Seek((FPosition shr 2) shl 2, soFromBeginning); // align to 4-byte frame
+          FOffset := 0;
+        end;
+        BufStart := 1;
+        l := FStream.Read(buf, aBufferSize);
+        if FPosition+l >= FSize then
+          l := FSize - FPosition;
+        if l <=0 then
+        begin
+          if FLoop then
+          begin
+            Flush;
+            Init;
+          end else
+          begin
+            Result := 0;
+            Exit;
+          end;
+        end;
+        if l = 0 then
+        begin
+          if FLoop then
+          begin
+            Flush;
+            Init;
+            l := FStream.Read(buf, aBufferSize);
+          end else
+          begin
+            Result := 0;
+            Exit;
+          end;
+        end;
+        BufEnd := l;
+      end;
+      wtACM:
+      begin
+        if FOffset <> 0 then
+        begin
+          offs := Round((FOffset/100)*FSize);
+          FPosition := FPosition + offs;
+          if FPosition < 0 then FPosition := 0
+          else if FPosition > FSize then FPosition := FSize;
+          FStream.Seek((FPosition shr 2) shl 2, soFromBeginning); // align to 4-byte frame
+          FOffset := 0;
+        end;
+        BufStart := 1;
+        l := FStream.Read(buf, aBufferSize);
+        if FPosition+l >= FSize then
+          l := FSize - FPosition;
+        if l <=0 then
+        begin
+          if FLoop then
+          begin
+            Flush;
+            Init;
+          end else
+          begin
+            Result := 0;
+            Exit;
+          end;
+        end;
+        BufEnd := l;
+      end;
     end;
-    FPrevWavType := wtUnsupported
+  end;
+  if aBufferSize < (BufEnd - BufStart + 1) then
+    Result := aBufferSize
+  else
+    Result := BufEnd - BufStart + 1;
+
+  Move(buf[BufStart-1], Buffer^, Result);
+  Inc(BufStart, Result);
+  Inc(FPosition, Result);
+end;
+
+function TWaveIn.Seek(SampleNum : Integer) : Boolean;
+begin
+  Result := False;
+  if not FSeekable then Exit;
+  Result := True;
+  OpenFile;
+  case _WavType of
+    wtPCM :
+    begin
+      Stream.Seek(SampleNum*(Self.FBPS shr 3)*FChan+HeaderSize, soFromBeginning);
+    end;
+    wtDVIADPCM:
+    begin
+      Stream.Seek((SampleNum div DVI_ADPCM_INFO.SamplesPerBlock)*DVI_ADPCM_INFO.BlockLength + HeaderSize, soFromBeginning);
+    end;
+    wtMSADPCM:
+    begin
+      Stream.Seek((SampleNum div MS_ADPCM_INFO.SamplesPerBlock)*MS_ADPCM_INFO.BlockLength + HeaderSize, soFromBeginning);
+    end;
+    else
+    begin
+      Result := False;
+    end;
+  end;
+  CloseFile;
+end;
+
+function TWaveIn.GetWavType(): TWavType;
+begin
+  OpenFile();
+  Result:=_WavType;
+  CloseFile();
+end;
+
+function TWaveIn.ReadDVIADPCMBlock(aData : Pointer) : Boolean;
+var
+  block : array of Byte;
+  BH : TDVIADPCMBlockHeader;
+begin
+  Result := False;
+  if Seekable then
+  if FStream.Position >= FStream.Size then Exit;
+  SetLength(Block, DVI_ADPCM_INFO.BlockLength);
+  if FStream.Read(Block[0], Length(Block))= 0 then Exit;
+  Result := True;
+  Move(Block[0], BH, SizeOf(BH));
+  DVI_ADPCM_STATE.valprev_l := BH.Samp0;
+  DVI_ADPCM_STATE.index_l := BH.StepTableIndex;
+  if FChan = 2 then
+  begin
+    Move(Block[4], BH, SizeOf(BH));
+    DVI_ADPCM_STATE.valprev_r := BH.Samp0;
+    DVI_ADPCM_STATE.index_r := BH.StepTableIndex;
+    Move(Block[8], aData^, DVI_ADPCM_INFO.BlockLength-8);
+  end else
+  Move(Block[4], aData^, DVI_ADPCM_INFO.BlockLength-4);
+end;
+
+function TWaveIn.ReadMSADPCMBlock(bData : Pointer) : Boolean;
+var
+  block : array of Byte;
+  BHM : TMSADPCMBlockHeaderMono;
+  BHS : TMSADPCMBlockHeaderStereo;
+begin
+  Result := False;
+  if FStream.Position >= FStream.Size then Exit;
+  Result := True;
+  SetLength(Block, MS_ADPCM_INFO.BlockLength);
+  FStream.Read(Block[0], Length(Block));
+  if FChan = 1 then
+  begin
+    Move(Block[0], BHM, SizeOf(BHM));
+    MS_ADPCM_STATE.predictor[0] := BHM.predictor;
+    MS_ADPCM_STATE.Delta[0] := BHM.Delta;
+    MS_ADPCM_STATE.Samp1[0] := BHM.Samp1;
+    MS_ADPCM_STATE.Samp2[0] := BHM.Samp2;
+    Move(Block[SizeOf(BHM)], bData^, MS_ADPCM_INFO.BlockLength-SizeOf(BHM));
+  end else
+  begin
+    Move(Block[0], BHS, SizeOf(BHS));
+    MS_ADPCM_STATE := BHS;
+    Move(Block[SizeOf(BHS)], bData^, MS_ADPCM_INFO.BlockLength-SizeOf(BHS));
+  end;
+end;
+
+procedure TWaveIn.ReadRIFFHeader;
+var
+  i : Integer;
+  WordVal : Word;
+  IntVal : Integer;
+  Buff : array[0..$fff] of Char;
+  State : Integer;
+  ChunkSize : Integer;
+begin
+  _WavType := wtUnsupported;
+  State := LookingForRIFF;
+  i := 4;
+  FStream.Read(Buff[0], 4);
+  while i < $2000 do
+  begin
+    case State of
+      LookingForRIFF :
+      begin
+        if not Compare4(@Buff[i-4], 'RIFF') then
+        begin
+          FStream.Read(Buff[i], 1);
+          Inc(i);
+        end else
+        begin
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+          State := LookingForWAVE;
+        end;
+      end;
+      LookingForWAVE :
+      begin
+        if not Compare4(@Buff[i-4], 'WAVE') then
+        begin
+          FStream.Read(Buff[i], 1);
+          Inc(i);
+        end else
+        begin
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+          State := LookingForFMT;
+        end;
+      end;
+      LookingForFMT :
+      begin
+        if not Compare4(@Buff[i-4], 'fmt ') then
+        begin
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+          Move(Buff[i-4], ChunkSize, 4);
+          FStream.Read(Buff[i], ChunkSize);
+          Inc(i, ChunkSize);
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+        end else
+        begin
+          Stream.Read(Buff[i], 4);
+          Inc(i, 4);
+          Move(Buff[i-4], ChunkSize, 4);
+          FStream.Read(Buff[i], ChunkSize);
+          Inc(i, ChunkSize);
+          Move(Buff[i-ChunkSize], WordVal, 2);
+          case WordVal of
+            WAVE_FORMAT_PCM : _WavType := wtPCM;
+            WAVE_FORMAT_IMA_ADPCM : _WavType := wtDVIADPCM;
+            WAVE_FORMAT_ADPCM : _WavType := wtMSADPCM;
+            WAVE_FORMAT_MP3 : _WavType := wtACM;
+            else Exit;
+          end;
+          Move(Buff[i+2-ChunkSize], WordVal, 2);
+          FChan := WordVal;
+          Move(Buff[i+4-ChunkSize], IntVal, 4);
+          FSR := IntVal;
+          Move(Buff[i+12-ChunkSize], WordVal, 2);
+          if _WavType = wtDVIADPCM then
+          DVI_ADPCM_INFO.BlockLength := WordVal else
+          MS_ADPCM_INFO.BlockLength := WordVal;
+          Move(Buff[i+14-ChunkSize], WordVal, 2);
+          FBPS := WordVal;
+          if _WavType in [wtDVIADPCM, wtMSADPCM, wtACM] then
+          begin
+            Move(Buff[i+18-ChunkSize], WordVal, 2);
+            if _WavType = wtDVIADPCM then
+            DVI_ADPCM_INFO.SamplesPerBlock := WordVal
+            else MS_ADPCM_INFO.SamplesPerBlock := WordVal;
+            if _WavType = wtMSADPCM then
+            begin
+              Move(Buff[i+20-ChunkSize], WordVal, 2);
+              MS_ADPCM_INFO.NumCoeff := WordVal;
+              Move(Buff[i+22-ChunkSize], MS_ADPCM_INFO.CoefSets[0], MS_ADPCM_INFO.NumCoeff*SizeOf(TMS_ADPCM_COEF_SET));
+            end;
+            State := LookingForFACT;
+          end else State := LookingForDATA;
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+        end;
+      end;
+      LookingForFACT :
+      begin
+        if not Compare4(@Buff[i-4], 'fact') then
+        begin
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+          Move(Buff[i-4], ChunkSize, 4);
+          FStream.Read(Buff[i], ChunkSize);
+          Inc(i, ChunkSize);
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+        end else
+        begin
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+          Move(Buff[i-4], ChunkSize, 4);
+          FStream.Read(Buff[i], ChunkSize);
+          Inc(i, ChunkSize);
+          Move(Buff[i-ChunkSize], IntVal, 4);
+          if _WavType = wtDVIADPCM then
+          DVI_ADPCM_INFO.DataSize := IntVal
+          else
+          MS_ADPCM_INFO.DataSize := IntVal;
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+          State := LookingForDATA;
+        end;
+      end;
+      LookingForDATA :
+      begin
+        if not Compare4(@Buff[i-4], 'data') then
+        begin
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+          Move(Buff[i-4], ChunkSize, 4);
+          FStream.Read(Buff[i], ChunkSize);
+          Inc(i, ChunkSize);
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+        end else
+        begin
+          FStream.Read(Buff[i], 4);
+          Inc(i, 4);
+          if _WavType = wtPCM then
+          Move(Buff[i-4], FSize, 4);
+          HeaderSize := i;
+          Exit;
+        end;
+      end;
+    end;
+    if Seekable then
+    if FStream.Position >= FStream.Size then Break;
+  end;
+  _WavType := wtUnsupported
+end;
+
+procedure TWaveIn.DecodeDVIADPCMMono(InData: PAcsBuffer8; OutData: PAcsBuffer16; var Len: Integer);
+var
+  i, j, SP: Integer;
+  Diff, PSample: Integer;
+  Code: Byte;
+  Index: Integer;
+begin
+  OutData^[0]:=DVI_ADPCM_STATE.valprev_l;
+  SP:=0;
+  PSample:=DVI_ADPCM_STATE.valprev_l;
+  Index:=DVI_ADPCM_STATE.index_l;
+  for i:=0 to (Len shl 1)-1 do
+  begin
+    j:=(i shr 1);
+    Code:=InData^[j];
+    if (i and 1) = 0 then
+      Code:=(Code and 15)
+    else
+      Code:=(Code shr 4);
+    Diff:=(StepTab[Index] shr 3 );
+    if (Code and 4) <> 0 then
+      Diff:=Diff+StepTab[Index];
+    if (Code and 2) <> 0 then
+      Diff:=Diff+(StepTab[Index] shr 1);
+    if (Code and 1) <> 0 then
+      Diff:=Diff+(StepTab[Index] shr 2);
+    if (Code and 8) <> 0 then
+      Diff:=-Diff;
+    PSample:=PSample+Diff;
+    if PSample > 32767 then PSample := 32767;
+    if PSample < -32767 then PSample := -32767;
+    SP:=SP+1;
+    OutData^[SP]:=PSample;
+    Index:=Index+IndexTab[Code];
+    if Index > 88 then Index:=88;
+    if Index < 0 then Index:=0;
+  end;
+  Len:=SP+1;
+end;
+
+procedure TWaveIn.DecodeDVIADPCMStereo(InData: PAcsBuffer8; OutData: PAcsBuffer16; var Len: Integer);
+var
+  i, j, SP: Integer;
+  Diff, PSample: Integer;
+  Code: Byte;
+  Index: Integer;
+begin
+  { TODO : function for decodin single channel }
+  OutData^[0]:=DVI_ADPCM_STATE.valprev_l;
+  SP:=0;
+  PSample:=DVI_ADPCM_STATE.valprev_l;
+  Index:=DVI_ADPCM_STATE.index_l;
+  for i:=0 to (Len-1) do
+  begin
+    j:=(i shr 1);
+    Code:=InData^[(j div 4)*8+(j mod 4)];
+    if (i and 1) = 0 then
+      Code:=(Code and 15)
+    else
+      Code:=(Code shr 4);
+
+    Diff:=(StepTab[Index] shr 3 );
+    if (Code and 4) <> 0 then
+      Diff:=Diff+StepTab[Index];
+    if (Code and 2) <> 0 then
+      Diff:=Diff+(StepTab[Index] shr 1);
+    if (Code and 1) <> 0 then
+      Diff:=Diff+(StepTab[Index] shr 2);
+    if (Code and 8) <> 0 then
+      Diff:=-Diff;
+
+    PSample:=PSample+Diff;
+    if PSample > 32767 then PSample:=32767;
+    if PSample < -32767 then PSample:=-32767;
+    SP:=SP+2;
+    OutData^[SP]:=PSample;
+    Index:=Index+IndexTab[Code];
+    if Index > 88 then Index:=88;
+    if Index < 0 then Index:=0;
   end;
 
-  procedure TWaveOut.SetBlockSize;
+  i:=1;
+  OutData^[i]:=DVI_ADPCM_STATE.valprev_r;
+  SP:=1;
+  PSample:=DVI_ADPCM_STATE.valprev_r;
+  Index:=DVI_ADPCM_STATE.index_r;
+  for i:=0 to (Len-1) do
   begin
-    if not Busy then
-    if BS <> 0 then
-    if (BS mod 4) = 0 then FBlockAlign := BS;
+    j:=(i shr 1);
+    Code:=InData^[(j div 4)*8+(j mod 4)+4];
+    if (i and 1) = 0 then
+      Code:=(Code and 15)
+    else
+      Code:=(Code shr 4);
+
+    Diff:=(StepTab[Index] shr 3);
+    if (Code and 4) <> 0 then
+      Diff:=Diff+StepTab[Index];
+    if (Code and 2) <> 0 then
+      Diff:=Diff+(StepTab[Index] shr 1);
+    if (Code and 1) <> 0 then
+      Diff:=Diff+(StepTab[Index] shr 2);
+    if (Code and 8) <> 0 then
+      Diff:=-Diff;
+
+    PSample:=PSample+Diff;
+    if PSample > 32767 then PSample:=32767;
+    if PSample < -32767 then PSample:=-32767;
+    SP:=SP+2;
+    OutData^[SP]:=PSample;
+    Index:=Index+IndexTab[Code];
+    if Index > 88 then Index:=88;
+    if Index < 0 then Index:=0;
   end;
+  Len:=(SP div 2)+1;
+end;
+
+procedure TWaveIn.DecodeMSADPCMMono(InData : PAcsBuffer8; OutData : PAcsBuffer16; var Len : Integer);
+var
+  pos, i, PredSamp, ErrorDelta: Integer;
+begin
+  pos:=0;
+  OutData^[pos]:=MS_ADPCM_STATE.Samp2[0];
+  Inc(pos);
+  OutData^[pos]:=MS_ADPCM_STATE.Samp1[0];
+  Inc(pos);
+  for i:=0 to (Len shr 1)-1 do
+  begin
+    PredSamp:=(MS_ADPCM_STATE.Samp1[0]*MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[0]].Coef1 +
+               MS_ADPCM_STATE.Samp2[0]*MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[0]].Coef2) div 256;
+    ErrorDelta:=(InData^[i] shr 4);
+    if (ErrorDelta and 8) <> 0 then
+      PredSamp:=PredSamp+MS_ADPCM_STATE.Delta[0]*(ErrorDelta-16)
+    else
+      PredSamp:=PredSamp+MS_ADPCM_STATE.Delta[0]*(ErrorDelta);
+    if PredSamp > 32767 then PredSamp:=32767;
+    if PredSamp < -32768 then PredSamp:=-32768;
+    OutData^[pos]:=PredSamp;
+    Inc(pos);
+    MS_ADPCM_STATE.Delta[0]:=(MS_ADPCM_STATE.Delta[0]*adaptive[ErrorDelta]) div 256;
+    if MS_ADPCM_STATE.Delta[0] < 16 then MS_ADPCM_STATE.Delta[0]:=16;
+    MS_ADPCM_STATE.Samp2[0]:=MS_ADPCM_STATE.Samp1[0];
+    MS_ADPCM_STATE.Samp1[0]:=PredSamp;
+
+    { TODO : Is it correct for mono? }
+    PredSamp:=(MS_ADPCM_STATE.Samp1[0]*MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[0]].Coef1 +
+               MS_ADPCM_STATE.Samp2[0]*MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[0]].Coef2) div 256;
+    ErrorDelta:=InData^[i] and 15;
+    if (ErrorDelta and 8) <> 0 then
+      PredSamp:=PredSamp+MS_ADPCM_STATE.Delta[0]*(ErrorDelta-16)
+    else
+      PredSamp:=PredSamp+MS_ADPCM_STATE.Delta[0]*(ErrorDelta);
+    if PredSamp > 32767 then PredSamp:=32767;
+    if PredSamp < -32768 then PredSamp:=-32768;
+    OutData^[pos]:=PredSamp;
+    Inc(pos);
+    MS_ADPCM_STATE.Delta[0]:=(MS_ADPCM_STATE.Delta[0]*adaptive[ErrorDelta]) div 256;
+    if MS_ADPCM_STATE.Delta[0] < 16 then MS_ADPCM_STATE.Delta[0]:=16;
+    MS_ADPCM_STATE.Samp2[0]:=MS_ADPCM_STATE.Samp1[0];
+    MS_ADPCM_STATE.Samp1[0]:=PredSamp;
+  end;
+  Len:=pos*2;
+end;
+
+procedure TWaveIn.DecodeMSADPCMStereo(InData : PAcsBuffer8; OutData : PAcsBuffer16; var Len : Integer);
+var
+  pos, i, PredSamp, ErrorDelta : Integer;
+begin
+  pos := 0;
+  OutData^[pos] := MS_ADPCM_STATE.Samp2[0];
+  Inc(pos);
+  OutData^[pos] := MS_ADPCM_STATE.Samp2[1];
+  Inc(pos);
+  OutData^[pos] := MS_ADPCM_STATE.Samp1[0];
+  Inc(pos);
+  OutData^[pos] := MS_ADPCM_STATE.Samp1[1];
+  Inc(pos);
+  for i := 0 to Len - 1 do
+  begin
+    PredSamp := (MS_ADPCM_STATE.Samp1[0]*MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[0]].Coef1 +
+                 MS_ADPCM_STATE.Samp2[0]*MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[0]].Coef2) div 256;
+    ErrorDelta := InData^[i] shr 4;
+    if (ErrorDelta and 8) <> 0 then
+    PredSamp := PredSamp + MS_ADPCM_STATE.Delta[0]*(ErrorDelta - 16)
+    else
+    PredSamp := PredSamp + MS_ADPCM_STATE.Delta[0]*(ErrorDelta);
+    if PredSamp > 32767 then PredSamp := 32767;
+    if PredSamp < -32768 then PredSamp := -32768;
+    OutData^[pos] := PredSamp;
+    Inc(pos);
+    MS_ADPCM_STATE.Delta[0] := (MS_ADPCM_STATE.Delta[0]*adaptive[ErrorDelta]) div 256;
+    if MS_ADPCM_STATE.Delta[0] < 16 then MS_ADPCM_STATE.Delta[0] := 16;
+    MS_ADPCM_STATE.Samp2[0] := MS_ADPCM_STATE.Samp1[0];
+    MS_ADPCM_STATE.Samp1[0] := PredSamp;
+
+    PredSamp := (MS_ADPCM_STATE.Samp1[1]*MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[1]].Coef1 +
+                 MS_ADPCM_STATE.Samp2[1]*MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[1]].Coef2) div 256;
+    ErrorDelta := InData^[i] and 15;
+    if (ErrorDelta and 8) <> 0 then
+    PredSamp := PredSamp + MS_ADPCM_STATE.Delta[1]*(ErrorDelta - 16)
+    else
+    PredSamp := PredSamp + MS_ADPCM_STATE.Delta[1]*(ErrorDelta);
+    if PredSamp > 32767 then PredSamp := 32767;
+    if PredSamp < -32768 then PredSamp := -32768;
+    OutData^[pos] := PredSamp;
+    Inc(pos);
+    MS_ADPCM_STATE.Delta[1] := (MS_ADPCM_STATE.Delta[1]*adaptive[ErrorDelta]) div 256;
+    if MS_ADPCM_STATE.Delta[1] < 16 then MS_ADPCM_STATE.Delta[1] := 16;
+    MS_ADPCM_STATE.Samp2[1] := MS_ADPCM_STATE.Samp1[1];
+    MS_ADPCM_STATE.Samp1[1] := PredSamp;
+  end;
+  Len := pos*2;
+end;
 
 initialization
 
-  FileFormats.Add('wav','Waveform Audio',TWaveOut);
-  FileFormats.Add('wav','Waveform Audio',TWaveIn);
+  FileFormats.Add('wav', 'Waveform Audio', TWaveOut);
+  FileFormats.Add('wav', 'Waveform Audio', TWaveIn);
 
 end.

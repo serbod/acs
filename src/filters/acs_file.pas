@@ -2,8 +2,11 @@
 Base file in/out classes
 
 This file is a part of Audio Components Suite.
-Copyright (C) 2002-2005 Andrei Borovsky. All rights reserved.
-See the license file for more details.
+All rights reserved. See the license file for more details.
+
+Copyright (c) 2002-2009, Andrei Borovsky, anb@symmetrica.net
+Copyright (c) 2005-2006  Christian Ulrich, mail@z0m3ie.de
+Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 *)
 
 {
@@ -70,13 +73,13 @@ type
 {$IFDEF LINUX}
     FAccessMask : Integer;
 {$ENDIF}
-    function GetDelay: Integer;
-    function GetPriority: TTPriority;
-    function GetProgress: Real;
-    function GetStatus: TAcsOutputStatus;
-    function GetTE: Integer;
+    function GetDelay(): Integer;
+    function GetPriority(): TThreadPriority;
+    function GetProgress(): Real;
+    function GetStatus(): TAcsOutputStatus;
+    function GetTE(): Integer;
     procedure SetDelay(const AValue: Integer);
-    procedure SetPriority(const AValue: TTPriority);
+    procedure SetPriority(const AValue: TThreadPriority);
 
     procedure ThreadException(Sender: TComponent; E : Exception);
     procedure OutputDone(Sender: TComponent);
@@ -84,22 +87,22 @@ type
   protected
     FBaseChannel: Integer;
     procedure SetInput(AInput: TAcsCustomInput);
-    procedure Done;
+    procedure Prepare();
+    procedure Done();
     function DoOutput(Abort: Boolean): Boolean;
-    procedure Prepare;
     procedure SetFileMode(aMode: TAcsFileOutputMode); virtual;
     procedure SetFileName(const AValue: string);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    procedure Open;
+    procedure Open();
     property Buffersize: Integer read FBufferSize write FBufferSize;
     procedure Pause; virtual;
     procedure Resume; virtual;
     procedure Run;
     procedure Stop;
     property Delay: Integer read GetDelay write SetDelay;
-    property ThreadPriority: TTPriority read GetPriority write SetPriority;
+    property ThreadPriority: TThreadPriority read GetPriority write SetPriority;
     property Progress: Real read GetProgress;
     property Status: TAcsOutputStatus read GetStatus;
     property TimeElapsed: Integer read GetTE;
@@ -168,48 +171,44 @@ implementation
 
 { TAcsFileIn }
 
-function TAcsFileIn.GetBPS: Integer;
+function TAcsFileIn.GetBPS(): Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.BitsPerSample;
-    //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TAcsFileIn.GetCh: Integer;
+function TAcsFileIn.GetCh(): Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.Channels;
-    //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TAcsFileIn.GetSR: Integer;
+function TAcsFileIn.GetSR(): Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.SampleRate;
-    //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TAcsFileIn.GetTime: Integer;
+function TAcsFileIn.GetTime(): Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.Time;
-    //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TAcsFileIn.GetValid: Boolean;
+function TAcsFileIn.GetValid(): Boolean;
 begin
   Result:=False;
   if Assigned(FInput) then Result:=FInput.Valid;
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TAcsFileIn.GetTotalTime: Real;
+function TAcsFileIn.GetTotalTime(): Real;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.TotalTime
 end;
 
-procedure TAcsFileIn.Reset;
+procedure TAcsFileIn.Reset();
 begin
   if Assigned(FInput) then FInput.Reset;
 end;
@@ -223,13 +222,13 @@ begin
   if Assigned(FInput) then FInput.FileName:=FFilename;
 end;
 
-function TAcsFileIn.GetSize: Integer;
+function TAcsFileIn.GetSize(): Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.Size;
 end;
 
-function TAcsFileIn.GetPosition: Integer;
+function TAcsFileIn.GetPosition(): Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.Position;
@@ -240,7 +239,7 @@ begin
   inherited Create(AOwner);
   FInput:=nil;
   FFileName:='';
-  FOpened:=0;
+  FOpened:=False;
   FValid:=False;
 end;
 
@@ -339,70 +338,60 @@ begin
   FOutput:=nil;
 end;
 
-procedure TAcsFileOut.Done;
+procedure TAcsFileOut.Prepare();
 begin
-  if Assigned(FOutput) then FOutput.Done;
-    //raise EAcsException.Create(strNoFileOpened);
+  if Assigned(FOutput) then FOutput.Prepare();
+end;
+
+procedure TAcsFileOut.Done();
+begin
+  if Assigned(FOutput) then FOutput.Done();
 end;
 
 function TAcsFileOut.DoOutput(Abort: Boolean): Boolean;
 begin
   Result:=False;
   if not Assigned(FOutput) then Result:=FOutput.DoOutput(Abort);
-    //raise EAcsException.Create(strNoFileOpened);
 end;
 
-procedure TAcsFileOut.Prepare;
-begin
-  if Assigned(FOutput) then FOutput.Prepare;
-    //raise EAcsException.Create(strNoFileOpened);
-end;
-
-function TAcsFileOut.GetDelay: Integer;
+function TAcsFileOut.GetDelay(): Integer;
 begin
   Result:=0;
   if not Assigned(FOutput) then Result:=FOutput.Delay;
-    //raise EAcsException.Create(strNoFileOpened);
 end;
 
-function TAcsFileOut.GetPriority: TTPriority;
+function TAcsFileOut.GetPriority: TThreadPriority;
 begin
-  Result:=TTPriority.tpNormal;
+  Result:=TThreadPriority.tpNormal;
   if not Assigned(FOutput) then Result:=FOutput.ThreadPriority;
-    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 function TAcsFileOut.GetProgress: Real;
 begin
   Result:=0;
   if Assigned(FOutput) then Result:=FOutput.Progress;
-    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 function TAcsFileOut.GetStatus: TAcsOutputStatus;
 begin
   Result:=TAcsOutputStatus.tosUndefined;
   if Assigned(FOutput) then Result:=FOutput.Status;
-    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 function TAcsFileOut.GetTE: Integer;
 begin
   Result:=0;
   if Assigned(FOutput) then Result:=FOutput.TimeElapsed;
-    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 procedure TAcsFileOut.SetDelay(const AValue: Integer);
 begin
   if Assigned(FOutput) then FOutput.Delay:=AValue;
-    //raise EAcsException.Create(strNoFileOpened);
 end;
 
-procedure TAcsFileOut.SetPriority(const AValue: TTPriority);
+procedure TAcsFileOut.SetPriority(const AValue: TThreadPriority);
 begin
   if Assigned(FOutput) then FOutput.ThreadPriority:=AValue;
-    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 procedure TAcsFileOut.ThreadException(Sender: TComponent; E: Exception);

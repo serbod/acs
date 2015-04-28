@@ -1,7 +1,12 @@
 (*
-  this file is a part of audio components suite v 2.4.
-  see the license file for more details.
-  you can contact me at mail@z0m3ie.de
+Windows DirectShow file in
+
+This file is a part of Audio Components Suite.
+All rights reserved. See the license file for more details.
+
+Copyright (c) 2002-2009, Andrei Borovsky, anb@symmetrica.net
+Copyright (c) 2005-2006  Christian Ulrich, mail@z0m3ie.de
+Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 *)
 
 unit acs_dsfiles;
@@ -13,7 +18,7 @@ unit acs_dsfiles;
 interface
 
 uses
-  ACS_File, ACS_Classes, DirectShow9, Classes, ActiveX, MMSystem, Windows, ACS_Types;
+  ACS_File, ACS_Classes, DirectShow9, Classes, ActiveX, MMSystem, Windows;
 
 type
   { TDSIn }
@@ -45,8 +50,8 @@ type
     function Read(Buffer: Pointer; xSize: DWord): DWord;
     procedure SetPosition(Value: STREAM_TIME);
   protected
-    procedure OpenFile; override;
-    procedure CloseFile; override;
+    procedure OpenFile(); override;
+    procedure CloseFile(); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -58,56 +63,73 @@ const
   DSUSER_HRESULT = HResult($08000000);
   DSUSER_INVALIDSIZE = DSUSER_HRESULT + 1;
 
-function ErrorCheck(Value: HRESULT): HRESULT; { Check the result of a COM operation }
+function ErrorCheck(FuncName: string; Value: HRESULT): HRESULT; { Check the result of a COM operation }
 
 implementation
 
-procedure TDSIn.OpenFile;
-var
-  v: WideString;
+constructor TDSIn.Create(AOwner: TComponent);
 begin
-  FValid:=True;
-  if FOpened = 0 then
+  inherited Create(AOwner);
+  BufferSize:=$8000;
+end;
+
+destructor TDSIn.Destroy();
+begin
+  inherited Destroy;
+end;
+
+procedure TDSIn.OpenFile();
+var
+  //AMovie: IGraphBuilder;
+  v: WideString;
+  hr: HRESULT;
+begin
+  if not FOpened then
   begin
-    QzInitialize(nil);
-    ErrorCheck( CoCreateInstance( CLSID_AMMultiMediaStream, nil, CLSCTX_INPROC_SERVER,IID_IAMMultiMediaStream, FxAMMultiMediaStream ) );
-    ErrorCheck( FxAMMultiMediaStream.Initialize(STREAMTYPE_READ, AMMSF_NOGRAPHTHREAD, nil) );
-    ErrorCheck( FxAMMultiMediaStream.AddMediaStream(nil, @MSPID_PrimaryAudio, 0, FxMediaStream) );
-    ErrorCheck( FxAMMultiMediaStream.GetMediaStream(MSPID_PrimaryAudio, FxMediaStream) );
+    FValid:=False;
     v:=FFileName;
-    ErrorCheck( FxAMMultiMediaStream.OpenFile(PWideChar(v), 0) );
-    ErrorCheck( FxAMMultiMediaStream.GetFilterGraph(FxGraphBuilder) );
-    ErrorCheck( FxGraphBuilder.QueryInterface(IID_IMediaControl, FxMediaControl) );
-    ErrorCheck( FxGraphBuilder.QueryInterface(IID_IMediaSeeking, FxMediaSeeking) );
-    ErrorCheck( FxMediaStream.QueryInterface(IID_IAudioMediaStream, FxAudioMediaStream) );
-    ErrorCheck( FxAudioMediaStream.GetFormat(FxFormat) );
-    ErrorCheck( CoCreateInstance(CLSID_AMAudioData, nil, CLSCTX_INPROC_SERVER,IID_IAudioData, FxAudioData) );
-    ErrorCheck( FxAudioData.SetFormat(FxFormat) );
-    ErrorCheck( FxAudioMediaStream.CreateSample(FxAudioData, 0, FxAudioStreamSample) );
-    ErrorCheck( FxAMMultiMediaStream.GetDuration(FDuration) );
-    ErrorCheck( FxAMMultiMediaStream.SetState( STREAMSTATE_RUN ) );
+    hr:=CoInitialize(nil);
+    if (hr <> S_OK) and (hr <> S_FALSE) then ErrorCheck('CoInitialize()', hr );
+
+    //ErrorCheck('', CoCreateInstance( CLSID_FilterGraph, nil, CLSCTX_INPROC_SERVER, IID_IGraphBuilder, AMovie) );
+    ErrorCheck('CoCreateInstance(CLSID_AMMultiMediaStream)', CoCreateInstance( CLSID_AMMultiMediaStream, nil, CLSCTX_INPROC_SERVER, IID_IAMMultiMediaStream, FxAMMultiMediaStream ) );
+    ErrorCheck('FxAMMultiMediaStream.Initialize()', FxAMMultiMediaStream.Initialize(STREAMTYPE_READ, AMMSF_NOGRAPHTHREAD, nil) );
+    ErrorCheck('FxAMMultiMediaStream.AddMediaStream()', FxAMMultiMediaStream.AddMediaStream(nil, @MSPID_PrimaryAudio, 0, FxMediaStream) );
+    ErrorCheck('FxAMMultiMediaStream.GetMediaStream()', FxAMMultiMediaStream.GetMediaStream(MSPID_PrimaryAudio, FxMediaStream) );
+    ErrorCheck('FxAMMultiMediaStream.OpenFile()', FxAMMultiMediaStream.OpenFile(PWideChar(v), 0) );
+
+    ErrorCheck('FxAMMultiMediaStream.GetFilterGraph()', FxAMMultiMediaStream.GetFilterGraph(FxGraphBuilder) );
+    ErrorCheck('FxGraphBuilder.QueryInterface(IID_IMediaControl)', FxGraphBuilder.QueryInterface(IID_IMediaControl, FxMediaControl) );
+    ErrorCheck('FxGraphBuilder.QueryInterface(IID_IMediaSeeking)', FxGraphBuilder.QueryInterface(IID_IMediaSeeking, FxMediaSeeking) );
+
+    ErrorCheck('FxMediaStream.QueryInterface(IID_IAudioMediaStream)', FxMediaStream.QueryInterface(IID_IAudioMediaStream, FxAudioMediaStream) );
+    ErrorCheck('FxAudioMediaStream.GetFormat()', FxAudioMediaStream.GetFormat(FxFormat) );
+    ErrorCheck('CoCreateInstance(CLSID_AMAudioData)', CoCreateInstance(CLSID_AMAudioData, nil, CLSCTX_INPROC_SERVER, IID_IAudioData, FxAudioData) );
+    ErrorCheck('FxAudioData.SetFormat()', FxAudioData.SetFormat(FxFormat) );
+    ErrorCheck('FxAudioMediaStream.CreateSample()', FxAudioMediaStream.CreateSample(FxAudioData, 0, FxAudioStreamSample) );
+    ErrorCheck('FxAMMultiMediaStream.GetDuration()', FxAMMultiMediaStream.GetDuration(FDuration) );
+    ErrorCheck('FxAMMultiMediaStream.SetState()', FxAMMultiMediaStream.SetState( STREAMSTATE_RUN ) );
     FxSelLength:=0;
+
     FSR   := FxFormat.nSamplesPerSec;
     FBPS  := FxFormat.wBitsPerSample;
     FChan := FxFormat.nChannels;
     FTotalSamples := FSize;
-    FSeekable     := TRUE;
-    if fDuration = 0 then exit;
-    FSize :=(FDuration div 10000000) *
-            FSR *
-            FChan *
-            FBPS div 8;
+    FSeekable     := True;
+    if fDuration = 0 then Exit;
+    FSize := (FDuration div 10000000) * FSR * FChan * (FBPS div 8);
     FSeekScale := FDuration div FSize;
+    FOpened:=True;
+    FValid:=True;
   end;
-  Inc(FOpened);
 end;
 
-procedure TDSIn.CloseFile;
+procedure TDSIn.CloseFile();
 begin
-  if FOpened = 1 then
+  if FOpened then
   begin
     if Assigned(FxAMMultiMediaStream) then
-      ErrorCheck( FxAMMultiMediaStream.SetState( STREAMSTATE_STOP ) );
+      ErrorCheck('FxAMMultiMediaStream.SetState()', FxAMMultiMediaStream.SetState( STREAMSTATE_STOP ) );
     FxAudioStreamSample  := nil;
     FxAudioData          := nil;
     FxAudioMediaStream   := nil;
@@ -116,8 +138,10 @@ begin
     FxMediaControl       := nil;
     FxGraphBuilder       := nil;
     FxAMMultiMediaStream := nil;
+    CoUninitialize();
+    FOpened:=False;
+    FValid:=False;
   end;
-  if FOpened > 0 then Dec(FOpened);
 end;
 
 function TDSIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
@@ -164,22 +188,6 @@ begin
   Inc(FPosition, Result);
 end;
 
-constructor TDSIn.Create(AOwner: TComponent);
-var
-  AMovie: IGraphBuilder;
-begin
-  inherited Create(AOwner);
-  BufferSize:=$8000;
-  QzInitialize(nil);
-  ErrorCheck( CoCreateInstance(CLSID_FilterGraph, nil, CLSCTX_INPROC_SERVER, IID_IGraphBuilder, AMovie) );
-end;
-
-destructor TDSIn.Destroy;
-begin
-  QzUninitialize;
-  inherited Destroy;
-end;
-
 function TDSIn.Seek(SampleNum: Integer): Boolean;
 begin
   Result:=True;
@@ -192,20 +200,20 @@ var
   Tmp: STREAM_TIME;
 begin
   Result:=0;
-  if (xSize <= 0) then ErrorCheck(DSUSER_INVALIDSIZE);
+  if (xSize <= 0) then ErrorCheck('xSize', DSUSER_INVALIDSIZE);
   if (FxSelLength <> 0) and (FxPosition >= FxSelStart+FxSelLength) then Exit;
 
   if (Buffer <> FxBuffer) or (xSize <> FxBufferSize) then
   begin
     FxBuffer:=Buffer;
     FxBufferSize:=xSize;
-    ErrorCheck( FxAudioData.SetBuffer(FxBufferSize, FxBuffer, 0) );
+    ErrorCheck('FxAudioData.SetBuffer()', FxAudioData.SetBuffer(FxBufferSize, FxBuffer, 0) );
   end;
   hr:=FxAudioStreamSample.Update(0, 0, nil, 0);
   if (hr = MS_S_ENDOFSTREAM) or (hr = MS_E_NOSTREAM) then Exit;
-  ErrorCheck(hr);
-  ErrorCheck( FxAudioData.GetInfo(FxBufferSize, FxBuffer, Result) );
-  ErrorCheck( FxAudioStreamSample.GetSampleTimes(FxLastReadingStartTime, FxLastReadingEndTime, Tmp) );
+  ErrorCheck('FxAudioStreamSample.Update()', hr);
+  ErrorCheck('FxAudioData.GetInfo()', FxAudioData.GetInfo(FxBufferSize, FxBuffer, Result) );
+  ErrorCheck('FxAudioStreamSample.GetSampleTimes()', FxAudioStreamSample.GetSampleTimes(FxLastReadingStartTime, FxLastReadingEndTime, Tmp) );
   if FxLastReadingStartTime > FxLastReadingEndTime then
     FxLastReadingStartTime:=FxLastReadingEndTime;
   if (FxSelLength <> 0) and (FxLastReadingEndTime > FxLastReadingStartTime)
@@ -233,15 +241,15 @@ begin
       else
         if (FxSelLength <> 0) and (Value > FxSelStart+FxSelLength) then
           Value:=FxSelStart+FxSelLength;
-    ErrorCheck( FxMediaControl.StopWhenReady );
-    ErrorCheck( FxMediaSeeking.SetPositions(Value, AM_SEEKING_AbsolutePositioning, Value, AM_SEEKING_NoPositioning) );
-    ErrorCheck( FxMediaControl.Run );
-    ErrorCheck( FxMediaControl.GetState(INFINITE, pfs) );
+    ErrorCheck('FxMediaControl.StopWhenReady()', FxMediaControl.StopWhenReady );
+    ErrorCheck('FxMediaSeeking.SetPositions()', FxMediaSeeking.SetPositions(Value, AM_SEEKING_AbsolutePositioning, Value, AM_SEEKING_NoPositioning) );
+    ErrorCheck('FxMediaControl.Run()', FxMediaControl.Run );
+    ErrorCheck('FxMediaControl.GetState()', FxMediaControl.GetState(INFINITE, pfs) );
     FxPosition:=Value;
   end;
 end;
 
-function ErrorCheck( Value: HRESULT ): HRESULT; { Check the result of a COM operation }
+function ErrorCheck(FuncName: string; Value: HRESULT): HRESULT; { Check the result of a COM operation }
 var
   s: String;
   s2: array [0..300] of Char;
@@ -255,6 +263,8 @@ begin
       DWord(CLASS_E_NOAGGREGATION): s:='This class cannot be created as part of an aggregate.';
       DWord(E_ABORT): s:='The update aborted.';
       DWOrd(E_INVALIDARG): s:='One of the parameters is invalid.';
+      DWOrd(E_OUTOFMEMORY): s:='Out of memory.';
+      DWOrd(E_UNEXPECTED): s:='Unexpected error.';
       DWord(E_POINTER): s:='This method tried to access an invalid pointer.';
       DWord(E_NOINTERFACE): s:='No interface.';
       MS_S_PENDING: s:='The asynchronous update is pending.';
@@ -270,19 +280,26 @@ begin
       MS_E_SOURCEALREADYDEFINED: s:='Source already defined.';
       MS_E_INVALIDSTREAMTYPE: s:='The stream type is not valid for this operation.';
       MS_E_NOTRUNNING: s:='The IMultiMediaStream object is not in running state.';
+      // standard results
+      S_FALSE: s:='The COM library is already initialized on this thread.';
+      DWord(RPC_E_CHANGED_MODE): s:='A previous call to CoInitializeEx specified the concurrency model for this thread as multithread apartment (MTA).';
       else
       begin
         if AMGetErrorText(Value, s2, High(s2)) = 0 then
           s:='Unrecognized error value.'
         else
-          s:=String(s2);
+          s:=string(s2);
+          {$ifdef fpc}
+          s:=AnsiToUtf8(s);
+          {$endif}
       end;
     end;
-//    raise EAcsException.Create(s);
+    raise EAcsException.Create(FuncName+': '+s);
   end;
 end ;
 
 initialization
+  { TODO : Enumerate available file formats }
   FileFormats.Add('mp3',  'Mpeg Audio Layer III', TDSIn);
   FileFormats.Add('mp2',  'Mpeg Audio Layer II', TDSIn);
   FileFormats.Add('mpeg', 'Mpeg Audio', TDSIn);

@@ -2,10 +2,12 @@
   the original version of this file is written by thomas la cour,
   http://www.top-house.dk/~nr161/delphi/
 
-  This file is a part of Audio Components Suite v 2.4
-  Copyright (c) 2002, 2003 Andrei Borovsky. All rights reserved.
-  See the LICENSE file for more details.
-  You can contact me at acs@compiler4.net
+  This file is a part of Audio Components Suite.
+  All rights reserved. See the license file for more details.
+
+  Copyright (c) 2002-2009, Andrei Borovsky, anb@symmetrica.net
+  Copyright (c) 2005-2006  Christian Ulrich, mail@z0m3ie.de
+  Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 *)
 
 unit acs_mac;
@@ -29,13 +31,12 @@ type
     FCompressionLevel: Integer;
     FMaxAudioBytes: Integer;
     procedure SetCompressionLevel(Value: Integer);
-  protected
-    procedure Done(); override;
-    function DoOutput(Abort: Boolean): Boolean; override;
-    procedure Prepare(); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
+    procedure Done(); override;
+    function DoOutput(Abort: Boolean): Boolean; override;
+    procedure Prepare(); override;
   published
     property CompressionLevel: LongInt read FCompressionLevel write SetCompressionLevel stored True;
     property MaxAudioBytes: Integer read FMaxAudioBytes write FMaxAudioBytes;
@@ -66,7 +67,7 @@ type
     destructor Destroy(); override;
     function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
 
-    function Seek(Sample: Integer) : Boolean; override;
+    function Seek(Sample: Integer): Boolean; override;
 
     procedure Flush(); override;
     procedure Init(); override;
@@ -85,8 +86,8 @@ constructor TMACOut.Create();
 begin
   inherited Create(AOwner);
   FBufferSize:=$10000;  // default buffer size
-  FCompressionLevel := COMPRESSION_LEVEL_NORMAL;
-  FMaxAudioBytes := MAX_AUDIO_BYTES_UNKNOWN;
+  FCompressionLevel:=COMPRESSION_LEVEL_NORMAL;
+  FMaxAudioBytes:=MAX_AUDIO_BYTES_UNKNOWN;
   if not (csDesigning in ComponentState) then
   begin
     if not MACLoaded then
@@ -134,7 +135,7 @@ end;
 
 function TMACOut.DoOutput(Abort: Boolean): Boolean;
 var
-  Len, i, x, z: Integer;
+  Len, x: Integer;
   pBuffer: PByteArray;
   nAudioBytesLeft, nBufferBytesAvailable, nNoiseBytes, nRetVal: Integer;
 begin
@@ -148,8 +149,8 @@ begin
     Result:=False;
     Exit;
   end;
-  //Len:=FInput.GetData(@FBuffer[0], FBufferSize);
-  Len:=FInput.GetData(FBuffer.Memory, FBuffer.Size);
+
+  Len:=FillBufferFromInput();
   x:=0;
   if Len <> 0 then
   begin
@@ -164,9 +165,9 @@ begin
         nNoiseBytes:=nAudioBytesLeft;
 
       {//whats this ? schoult System.Move not be faster ?
-      for z := 0 to nNoiseBytes - 1 do
+      for z:=0 to nNoiseBytes - 1 do
       begin
-        pBuffer[z] := FBuffer[x];
+        pBuffer[z]:=FBuffer[x];
         inc(x);
       end; }
       FBuffer.Position:=0;
@@ -180,14 +181,15 @@ begin
     end
   end
   else
-    EndOfStream := True;
+    EndOfStream:=True;
 end;
 
+{ TMACIn }
 
 constructor TMACIn.Create();
 begin
   inherited Create(AOwner);
-  BufferSize := $2000;
+  BufferSize:=$2000;
   if not (csDesigning in ComponentState) then
   begin
     if not MACLoaded then
@@ -195,48 +197,45 @@ begin
   end;
 end;
 
-destructor TMACIn.Destroy;
+destructor TMACIn.Destroy();
 begin
-  if Assigned(APEDecompress) then
-    APEDecompress.Free;
+  CloseFile();
   inherited Destroy;
 end;
 
-procedure TMACIn.OpenFile;
+procedure TMACIn.OpenFile();
 begin
-  FValid := True;
-  if FOpened = 0 then
+  if not FOpened then
   begin
-    EndOfStream := False;
+    EndOfStream:=False;
 
-    APEDecompress := TAPEDecompress.Create(FileName);
+    APEDecompress:=TAPEDecompress.Create(FileName);
     if APEDecompress.Handle <> 0 then
     begin
-      FSize := APEDecompress.InfoWavTotalBytes;
-      FSR := APEDecompress.InfoSampleRate;
-      FBPS := APEDecompress.InfoBitsPerSample;
-      FChan := APEDecompress.InfoChannels;
-      FTime := APEDecompress.InfoLengthMS div 1000; // Round(ov_time_total(VFile, 0));
-      FTotalSamples := (FSize div (FBPS shr 3)) div FChan;
+      FSize:=APEDecompress.InfoWavTotalBytes;
+      FSR:=APEDecompress.InfoSampleRate;
+      FBPS:=APEDecompress.InfoBitsPerSample;
+      FChan:=APEDecompress.InfoChannels;
+      FTime:=APEDecompress.InfoLengthMS div 1000; // Round(ov_time_total(VFile, 0));
+      FTotalSamples:=(FSize div (FBPS div 8)) div FChan;
+      FValid:=True;
+      FOpened:=True;
     end
     else
     begin
-      FValid := False;
-      FOpened := -1;
+      FValid:=False;
+      FOpened:=False;
     end;
   end;
-  Inc(FOpened);
 end;
 
-procedure TMACIn.CloseFile;
+procedure TMACIn.CloseFile();
 begin
-  if FOpened = 1 then
+  if FOpened then
   begin
-    if Assigned(APEDecompress) then
-      APEDecompress.Free;
-    APEDecompress := nil;
+    if Assigned(APEDecompress) then FreeAndNil(APEDecompress);
+    FOpened:=False;
   end;
-  if FOpened > 0 then Dec(FOpened);
 end;
 
 function TMACIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
@@ -250,40 +249,40 @@ begin
   begin
     if FOffset <> 0 then
     begin
-      offs := Round((FOffset / 100) * FSize);
-      FPosition := FPosition + offs;
-      if FPosition < 0 then FPosition := 0
-      else if FPosition > FSize then FPosition := FSize;
+      offs:=Round((FOffset / 100) * FSize);
+      FPosition:=FPosition + offs;
+      if FPosition < 0 then FPosition:=0
+      else if FPosition > FSize then FPosition:=FSize;
       APEDecompress.Seek(FPosition shr 2);
-      FOffset := 0;
+      FOffset:=0;
     end;
-    BufStart := 1;
-    BufEnd := 0;
+    BufStart:=1;
+    BufEnd:=0;
     if not EndOfStream then
     begin
       while BufEnd < BufferSize do
       begin
-        //l := ov_read(VFile, @buf[BufEnd + 1], BUF_SIZE - BufEnd, 0, 2, 1, @cursec);
-        blocks := (BufferSize - BufEnd) div 4;
+        //l:=ov_read(VFile, @buf[BufEnd + 1], BUF_SIZE - BufEnd, 0, 2, 1, @cursec);
+        blocks:=(BufferSize - BufEnd) div 4;
         APEDecompress.GetData(@FBuffer[BufEnd], blocks, l);
-        l := l * 4;
+        l:=l * 4;
         if l <= 0 then
         begin
-          EndOfStream := True;
+          EndOfStream:=True;
           Break;
         end;
         Inc(BufEnd, l);
         if (FEndSample <> -1) then
         begin
-          csize := (FEndSample-FStartSample)*(FBPS shr 3)*FChan;
+          csize:=(FEndSample-FStartSample)*(FBPS shr 3)*FChan;
           if (csize - FPosition) <= 0 then
           begin
-            EndOfStream := True;
+            EndOfStream:=True;
             Break;
           end;
           if (csize - FPosition) < BufEnd then
           begin
-            BufEnd := csize - FPosition;
+            BufEnd:=csize - FPosition;
             Break;
           end;
         end;
@@ -291,18 +290,18 @@ begin
     end;
     if EndOfStream and FLoop then
     begin
-      Flush;
-      Init;
-      EndOfStream := False;
+      Flush();
+      Init();
+      EndOfStream:=False;
       while BufEnd < BufferSize do
       begin
-        //l := ov_read(VFile, @buf[BufEnd + 1], BUF_SIZE - BufEnd, 0, 2, 1, @cursec);
-        blocks := (BufferSize - BufEnd) div 4;
+        //l:=ov_read(VFile, @buf[BufEnd + 1], BUF_SIZE - BufEnd, 0, 2, 1, @cursec);
+        blocks:=(BufferSize - BufEnd) div 4;
         APEDecompress.GetData(@FBuffer[BufEnd], blocks, l);
-        l := l * 4;
+        l:=l * 4;
         if l <= 0 then
         begin
-          EndOfStream := True;
+          EndOfStream:=True;
           Break;
         end;
         Inc(BufEnd, l);
@@ -310,77 +309,77 @@ begin
     end;
   end;
   if BufferSize < (BufEnd - BufStart + 1) then
-    Result := BufferSize
+    Result:=BufferSize
   else
-    Result := BufEnd - BufStart + 1;
+    Result:=BufEnd - BufStart + 1;
   Move(FBuffer[BufStart - 1], Buffer^, Result);
   Inc(BufStart, Result);
   Inc(FPosition, Result);
 end;
 
-function TMACIn.GetTotalTime: real;
+function TMACIn.GetTotalTime(): Real;
 begin
-  OpenFile;
+  OpenFile();
   if Assigned(APEDecompress) then
-    Result := APEDecompress.LengthMS / 1000;
-  CloseFile;  
+    Result:=APEDecompress.LengthMS / 1000;
+  CloseFile();  
 end;
 
-function TMACIn.GetAverageBitrate: Integer;
-begin
-  if Assigned(APEDecompress) then
-    Result := APEDecompress.AverageBitrate;
-end;
-
-function TMACIn.GetCurrentBitrate: Integer;
+function TMACIn.GetAverageBitrate(): Integer;
 begin
   if Assigned(APEDecompress) then
-    Result := APEDecompress.CurrentBitrate;
+    Result:=APEDecompress.AverageBitrate;
 end;
 
-function TMACIn.GetCurrentBlock: Integer;
+function TMACIn.GetCurrentBitrate(): Integer;
 begin
   if Assigned(APEDecompress) then
-    Result := APEDecompress.CurrentBlock;
+    Result:=APEDecompress.CurrentBitrate;
 end;
 
-function TMACIn.GetCurrentMS: Integer;
+function TMACIn.GetCurrentBlock(): Integer;
 begin
   if Assigned(APEDecompress) then
-    Result := APEDecompress.CurrentMS;
+    Result:=APEDecompress.CurrentBlock;
 end;
 
-function TMACIn.GetLengthMS: Integer;
+function TMACIn.GetCurrentMS(): Integer;
 begin
   if Assigned(APEDecompress) then
-    Result := APEDecompress.LengthMS;
+    Result:=APEDecompress.CurrentMS;
 end;
 
-function TMACIn.GetTotalBlocks: Integer;
+function TMACIn.GetLengthMS(): Integer;
 begin
   if Assigned(APEDecompress) then
-    Result := APEDecompress.TotalBlocks;
+    Result:=APEDecompress.LengthMS;
 end;
 
-function TMACIn.GetBPS: Integer;
+function TMACIn.GetTotalBlocks(): Integer;
 begin
-  OpenFile;
-  Result := FBPS;
-  CloseFile;
+  if Assigned(APEDecompress) then
+    Result:=APEDecompress.TotalBlocks;
 end;
 
-function TMACIn.GetCh: Integer;
+function TMACIn.GetBPS(): Integer;
 begin
-  OpenFile;
-  Result := FChan;
-  CloseFile;
+  OpenFile();
+  Result:=FBPS;
+  CloseFile();
 end;
 
-function TMACIn.GetSR: Integer;
+function TMACIn.GetCh(): Integer;
 begin
-  OpenFile;
-  Result := FSR;
-  CloseFile;
+  OpenFile();
+  Result:=FChan;
+  CloseFile();
+end;
+
+function TMACIn.GetSR(): Integer;
+begin
+  OpenFile();
+  Result:=FSR;
+  CloseFile();
 end;
 
 procedure TMACOut.SetCompressionLevel(Value: Integer);
@@ -389,38 +388,43 @@ begin
     COMPRESSION_LEVEL_FAST,
       COMPRESSION_LEVEL_NORMAL,
       COMPRESSION_LEVEL_HIGH,
-      COMPRESSION_LEVEL_EXTRA_HIGH: FCompressionLevel := Value;
+      COMPRESSION_LEVEL_EXTRA_HIGH: FCompressionLevel:=Value;
   else
-    FCompressionLevel := COMPRESSION_LEVEL_NORMAL;
+    FCompressionLevel:=COMPRESSION_LEVEL_NORMAL;
   end;
 end;
 
-procedure TMACIn.Flush;
+procedure TMACIn.Flush();
 begin
-  inherited Flush;
+  inherited Flush();
 end;
 
-procedure TMACIn.Init;
+procedure TMACIn.Init();
 begin
   inherited Init;
-  BufStart := 1;
-  BufEnd := 0;
+  BufStart:=1;
+  BufEnd:=0;
 end;
 
-function TMACIn.Seek(Sample : Integer) : Boolean;
+function TMACIn.Seek(Sample: Integer): Boolean;
 begin
-  Result := False;
+  Result:=False;
   if not FSeekable then Exit;
-  Result := True;
+  Result:=True;
   OpenFile;
   APEDecompress.Seek(Sample);
   CloseFile;
 end;
 
 initialization
+  if LoadMacLibrary() then
+  begin
+    FileFormats.Add('mac', 'Monkey Audio', TMACOut);
+    FileFormats.Add('mac', 'Monkey Audio', TMACIn);
+  end;
 
-  FileFormats.Add('mac','Monkey Audio',TMACOut);
-  FileFormats.Add('mac','Monkey Audio',TMACIn);
+finalization
+  UnloadMacLibrary();
 
 
 end.

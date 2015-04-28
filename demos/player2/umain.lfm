@@ -12,7 +12,7 @@ object fMain: TfMain
   ClientWidth = 201
   OnClose = FormClose
   OnCreate = FormCreate
-  LCLVersion = '1.3'
+  LCLVersion = '1.4.0.4'
   object Panel1: TPanel
     Left = 4
     Height = 64
@@ -411,7 +411,7 @@ object fMain: TfMain
     OnClick = btVizuClick
     TabOrder = 8
   end
-  object FileIn1: TACSFileIn
+  object FileIn1: TAcsFileIn
     EndSample = -1
     Loop = False
     StartSample = 0
@@ -425,20 +425,20 @@ object fMain: TfMain
     left = 140
     top = 36
   end
-  object AudioOut1: TACSAudioOut
-    BufferSize = -1
+  object AudioOut1: TAcsAudioOut
+    BufferSize = 0
     Device = 0
     Volume = 0
     Input = SoundIndicator
     Delay = -1
-    SuspendWhenIdle = False
     OnDone = AudioOut1Done
     OnThreadException = AudioOut1ThreadException
     left = 152
     top = 8
   end
-  object SoundIndicator: TACSSoundIndicator
+  object SoundIndicator: TAcsSoundIndicator
     Input = FileIn1
+    ValuesCount = 32
     left = 87
     top = 50
   end

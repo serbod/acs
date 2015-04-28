@@ -1,8 +1,12 @@
 (*
-  this file is a part of audio components suite v 2.3.
-  copyright (c) 2002-2005 andrei borovsky. all rights reserved.
-  see the license file for more details.
-  you can contact me at mail@z0m3ie.de
+Miscellaneous functions and classes
+
+This file is a part of Audio Components Suite.
+All rights reserved. See the license file for more details.
+
+Copyright (c) 2002-2009, Andrei Borovsky, anb@symmetrica.net
+Copyright (c) 2005-2006  Christian Ulrich, mail@z0m3ie.de
+Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 *)
 
 unit acs_misc;
@@ -92,12 +96,8 @@ type
   end;
 
   TAcsNULLOut = class(TAcsCustomOutput)
-  private
-    Buf: array[0..BUF_SIZE-1] of Byte;
   public
-    procedure Done; override;
     function DoOutput(Abort: Boolean): Boolean; override;
-    procedure Prepare; override;
   end;
 
   TAcsInputItem = class(TCollectionItem)
@@ -328,33 +328,17 @@ begin
   FBusy:=False;
 end;
 
-procedure TAcsNULLOut.Prepare;
-begin
-  //if not Assigned(FInput) then raise EAcsException.Create(strInputnotAssigned);
-  if Assigned(FInput) then FInput.Init;
-end;
-
 function TAcsNULLOut.DoOutput(Abort: Boolean): Boolean;
 begin
   Result:=True;
-  if not Busy then Exit;
+  if not Active then Exit;
   if Abort or (not CanOutput) then
   begin
     Result:=False;
     Exit;
   end;
 
-  if Assigned(FInput) and (FInput.GetData(@Buf[0], BUF_SIZE) > 0) then Result:=True
-  else
-  begin
-    Result:=False;
-    Exit;
-  end;
-end;
-
-procedure TAcsNULLOut.Done;
-begin
-  if Assigned(FInput) then FInput.Flush;
+  Result:=(FillBufferFromInput()>0);
 end;
 
 function TAcsInputItem.GetOwner : TPersistent;

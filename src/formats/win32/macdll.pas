@@ -617,7 +617,13 @@ TAPEDecompress - class for working with existing APE files (decoding, seeking, a
     property Filename: string read FFilename;
   end;
 
+function LoadMacLibrary(): Boolean;
+procedure UnloadMacLibrary();
+
 implementation
+
+var
+  Libhandle: HMODULE;
 
 function macErrorExplanation(MACErrorCode: LongInt): string;
 begin
@@ -1155,12 +1161,10 @@ begin
   Result := GetInfo(APE_DECOMPRESS_AVERAGE_BITRATE);
 end;
 
-var
-  Libhandle : HMODULE;
 
-initialization
-
-  Libhandle := LoadLibraryEx(MACPath, 0, 0);
+function LoadMacLibrary(): Boolean;
+begin
+  Libhandle:=LoadLibraryEx(MACPath, 0, 0);
   if Libhandle <> 0 then
   begin
     MACLoaded := True;
@@ -1192,9 +1196,15 @@ initialization
     c_APEDecompress_GetInfo := GetProcAddress(Libhandle, 'c_APEDecompress_GetInfo');
     c_APEDecompress_Seek := GetProcAddress(Libhandle, 'c_APEDecompress_Seek');
   end;
+  Result:=MACLoaded;
+end;
 
-  finalization
-    if Libhandle <> 0 then FreeLibrary(Libhandle);
+procedure UnloadMacLibrary();
+begin
+  if Libhandle <> 0 then FreeLibrary(Libhandle);
+  MACLoaded:=False;
+end;
+
 
 end.
 
