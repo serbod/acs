@@ -58,7 +58,7 @@ type
     property DataBuffer: Pointer read GetBuffer write SetBuffer;
     property DataSize: Integer read FDataSize write FDataSize;
   published
-    property GlobalSize: Integer read FSize write FSize;
+    //property GlobalSize: Integer read FSize write FSize;
     property InBitsPerSample: Integer read GetBPS write FBPS;
     property InChannels: Integer read GetCh write FChan;
     property InSampleRate: Integer read GetSR write FSR;
@@ -74,12 +74,11 @@ type
     FOnGetBitsPerSample: TAcsGetParameterEvent;
     FOnGetChannels: TAcsGetParameterEvent;
     FOnGetTotalTime: TAcsGetRealParameterEvent;
-    FOnGetSize: TAcsGetParameterEvent;
+    //FOnGetSize: TAcsGetParameterEvent;
   protected
     function GetBPS: Integer; override;
     function GetCh: Integer; override;
     function GetSR: Integer; override;
-    function GetTotalTime: Real; override;
   public
     function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
     procedure Init; override;
@@ -90,7 +89,7 @@ type
     property OnGetChannels: TAcsGetParameterEvent read FOnGetChannels write FOnGetChannels;
     property OnGetData: TAcsGetDataEvent read FOnGetData write FOnGetData;
     property OnGetSampleRate: TAcsGetParameterEvent read FOnGetSampleRate write FOnGetSampleRate;
-    property OnGetSize: TAcsGetParameterEvent read FOnGetSize write FOnGetSize;
+    //property OnGetSize: TAcsGetParameterEvent read FOnGetSize write FOnGetSize;
     property OnGetTotalTime: TAcsGetrealParameterEvent read FOnGetTotalTime write FOnGetTotalTime;
     property OnInit: TAcsAudioProcessorInitEvent read FOnInit write FOnInit;
   end;
@@ -170,7 +169,7 @@ var
 constructor TAcsMemoryIn.Create;
 begin
   inherited Create(AOwner);
-  FSize:=-1;
+  //FSize:=-1;
 end;
 
 destructor TAcsMemoryIn.Destroy;
@@ -275,16 +274,6 @@ begin
     if Assigned(FInput) then Result:=FInput.Channels;
 end;
 
-function TAcsAudioProcessor.GetTotalTime: Real;
-begin
-  Result:=0;
-  //if not Assigned(FInput) then raise EAcsException.Create(strInputnotAssigned);
-  if Assigned(FOnGetTotalTime) then
-    FOnGetTotalTime(Self, Result)
-  else
-    if Assigned(FInput) then Result:=FInput.TotalTime;
-end;
-
 function TAcsAudioProcessor.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
 begin
   //if not Assigned(FInput) then raise EAcsException.Create(strInputnotAssigned);
@@ -300,18 +289,21 @@ begin
 end;
 
 procedure TAcsAudioProcessor.Init;
+var
+  FSize: Integer;
 begin
   //if not Assigned(FInput) then raise EAcsException.Create(strInputnotAssigned);
+  FSize:=0;
   if Assigned(FOnInit) then FOnInit(Self, FSize)
   else
   begin
     if Assigned(FInput) then
     begin
       FInput.Init;
-      if Assigned(FOnGetSize) then
+      {if Assigned(FOnGetSize) then
         FOnGetSize(Self, FSize)
       else
-        FSize:=Finput.Size;
+        FSize:=Finput.Size;  }
     end;
   end;
   FBusy:=True;
@@ -351,7 +343,7 @@ begin
   inherited Create(AOwner);
   FInputItems:=TAcsInputItems.Create(Self, TAcsInputItem);
   FPosition:=0;
-  FSize:=-1;
+  //FSize:=-1;
   FIndicateProgress:=True;
 end;
 
@@ -378,8 +370,8 @@ begin
       Item:=TAcsInputItem(InputItems.Items[AInput]);
       Item.Input.Init;
       if FIndicateProgress then
-      FSize:=Item.Input.Size
-      else FSize:=-1;
+      {FSize:=Item.Input.Size
+      else FSize:=-1; }
       FPosition:=0;
       Lock:=False;
     end;
@@ -457,7 +449,7 @@ begin
     raise EAcsException.Create(Format(strNoInputAssigned,[FCurrentInput]));
   FBusy:=True;
   Item.Input.Init;
-  if FIndicateProgress then FSize:=Item.Input.Size else FSize:=-1;
+  //if FIndicateProgress then FSize:=Item.Input.Size else FSize:=-1;
   FPosition:=0;
 end;
 
@@ -498,9 +490,9 @@ begin
         if not Assigned(Item.Input) then
           raise EAcsException.Create(Format(strNoInputAssigned, [FCurrentInput]));
         Item.Input.Init;
-        if FIndicateProgress then
+        {if FIndicateProgress then
           FSize:=Item.Input.Size
-        else FSize:=-1;
+        else FSize:=-1;  }
         FPosition:=0;
         Result:=Item.Input.GetData(Buffer, BufferSize);
       end

@@ -91,7 +91,6 @@ type
     procedure SetDevice(Ch: Integer); override;
     function GetDeviceName(ADeviceNumber: Integer): string; override;
     function GetDeviceInfo(ADeviceNumber: Integer): TAcsDeviceInfo; override;
-    function GetTotalTime(): Real; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
@@ -146,18 +145,13 @@ begin
   Result:=GetAudioDeviceInfo(ADeviceNumber, False);
 end;
 
-function TStdAudioIn.GetTotalTime(): Real;
-begin
-  Result:=RecTime;
-end;
-
 constructor TStdAudioIn.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FBPS:=8;
   FChan:=1;
   FSampleRate:=8000;
-  FSize:=-1;
+  //FSize:=-1;
   FRecTime:=600;
   BufferSize:=$1000;
   {$IFDEF MSWINDOWS}

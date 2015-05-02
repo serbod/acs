@@ -82,7 +82,7 @@ type
     function GetPriority: TThreadPriority;
     procedure SetPriority(const AValue: TThreadPriority);
     function GetBusy: Boolean;
-    function GetProgress: real;
+    //function GetProgress: real;
     function GetStatus: TAcsOutputStatus;
     function GetTE: Integer;
 
@@ -138,13 +138,11 @@ type
     { Read Progress to get the output progress in percents.
       This value is meaningful only after the input component has been set
       and only if the input component can tell the size of its stream. }
-    property Progress: Real read GetProgress;
+    //property Progress: Real read GetProgress;
+
     { This property indicates the output component's current status. Possible values are:
-
       tosPlaying: the component is working;
-
       tosPaused: the component is paused (the Pause method was called);
-
       tosIdle: the component is idle; }
     property Status: TAcsOutputStatus read GetStatus;
     property TimeElapsed: Integer read GetTE;
@@ -186,7 +184,7 @@ type
     function GetBPS: Integer; override;
     function GetCh: Integer; override;
     function GetSR: Integer; override;
-    function GetTotalTime: Real; override;
+    //function GetTotalTime: Real; override;
 
     function GetDriversCount: Integer;
     function GetDriverName(idx: Integer): string;
@@ -269,7 +267,7 @@ type
     FBPS: Integer;
     FChan: Integer;
     FSampleRate: Integer;
-    FRecTime: Integer;
+    FRecTime: Real;
     FBaseChannel: Integer;
     FDeviceInfoArray: array of TAcsDeviceInfo;
     function GetBPS(): Integer; override;
@@ -312,7 +310,7 @@ type
          this property overrides the value of <BytesToRead>. If you set this
          property value to -1 (the default) the component will be endlessly
          recording until you stop it. *)
-    property RecTime: Integer read FRecTime write FRecTime;
+    property RecTime: Real read FRecTime write FRecTime;
   end;
 
   TAcsAudioOutDriverClass = class of TAcsAudioOutDriver;
@@ -439,6 +437,7 @@ begin
     //raise EAcsException(strNoDriverselected);
 end;
 
+{
 function TAcsAudioOut.GetProgress(): Real;
 begin
   if Assigned(FOutputDriver) then
@@ -447,6 +446,7 @@ begin
     Result:=0;
     //raise EAcsException.Create(strNoDriverselected);
 end;
+}
 
 function TAcsAudioOut.GetStatus(): TAcsOutputStatus;
 begin
@@ -651,6 +651,15 @@ begin
   //  raise EAcsException.Create(strNoDriverselected);
 end;
 
+{
+function TAcsAudioIn.GetTotalTime(): Real;
+begin
+  if Assigned(FInput) then Result:=FInput.GetTotalTime
+  else Result:=inherited GetTotalTime;
+  //  raise EAcsException.Create(strNoDriverselected);
+end;
+}
+
 function TAcsAudioIn.GetDeviceCount(): Integer;
 begin
   Result:=0;
@@ -671,13 +680,6 @@ end;
 procedure TAcsAudioIn.SetDevice(Ch: Integer);
 begin
   if Assigned(FInput) then FInput.SetDevice(Ch);
-  //  raise EAcsException.Create(strNoDriverselected);
-end;
-
-function TAcsAudioIn.GetTotalTime(): Real;
-begin
-  if Assigned(FInput) then Result:=FInput.GetTotalTime
-  else Result:=inherited GetTotalTime;
   //  raise EAcsException.Create(strNoDriverselected);
 end;
 

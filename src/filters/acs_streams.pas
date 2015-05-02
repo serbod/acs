@@ -101,7 +101,7 @@ begin
   FBPS:=8;
   FChan:=1;
   FSampleRate:=8000;
-  FSize:=-1;
+  //FSize:=-1;
 end;
 
 destructor TAcsStreamIn.Destroy;
@@ -117,7 +117,7 @@ begin
     raise EAcsException.Create(strStreamObjectnotassigned);
   FPosition:=FStream.Position;
   FBusy:=True;
-  FSize:=FStream.Size;
+  //FSize:=FStream.Size;
 end;
 
 procedure TAcsStreamIn.Flush;
@@ -131,7 +131,7 @@ begin
   Result:=FStream.Read(Buffer^, BufferSize);
   FPosition:=FStream.Position;
   //  Inc(FPosition, Result);
-  if FPosition >= FSize then Result:=0;
+  //if FPosition >= FSize then Result:=0;
 end;
 
 function TAcsStreamOut.GetSR: Integer;

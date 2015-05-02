@@ -1,3 +1,21 @@
+2015-05-02  serbod
+! note: Total size/time not for all components. It actial only for file-based
+  components. Default position in bytes, but it must be in samples.
+* TAcsCustomInput.Time property replaced by PositionTime
+- TAcsCustomInput.Size property moved to TAcsCustomFileIn 
+- TAcsCustomOutput.Progress property moved to TAcsCustomFileIn
+- TAcsCustomOutput.TotalTime property moved to TAcsCustomFileIn
+
+2015-04-30  serbod
++ TAcsAudioBuffer - TStream-based buffer for audio samples
+* TAcsThread renamed to TAcsOutThread, simplified and fixed
+* TAcsCustomOutput - Byte array buffer replaced by TAcsAudioBuffer
+* TAcsCustomOutput.Busy property renamed to Active
+* TAcsCustomOutput.Prepare() and Done() now is non-abstract and can be inherited
+* Available file and audio drivers added to list only when
+  according library is loaded
+* fixed inheritance bugs in some methods
+
 2014-11-04  serbod
 + DSWrapper unit from NewAC, dswrapper.dll not needed
 * TDXAudioOut and TDXAudioIn updated from NewAC
@@ -15,10 +33,9 @@ TACSSoundIndicator:
 * code formatted to LCL code style
 * removed exceptions from design-time components
 * some code rewritten to more strict FreePascal syntax
-
 TACSMixer:
-* added error checking for external functions calls
-* fixed errors in SetDevNum
+  * added error checking for external functions calls
+  * fixed errors in SetDevNum
 
 2006/07/04 17:12:45  z0m3ie
 ACS 2.4 alt wiederhergestellt (unterschiedliche Sampleformate ...)
@@ -94,6 +111,9 @@ first working Version
 
 2005/09/09 21:33:42  z0m3ie
 linux corrections
+
+2005/09/08 22:19:00  z0m3ie
+completed akrip based CDIn
 
 2005/09/07 20:53:22  z0m3ie
 begon to add MPEG and WMA support using DirectX

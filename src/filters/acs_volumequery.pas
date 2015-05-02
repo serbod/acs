@@ -113,7 +113,7 @@ implementation
     FBPS := GetBPS;
     FCH := GetCh;
     FPosition := 0;
-    FSize := FInput.Size;
+    //FSize := FInput.Size;
     F50ms := FSR * FBPS * FCh div 160;
     Lock := False;
   end;

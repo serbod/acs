@@ -224,7 +224,7 @@ implementation
     FPosition := 0;
     for chan := 0 to FTotalChannels-1 do
      FChannel[chan].Start;
-    FSize := 0;
+    //FSize := 0;
     FLock := False;
   end;
 

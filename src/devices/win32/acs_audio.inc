@@ -284,12 +284,12 @@ begin
   BufEnd:=0;
   BufStart:=1;
   FPosition:=0;
-  FRecBytes:=FRecTime*(GetBPS div 8)*GetCh*GetSR;
+  FRecBytes:=Trunc(FRecTime * (GetBPS div 8) * GetCh * GetSR);
   FBusy:=True;
   OpenAudio;
   waveInStart(_audio_fd);
   BlockChain:=nil;
-  FSize:=FRecBytes;
+  //FSize:=FRecBytes;
   aBlock:=0;
   EOC:=@BlockChain;
 end;

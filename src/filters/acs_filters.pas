@@ -209,7 +209,7 @@ implementation
     FPosition := 0;
     BufStart := 1;
     BufEnd := 0;
-    FSize := FInput.Size;
+    //FSize := FInput.Size;
     x0[0] := 0.0;
     x0[1] := 0.0;
     x1[0] := 0.0;
@@ -329,8 +329,8 @@ implementation
     else Result := BufEnd - BufStart + 1;
     Move(InBuf[BufStart], Buffer^, Result);
     Inc(BufStart, Result);
-    FPosition := Round(FInput.Position*(FSize/FInput.Size));
- //   Inc(FPosition, Result);
+    //FPosition := Round(FInput.Position*(FSize/FInput.Size));
+    Inc(FPosition, Result);
   end;
 
   constructor TAcsSincFilter.Create;
@@ -517,7 +517,7 @@ implementation
     end;
     BufStart := 1;
     BufEnd := 0;
-    FSize := FInput.Size;
+    //FSize := FInput.Size;
   end;
 
   procedure TAcsSincFilter.Flush;
@@ -595,7 +595,8 @@ implementation
     else Result := BufEnd - BufStart + 1;
     Move(InBuf[BufStart], Buffer^, Result);
     Inc(BufStart, Result);
-    FPosition := Round(FInput.Position*(FSize/FInput.Size));
+    Inc(FPosition, Result);
+    //FPosition := Round(FInput.Position*(FSize/FInput.Size));
   end;
 
   procedure TAcsSincFilter.GetKernel;
@@ -669,7 +670,7 @@ implementation
     end;
     BufStart := 1;
     BufEnd := 0;
-    FSize := FInput.Size;
+    //FSize := FInput.Size;
   end;
 
   procedure TAcsConvolver.Flush;
@@ -750,7 +751,8 @@ implementation
     else Result := BufEnd - BufStart + 1;
     Move(InBuf[BufStart], Buffer^, Result);
     Inc(BufStart, Result);
-    FPosition := Round(FInput.Position*(FSize/FInput.Size));
+    Inc(FPosition, Result);
+    //FPosition := Round(FInput.Position*(FSize/FInput.Size));
   end;
 
   procedure TAcsConvolver.SetKernel;

@@ -56,9 +56,6 @@ type
     function GetLengthMS(): Integer;
     function GetTotalBlocks(): Integer;
   protected
-    function GetBPS(): Integer; override;
-    function GetCh(): Integer; override;
-    function GetSR(): Integer; override;
     function GetTotalTime(): Real; override;
     procedure OpenFile(); override;
     procedure CloseFile(); override;
@@ -85,6 +82,7 @@ implementation
 constructor TMACOut.Create();
 begin
   inherited Create(AOwner);
+  FStreamDisabled:=True;
   FBufferSize:=$10000;  // default buffer size
   FCompressionLevel:=COMPRESSION_LEVEL_NORMAL;
   FMaxAudioBytes:=MAX_AUDIO_BYTES_UNKNOWN;
@@ -216,7 +214,7 @@ begin
       FSR:=APEDecompress.InfoSampleRate;
       FBPS:=APEDecompress.InfoBitsPerSample;
       FChan:=APEDecompress.InfoChannels;
-      FTime:=APEDecompress.InfoLengthMS div 1000; // Round(ov_time_total(VFile, 0));
+      FTotalTime:=APEDecompress.InfoLengthMS / 1000;
       FTotalSamples:=(FSize div (FBPS div 8)) div FChan;
       FValid:=True;
       FOpened:=True;
@@ -319,10 +317,7 @@ end;
 
 function TMACIn.GetTotalTime(): Real;
 begin
-  OpenFile();
-  if Assigned(APEDecompress) then
-    Result:=APEDecompress.LengthMS / 1000;
-  CloseFile();  
+  Result:=FTotalTime;
 end;
 
 function TMACIn.GetAverageBitrate(): Integer;
@@ -361,27 +356,6 @@ begin
     Result:=APEDecompress.TotalBlocks;
 end;
 
-function TMACIn.GetBPS(): Integer;
-begin
-  OpenFile();
-  Result:=FBPS;
-  CloseFile();
-end;
-
-function TMACIn.GetCh(): Integer;
-begin
-  OpenFile();
-  Result:=FChan;
-  CloseFile();
-end;
-
-function TMACIn.GetSR(): Integer;
-begin
-  OpenFile();
-  Result:=FSR;
-  CloseFile();
-end;
-
 procedure TMACOut.SetCompressionLevel(Value: Integer);
 begin
   case Value of
@@ -410,10 +384,11 @@ function TMACIn.Seek(Sample: Integer): Boolean;
 begin
   Result:=False;
   if not FSeekable then Exit;
-  Result:=True;
-  OpenFile;
-  APEDecompress.Seek(Sample);
-  CloseFile;
+  if Assigned(APEDecompress) then
+  begin
+    APEDecompress.Seek(Sample);
+    Result:=True;
+  end;
 end;
 
 initialization
