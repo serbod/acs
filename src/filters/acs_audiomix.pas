@@ -40,10 +40,6 @@ changed mail adress
 //{$hints off}
 unit acs_audiomix;
 
-//{$ifdef fpc}
-//{$mode delphi}
-//{$endif}
-
 interface
 
 uses
@@ -175,7 +171,7 @@ begin
   if FMode=amRTMix then
   begin
     FInput1.Init;
-    FSize:=FInput1.Size;
+    {FSize:=FInput1.Size;  }
     if Assigned(FInput2) then
     begin
       FInput2.Init;
@@ -192,13 +188,13 @@ begin
     FInput1.Init;
     FInput2.Init;
     case FMode of
-      amMix:
-        if FInput1.Size > FInput2.Size then
+      {amMix:
+        {if FInput1.Size > FInput2.Size then
           FSize:=FInput1.Size
         else
           FSize:=FInput2.Size;
       amConcatenate:
-        FSize:=FInput1.Size+FInput2.Size;     //determine the size of the output stream in bytes
+        FSize:=FInput1.Size+FInput2.Size;     //determine the size of the output stream in bytes }
       amCustomMix:
       begin
         // add by leozhang
@@ -206,10 +202,10 @@ begin
                        *(Cardinal(FInput2.Channels))
                        *((Cardinal(FInput2.BitsPerSample)) shr 3);
          ByteCount:=In2StartByte;
-         if Cardinal(FInput1.Size) > (In2StartByte+Cardinal(FInput2.Size)) then
+         {if Cardinal(FInput1.Size) > (In2StartByte+Cardinal(FInput2.Size)) then
            FSize:=FInput1.Size
          else
-           FSize:=In2StartByte+Cardinal(FInput2.Size);
+           FSize:=In2StartByte+Cardinal(FInput2.Size);  }
          FLock := False;
       end;
       // leozhang

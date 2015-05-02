@@ -1,87 +1,19 @@
 (*
-  this file is a part of audio components suite
-  see the license file for more details.
-  you can contact me at mail@z0m3ie.de
+CD-ROM input component
 
-  Special thanks to Thomas Grelle <grelle@online.de> for improving this unit.
+This file is a part of Audio Components Suite.
+All rights reserved. See the license file for more details.
 
-$Log: acs_cdrom.pas,v $
-Revision 1.11  2006/08/31 20:10:54  z0m3ie
-*** empty log message ***
+Copyright (c) 2002-2009, Andrei Borovsky, anb@symmetrica.net
+Copyright (c) 2005-2006  Christian Ulrich, mail@z0m3ie.de
+Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 
-Revision 1.10  2006/07/04 17:12:45  z0m3ie
-ACS 2.4 alt wiederhergestellt (unterschiedliche Sampleformate ...)
+Special thanks to Thomas Grelle <grelle@online.de> for improving this unit.
 
-Revision 1.2  2005/12/26 17:31:38  z0m3ie
-fixed some problems in acs_dsfiles
-fixed some problems in acs_vorbis
-reworked all buffers
-
-Revision 1.1  2005/12/19 18:34:35  z0m3ie
-*** empty log message ***
-
-Revision 1.7  2005/12/18 17:01:54  z0m3ie
-delphi compatibility
-
-Revision 1.6  2005/12/04 16:54:33  z0m3ie
-All classes are renamed, Style TAcs... than T... to avoid conflicts with other components (eg TMixer is TAcsMixer now)
-
-Revision 1.5  2005/11/28 21:57:24  z0m3ie
-mostly FileOut fixes
-moved PBuffer to PBuffer8
-set all to dynamically Buffering
-
-Revision 1.4  2005/10/02 16:51:46  z0m3ie
-*** empty log message ***
-
-Revision 1.3  2005/09/15 20:59:38  z0m3ie
-start translate the documentation in the source for pasdoc
-
-Revision 1.2  2005/09/13 21:54:11  z0m3ie
-acs is localizeable now (ACS_Strings)
-
-Revision 1.1  2005/09/12 22:04:52  z0m3ie
-modified structure again, fileformats are now in an sperat folder.
-all File In/Out classes are capsulated from TFileIn and TFileOut
-
-Revision 1.6  2005/09/09 21:33:42  z0m3ie
-linux corrections
-
-Revision 1.5  2005/09/08 22:18:59  z0m3ie
-completed akrip based CDIn
-
-Revision 1.4  2005/09/07 20:53:22  z0m3ie
-begon to add MPEG and WMA support using DirectX
-
-Revision 1.3  2005/09/04 17:59:37  z0m3ie
-moving CDIn support to AKRip mostly
-begon to add mpegin support for Win with mpg123
-
-Revision 1.2  2005/08/28 20:31:17  z0m3ie
-linux restructuring for 2.4
-
-Revision 1.1  2005/08/25 20:18:00  z0m3ie
-Version 2.4 restructure
-TCDPlayer removed (fits not in component structure)
-TMP3ToWavConverter removed (fits not in component structure)
-
-Revision 1.5  2005/08/22 20:17:02  z0m3ie
-changed Headers to log
-changed mail adress
 *)
-
-{
-@abstract(this unit introduces the base classes for acs)
-@author(Andrei Borovsky (2003-2005))
-@author(Christian Ulrich (2005))
-}
 
 
 unit acs_cdrom;
-
-{$ifdef fpc}
-{$mode delphi}
-{$endif}
 
 interface
 
@@ -137,10 +69,9 @@ var
 type  
 
   { This is the cdreader component of acs it reads in windows with aspi
-    and linux direct from device
-  }
+    and linux direct from device }
 
-  TAcsCDIn = class(TAcsCustomInput)
+  TAcsCDIn = class(TAcsCustomFileIn)
   private
     FBuffer: array of byte;
     FCurrentDrive: Integer;
@@ -184,7 +115,7 @@ type
     function GetBPS: Integer; override;
     function GetCh: Integer; override;
     function GetSR: Integer; override;
-    function GetTotalTime: Real; override;
+    function GetTotalTime(): Real; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -224,7 +155,7 @@ implementation
 
 {$I ACS_CDROM.inc}
 
-function MSFToStr(const MSF: TAcsCDMSF): String;
+function MSFToStr(const MSF: TAcsCDMSF): string;
 var
   sep: String;
   sec, min: Integer;
@@ -259,39 +190,40 @@ begin
   Result:=((MSF.Minute*60)+MSF.Second)*75+MSF.Frame;
 end;
 
-function TAcsCDIn.GetBPS: Integer;
+function TAcsCDIn.GetBPS(): Integer;
 begin
   Result:=16;
 end;
 
-function TAcsCDIn.GetCh: Integer;
+function TAcsCDIn.GetCh(): Integer;
 begin
   Result:=2;
 end;
 
-function TAcsCDIn.GetSR: Integer;
+function TAcsCDIn.GetSR(): Integer;
 begin
   Result:=44100;
 end;
 
-function TAcsCDIn.GetTotalTime: real;
+function TAcsCDIn.GetTotalTime(): Real;
 begin
   if (SampleRate=0) or (Channels=0) or (BitsPerSample=0) then Exit;
-  Result:=Size/(SampleRate*Channels*(BitsPerSample shr 3));
+  Result:=Size / (SampleRate * Channels * (BitsPerSample div 8));
 end;
 
-function TAcsCDIn.GetCDDBID: LongInt;
+function TAcsCDIn.GetCDDBID(): LongInt;
 
-  function prg_sum(n: integer): integer;
-  var
-    buf: String;
-    ib: Integer;
-  begin
-    buf:=IntToStr(n);
-    Result:=0;
-    for ib:=1 to Length(buf) do
-      Result:=Result+(StrToInt(Copy(Buf, ib, 1)));
-  end;
+function prg_sum(n: integer): integer;
+var
+  buf: string;
+  ib: Integer;
+begin
+  buf:=IntToStr(n);
+  Result:=0;
+  for ib:=1 to Length(buf) do
+    Result:=Result+(StrToInt(Copy(Buf, ib, 1)));
+end;
+
 
 var
   i, N, L: Longint;
@@ -320,5 +252,13 @@ end;
 initialization
   CountDrives;
 {$ENDIF}
+
+{$ifdef WINDOWS}
+initialization
+  LoadCDRip();
+
+finalization
+  UnloadCDRip();
+{$endif}
 
 end.

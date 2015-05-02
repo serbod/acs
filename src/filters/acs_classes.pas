@@ -60,21 +60,19 @@ type
   EAcsException = class(Exception)
   end;
 
-  {Basic Thread class for ACS}
 
-  { TAcsThread }
-
-  TAcsThread = class(TThread)
+  { TAcsOutThread }
+  { Basic Thread class for ACS }
+  TAcsOutThread = class(TThread)
   private
     FHandleException: TAcsHandleThreadException;
     procedure CallOnProgress();
     procedure CallOnDone();
   public
     Parent: TComponent;
-    //Terminating: Boolean;
     Stop: Boolean;
     Delay: Integer;
-    CS: TRTLCriticalSection;
+    //CS: TRTLCriticalSection;
     constructor Create();
     destructor Destroy(); override;
     procedure DoPause();
@@ -101,10 +99,10 @@ type
     ReadCur: Integer;
     WriteCur: Integer;
     FBufferMode: TAcsBufferMode;
-//    fBreak: Boolean;
+    //FBreak: Boolean;
     FBytesInBuffer: Integer;
-    BlockEventName: String;
-//    LockEventName: String;
+    BlockEventName: string;
+    //LockEventName: string;
     FBytesRead: Integer;
     {$IFDEF MSWINDOWS}
     BlockEvent: THandle;
@@ -165,17 +163,17 @@ type
   TAcsCustomInput = class(TComponent)
   protected
     FPosition: Integer;
-    FSize: Integer;
     FBusy: Boolean;
     BufStart: Integer;
     BufEnd: Integer;
-    FBuffer: array of Byte;
     (* We don't declare the buffer size variable here
      because different descendants may need different buffer sizes *)
+    FBuffer: array of Byte;
     function GetBPS(): Integer; virtual;
     function GetCh(): Integer; virtual;
     function GetSR(): Integer; virtual;
-    function GetTotalTime(): Real; virtual;
+    function GetPosition(): Integer; virtual;
+    function GetPositionTime(): Real; virtual;
     procedure SetBufferSize(AValue: Integer); virtual;
     function GetBufferSize(): Integer;
   public
@@ -215,27 +213,19 @@ type
     }
     procedure Flush(); virtual; abstract;
     { Read this property to determine the number of bits per sample in the input audio stream.
-      Possible values are 8 and 16.
-    }
+      Possible values are 8 and 16. }
     property BitsPerSample: Integer read GetBPS;
-    property Position: Integer read FPosition;
     { Read this property to get the sample rate (sampling frequency) in Hz
-      for the input audio stream.
-    }
+      for the input audio stream. }
     property SampleRate: Integer read GetSR;
     { Read Channles to determine the number of channels in the input audio stream.
-      Possible values are 1 (mono) and 2 (stereo).
-    }
+      Possible values are 1 (mono) and 2 (stereo). }
     property Channels: Integer read GetCh;
-    { Read Size to determine the size of the input stream in bytes.
-    }
-    property Size: Integer read FSize;
-    { Read this property to get the total time of the input stream in seconds.
-      If the total time cannot be determined this property contains 0.
-    }
-    property TotalTime: Real read GetTotalTime;
-    { This property sets the buffersize of the component
-    }
+    { Current playing position in bytes }
+    property Position: Integer read FPosition;
+    { Current playing position in seconds }
+    property PositionTime: Real read GetPositionTime;
+    { This property sets the buffersize of the component }
     property BufferSize: Integer read GetBufferSize write SetBufferSize;
     property Busy: Boolean read FBusy;
   end;
@@ -247,7 +237,7 @@ type
   protected
     CanOutput: Boolean;
     CurProgr: Real;
-    Thread: TAcsThread;
+    Thread: TAcsOutThread;
     FInput: TAcsCustomInput;
     FOnDone: TAcsOutputDoneEvent;
     FOnProgress: TAcsOutputProgressEvent;
@@ -263,7 +253,6 @@ type
     function FillBufferFromInput(): Integer; virtual; overload;
     function GetPriority(): TThreadPriority; virtual;
     procedure SetPriority(Priority: TThreadPriority); virtual;
-    function GetProgress(): Real; virtual;
     procedure SetInput(AInput: TAcsCustomInput); virtual;
     { Called from Thread when thread stopped }
     procedure WhenDone(); virtual;
@@ -309,16 +298,9 @@ type
     { Output components perform output in their own threads.
       Use this property to set the priority for the thread. }
     property ThreadPriority: TThreadPriority read GetPriority write SetPriority;
-    { Read Progress to get the output progress in percents.
-      This value is meaningful only after the input component has been set
-      and only if the input component can tell the size of its stream. }
-    property Progress: Real read GetProgress;
     { This property indicates the output component's current status. Possible values are:
-
       tosPlaying: the component is working;
-      
       tosPaused: the component is paused (the Pause method was called);
-      
       tosIdle: the component is idle; }
     property Status: TAcsOutputStatus read GetStatus;
     property TimeElapsed: Integer read GetTE;
@@ -330,7 +312,7 @@ type
 
       Note: don't try to start other output job before OnDone event from the
       previous job is triggered. An attempt to do so will cause the
-      "Component is buisy" exception.
+      "Component is busy" exception.
       It is a good practice to desable output-starting controls in the
       method where the output component's Run method is called and to enable
       them in the output component's OnDone event handler. }
@@ -356,8 +338,7 @@ type
     This property allows input components that descend from TAcsStreamedInput
     to get data not only from files on disc but from any kind of stream.
     The descendats of this class are TAcsFileIn (and all its descendats except TMACIn),
-    and TStreamIn component that is designed to read raw audio data from streams.
-  }
+    and TStreamIn component that is designed to read raw audio data from streams. }
   TAcsStreamedInput = class(TAcsCustomInput)
   protected
     FStream: TStream;
@@ -377,8 +358,7 @@ type
       to use with this component is not seekable, you have to set Seekable to False.
       Note that if the stream is not seekable, such properties as Channels, SampleRate,
       BitsPerSample, and Valid will not return correct values until the input
-      component starts performing the actual playback.
-    }
+      component starts performing the actual playback.  }
     property Seekable: Boolean read FSeekable write FSeekable;
     { Use this property to set the input stream for the input component.
       Remember that you have to create, destroy and position the input stream explicitly.
@@ -386,16 +366,14 @@ type
       the FileName property, i. e. if both Stream and FileName property are assigned,
       the stream and not the file will be used for the actual input.
       To unassign this property set it to nil.
-      If the stream is seekable it will be reset to the beginning at the end of the playback.
-    }
+      If the stream is seekable it will be reset to the beginning at the end of the playback. }
     property Stream: TStream read FStream write SetStream;
     constructor Create(AOwner: TComponent); override;
   end;
 
   { TAcsStreamedOutput introduces Stream property.
     This property allows output components that descend from TAcsStreamedOutput
-    to store data not only to files on disc but to any kind of stream as well.
-  }
+    to store data not only to files on disc but to any kind of stream as well. }
   TAcsStreamedOutput = class(TAcsCustomOutput)
   protected
     { Use this property to set the output stream for the corresponding output component.
@@ -403,8 +381,7 @@ type
       In file-handling TAcsStreamedOutput descendants the stream assigned to this property
       takes over the FileName property, i. e. if both Stream and FileName property are assigned,
       the stream and not the file will be used for the actual output.
-      To unassign this property set it to nil.
-    }
+      To unassign this property set it to nil. }
     FStream: TStream;
     procedure SetStream(AStream: TStream);
   public
@@ -412,8 +389,7 @@ type
   end;
   
   { This class introduces an simple handler for an file tag it can hold any streamable
-    piece of data or an string
-  }
+    piece of data or an string }
   TAcsFileTag = class
   private
     function GetName: string; virtual;
@@ -425,18 +401,16 @@ type
     procedure LoadFromStream(Stream: TStream); virtual;
   end;
   
-  { This class introduces an base class for file tag lists
-  }
 
   { TAcsFileInfo }
-
+  { This class introduces an base class for file tag lists }
   TAcsFileInfo = class
   private
-    procedure ReadFromFile; virtual;
+    procedure ReadFromFile(); virtual;
     procedure SetStringTag(Idx: string; const AValue: TAcsFileTag);
     function GetStringTag(Idx: string): TAcsFileTag;
   public
-    procedure SaveToFile; virtual;
+    procedure SaveToFile(); virtual;
     property Tags[Idx: string]: TAcsFileTag read GetStringTag write SetStringTag;
   end;
   
@@ -445,55 +419,75 @@ type
   { TAcsFileIn is the base class for all input components that read data from files
     (or from other streams in the corresponding file format).
     It introduces such properties as FileName, StartSample, EndSample, Loop,
-    and Valid and Jump, Seek, SetStartTime, SetEndTime methods.
-  }
+    and Valid and Jump, Seek, SetStartTime, SetEndTime methods. }
   TAcsCustomFileIn = class(TAcsStreamedInput)
   protected
+    { Set to True if internal FStream not used }
+    FStreamDisabled: Boolean;
     FFileName: TFileName;
     FOffset: Real;
     FOpened: Boolean;
     FValid: Boolean;
-    FBPS, FSR, FChan: Integer;
-    FTime: Integer;
+    FBPS: Integer;
+    FSR: Integer;
+    FChan: Integer;
     FLoop: Boolean;
     FStartSample: Integer;
     FEndSample: Integer;
     FTotalSamples: Integer;
-    function GetBPS: Integer; override;
-    function GetCh: Integer; override;
-    function GetSR: Integer; override;
-    function GetTime: Integer;
-    function GetValid: Boolean;
+    FTotalTime: Real;
+    FSize: Integer;
+    function GetBPS(): Integer; override;
+    function GetCh(): Integer; override;
+    function GetSR(): Integer; override;
+    function GetValid(): Boolean; virtual;
+    procedure SetFileName(const AValue: TFileName); virtual;
     (* Note on FSize calculation:
       FSize is calculated in OpenFile method as the FULL file size.
       More precise calculations regarding StartSample/EndSample are done in Init. *)
-    procedure OpenFile; virtual;
-    procedure CloseFile; virtual;
-    function GetTotalTime: Real; override;
+    procedure OpenFile(); virtual;
+    procedure CloseFile(); virtual;
+    function GetTotalTime(): Real; virtual;
+    function GetPositionTime(): Real; override;
+    function GetSize(): Integer; virtual;
+    function GetProgress(): Real; virtual;
   public
     constructor Create(AOwner: TComponent); override;
-    procedure Reset; override;
-    procedure Flush; override;
-    procedure Init; override;
+    procedure Reset(); override;
+    procedure Flush(); override;
+    procedure Init(); override;
+    { Read Size to determine the size of the input stream in bytes. }
+    property Size: Integer read FSize;
+    { Set current playing sample index from beginning of file }
     function Seek(SampleNum: Integer): Boolean; virtual; abstract;
     function SetStartTime(Minutes, Seconds: Integer): Boolean;
     function SetEndTime(Minutes, Seconds: Integer): Boolean;
-    procedure Jump(Offs: Real);
-    { Read this property to determine the total playing time of the file in seconds.
-    }
-    property Time: Integer read GetTime;
+    { Change playing position by specified offset, in seconds }
+    procedure Jump(Offs: Real); virtual;
+    { Read this property to get the total time of the input stream in seconds.
+      If the total time cannot be determined this property contains 0. }
+    property TotalTime: Real read GetTotalTime;
     { Use this property to read the total number of samples in the file/stream assigned
       to the component. The sample in this context means the minimum playable
       portion of audio data. For mono 8-bit sound 1 sample = 1 byte,
-      while for stereo 16-bit sound 1 sample = 4 bytes.
-    }
+      while for stereo 16-bit sound 1 sample = 4 bytes. }
     property TotalSamples: Integer read FTotalSamples;
     { Read this property to determine if the file is valid.
       It is a good practice to check this property before performing other
-      operations on audio stream.
-    }
+      operations on audio stream. }
     property Valid: Boolean read GetValid;
+    { Read Progress to get the input progress in percents. }
+    property Progress: Real read GetProgress;
   published
+    { Use this property to set the number of the sample in the file that the
+      playback should start from. The value of 0 (default) tells the component
+      to play the file from the beginning.
+      The sample in this context means the minimum playable portion of audio data.
+      For mono 8-bit sound 1 sample = 1 byte, while for stereo 16-bit sound 1 sample = 4 bytes.
+      You can get the total number of samples in the file by reading TotalSamples property.
+
+      Note that in some cases (for example, with ADPCM files) sample positioning is not quite precise. }
+    property StartSample: Integer read FStartSample write FStartSample;
     { Use this property to set the number of the end sample in the file that
       the playback should stop at.
       The value of -1 (default) tells the component to play the file up to the end.
@@ -502,36 +496,25 @@ type
       while for stereo 16-bit sound 1 sample = 4 bytes.
       You can get the total number of samples in the file by reading TotalSamples property.
 
-      Note that in some cases (for example, with ADPCM files) sample positioning is not quite precise.
-    }
+      Note that in some cases (for example, with ADPCM files) sample positioning is not quite precise. }
     property EndSample: Integer read FEndSample write FEndSample;
-    { Use this property to set the name of the file to read data from.
-    }
-    property FileName: TFileName read FFileName write FFileName stored True;
+    { Use this property to set the name of the file to read data from. }
+    property FileName: TFileName read FFileName write SetFileName stored True;
     { The default value of Loop is False. If this property is set to True,
     the file playback will be looped, in other words the file will start playing
     again right after it is finished. Note, that if Loop is set to True, it will not
     present end conditions to the corresponding output component.
     You can stop the looped input component either by setting Loop to False,
-    or by calling Stop method of the corresponding output component.
-    }
+    or by calling Stop method of the corresponding output component. }
     property Loop: Boolean read FLoop write FLoop;
-    { Use this property to set the number of the sample in the file that the
-      playback should start from. The value of 0 (default) tells the component
-      to play the file from the beginning.
-      The sample in this context means the minimum playable portion of audio data.
-      For mono 8-bit sound 1 sample = 1 byte, while for stereo 16-bit sound 1 sample = 4 bytes.
-      You can get the total number of samples in the file by reading TotalSamples property.
-
-      Note that in some cases (for example, with ADPCM files) sample positioning is not quite precise.
-    }
-    property StartSample: Integer read FStartSample write FStartSample;
   end;
 
   { TAcsCustomFileOut }
 
   TAcsCustomFileOut = class(TAcsStreamedOutput)
   protected
+    { Set to True if internal FStream not used }
+    FStreamDisabled: Boolean;
     FFileName: TFileName;
     FFileMode: TAcsFileOutputMode;
     FAccessMask: Integer;
@@ -542,9 +525,9 @@ type
     which corresponds to rw-rw-rw- access mask.
     }
     property AccessMask: Integer read FAccessMask write FAccessMask;
-    { check and open file stream }
+    { Check and open file stream }
     procedure Prepare(); override;
-    { close file stream }
+    { Close file stream }
     procedure Done(); override;
   published
     { There are two possible values for this property: foRewrite and foAppend.
@@ -554,11 +537,9 @@ type
 
       In the foAppend mode the new data is appended to the end of the existing
       file (stream).
-      Currently only TWaveOut and TVorbisOut components support foAppend mode.
-    }
+      Currently only TWaveOut and TVorbisOut components support foAppend mode. }
     property FileMode: TAcsFileOutputMode read FFileMode write SetFileMode;
-    { Use this property to set the name of the file to save data to.
-    }
+    { Use this property to set the name of the file to save data to. }
     property FileName: TFileName read FFileName write FFileName;
   end;
 
@@ -673,43 +654,43 @@ begin
  Synchronize(CallOnDone);
 end;
 
-{ TAcsThread }
+{ TAcsOutThread }
 
-constructor TAcsThread.Create();
+constructor TAcsOutThread.Create();
 begin
  inherited Create(True);
- InitCriticalSection(CS);
+ //InitCriticalSection(CS);
 end;
 
-destructor TAcsThread.Destroy();
+destructor TAcsOutThread.Destroy();
 begin
-  DoneCriticalSection(CS);
+  //DoneCriticalSection(CS);
   inherited Destroy();
 end;
 
-procedure TAcsThread.CallOnProgress();
+procedure TAcsOutThread.CallOnProgress();
 begin
   if Assigned((Parent as TAcsCustomOutput).OnProgress) then
     (Parent as TAcsCustomOutput).OnProgress(Parent);
 end;
 
-procedure TAcsThread.CallOnDone();
+procedure TAcsOutThread.CallOnDone();
 begin
   if Assigned((Parent as TAcsCustomOutput).FOnDone) then
     (Parent as TAcsCustomOutput).FOnDone(Parent);
 end;
 
-procedure TAcsThread.DoPause();
+procedure TAcsOutThread.DoPause();
 begin
   Suspended:=True;
 end;
 
-procedure TAcsThread.DoResume();
+procedure TAcsOutThread.DoResume();
 begin
   Suspended:=False;
 end;
 
-procedure TAcsThread.Execute();
+procedure TAcsOutThread.Execute();
 var
   //DoneThread: TAcsVerySmallThread;
   ParentComponent: TAcsCustomOutput;
@@ -733,13 +714,10 @@ begin
   begin
     if Delay > 5 then Sleep(Delay);
     try
-      if ParentComponent.Progress <> ParentComponent.CurProgr then
-      begin
-        ParentComponent.CurProgr:=ParentComponent.Progress;
-        if Assigned(ParentComponent.FOnProgress) then Synchronize(CallOnProgress);
-      end;
       Res:=ParentComponent.DoOutput(Stop);
-      if (not Res) then Terminate();
+      if (not Res) then Terminate()
+      else
+        if Assigned(ParentComponent.OnProgress) then Synchronize(CallOnProgress);
     except
       on E: Exception do
       begin
@@ -814,9 +792,16 @@ begin
   Result:=-1;
 end;
 
-function TAcsCustomInput.GetTotalTime: Real;
+function TAcsCustomInput.GetPosition(): Integer;
 begin
-  Result:=0;  // Default result for the streams.
+  Result:=FPosition;
+end;
+
+function TAcsCustomInput.GetPositionTime(): Real;
+begin
+  Result:=0;
+  if (SampleRate > 0) and (BitsPerSample > 0) and (Channels > 0) then
+    Result:=Position / SampleRate / (BitsPerSample div 8) / Channels;
 end;
 
 procedure TAcsCustomInput.SetBufferSize(AValue: Integer);
@@ -853,8 +838,6 @@ end;
 
 destructor TAcsCustomOutput.Destroy();
 begin
-  //if not Thread.Suspended then Thread.Terminating:=True;
-  //while Thread.Terminating do Sleep(1);
   if Assigned(Thread) then FreeAndNil(Thread);
   FreeAndNil(FBuffer);
   inherited Destroy;
@@ -882,10 +865,10 @@ begin
   InputLock:=False;
   FActive:=True;
 
-  Thread:=TAcsThread.Create();
+  Thread:=TAcsOutThread.Create();
   Thread.Parent:=Self;
-//  Thread.DoOutput:=Self.DoOutput;
-//  Thread.FOnDone:=Self.WhenDone;
+  //Thread.DoOutput:=Self.DoOutput;
+  //Thread.FOnDone:=Self.WhenDone;
   Thread.HandleException:=HandleThreadException;
   try
     Thread.Stop:=False;
@@ -898,7 +881,6 @@ end;
 
 procedure TAcsCustomOutput.Stop();
 begin
-  //Thread.Stop:=True;
   FreeAndNil(Thread);
 end;
 
@@ -995,20 +977,6 @@ begin
     FInput:=AInput;
 end;
 
-function TAcsCustomOutput.GetProgress(): Real;
-begin
-  if not Assigned(FInput) then
-  begin
-    Result:=0;
-    Exit;
-  end;
-  case Finput.Size of
-    0: Result:=0;
-    -1: Result:=-1;
-    else Result:=(FInput.Position/FInput.Size)*100;
-  end;
-end;
-
 function TAcsCustomOutput.GetTE(): Integer;
 begin
    if not Assigned(FInput) then
@@ -1089,12 +1057,13 @@ begin
   inherited Create(AOwner);
   FStartSample:=0;
   FEndSample:=-1;
+  FValid:=False;
 end;
 
 procedure TAcsCustomFileIn.Reset();
 begin
   inherited Reset();
-  FOpened:=False;
+  CloseFile();
 end;
 
 procedure TAcsCustomFileIn.Flush();
@@ -1125,26 +1094,28 @@ end;
 function TAcsCustomFileIn.GetBPS(): Integer;
 begin
   Result:=0;
-  if Valid then Result:=FBPS;
+  if FValid then Result:=FBPS;
 end;
 
 function TAcsCustomFileIn.GetCh(): Integer;
 begin
   Result:=0;
-  if Valid then Result:=FChan;
+  if FValid then Result:=FChan;
 end;
 
 function TAcsCustomFileIn.GetSR(): Integer;
 begin
   Result:=0;
-  if Valid then Result:=FSR;
+  if FValid then Result:=FSR;
 end;
 
+{
 function TAcsCustomFileIn.GetTime(): Integer;
 begin
   Result:=0;
-  if Valid then Result:=FTime;
+  if FValid then Result:=FTime;
 end;
+}
 
 function TAcsCustomFileIn.GetValid(): Boolean;
 var
@@ -1152,7 +1123,8 @@ var
 begin
   Result:=False;
   WasOpened:=FOpened;
-  if (not Assigned(FStream)) or (FileName = '') then
+  //if (not Assigned(FStream)) or (FileName = '') then
+  if (FileName = '') then // some drivers don't use FStream
   begin
     FValid:=False;
     Exit;
@@ -1166,6 +1138,11 @@ begin
   else Result:=FValid;
 end;
 
+procedure TAcsCustomFileIn.SetFileName(const AValue: TFileName);
+begin
+  FFileName:=AValue;
+end;
+
 procedure TAcsCustomFileIn.OpenFile();
 begin
   FSize:=0;
@@ -1176,19 +1153,32 @@ begin
 
 end;
 
+function TAcsCustomFileIn.GetTotalTime(): Real;
+begin
+  Result:=FTotalTime;
+end;
+
 procedure TAcsCustomFileIn.Jump(Offs: Real);
 begin
   FOffset:=Offs;
 end;
 
-function TAcsCustomFileIn.GetTotalTime(): Real;
+function TAcsCustomFileIn.GetPositionTime(): Real;
+begin
+  Result:=inherited GetPositionTime();
+  //if (Size = 0) or (TotalTime = 0) then Exit;
+  //Result:=Position / (Size / TotalTime);
+end;
+
+function TAcsCustomFileIn.GetSize(): Integer;
+begin
+  Result:=FSize;
+end;
+
+function TAcsCustomFileIn.GetProgress(): Real;
 begin
   Result:=0;
-  if (not FSeekable) or (not Valid) then Exit;
-
-  if (SampleRate = 0) or (Channels = 0) or (BitsPerSample = 0) then
-  else
-    Result:=Size / (SampleRate * Channels * (BitsPerSample div 8));
+  if TotalTime <> 0 then Result:=PositionTime/(TotalTime/100);
 end;
 
 function TAcsCustomFileIn.SetStartTime(Minutes, Seconds: Integer): Boolean;
@@ -1196,9 +1186,9 @@ var
   Sample: Integer;
 begin
   Result:=False;
-  if (not FSeekable) or Valid then Exit;
+  if (not FSeekable) or (not FValid) then Exit;
 
-  Sample:=(Minutes*60+Seconds)*FSR;
+  Sample:=(Minutes * 60 + Seconds) * FSR;
   if Sample > FTotalSamples then Exit;
   FStartSample:=Sample;
   Result:=True;
@@ -1209,13 +1199,15 @@ var
   Sample: Integer;
 begin
   Result:=False;
-  if (not FSeekable) or Valid then Exit;
+  if (not FSeekable) or (not FValid) then Exit;
 
-  Sample:=(Minutes*60+Seconds)*FSR;
+  Sample:=(Minutes * 60 + Seconds) * FSR;
   if Sample > FTotalSamples then Exit;
   FEndSample:=Sample;
   Result:=True;
 end;
+
+{ TAcsStreamedInput }
 
 procedure TAcsStreamedInput.SetStream(AStream: TStream);
 begin
@@ -1244,10 +1236,13 @@ begin
   if Assigned(FStream) then FreeAndNil(FStream);
   if FFileName = '' then
     raise EAcsException.Create(strFilenamenotassigned);
-  if (not FileExists(FFileName)) or (FFileMode = foRewrite) then
-    FStream := TFileStream.Create(FFileName, fmCreate or fmShareExclusive, FAccessMask)
-  else
-    FStream := TFileStream.Create(FFileName, fmOpenReadWrite or fmShareExclusive, FAccessMask);
+  if not FStreamDisabled then
+  begin
+    if (not FileExists(FFileName)) or (FFileMode = foRewrite) then
+      FStream := TFileStream.Create(FFileName, fmCreate or fmShareExclusive, FAccessMask)
+    else
+      FStream := TFileStream.Create(FFileName, fmOpenReadWrite or fmShareExclusive, FAccessMask);
+  end;
 end;
 
 procedure TAcsCustomFileOut.Done();

@@ -75,7 +75,6 @@ type
 {$ENDIF}
     function GetDelay(): Integer;
     function GetPriority(): TThreadPriority;
-    function GetProgress(): Real;
     function GetStatus(): TAcsOutputStatus;
     function GetTE(): Integer;
     procedure SetDelay(const AValue: Integer);
@@ -103,7 +102,6 @@ type
     procedure Stop;
     property Delay: Integer read GetDelay write SetDelay;
     property ThreadPriority: TThreadPriority read GetPriority write SetPriority;
-    property Progress: Real read GetProgress;
     property Status: TAcsOutputStatus read GetStatus;
     property TimeElapsed: Integer read GetTE;
 {$IFDEF LINUX}
@@ -122,45 +120,37 @@ type
   { Wrapper for all fileformats }
   TAcsFileIn = CLASS(TAcsCustomFileIn)
   private
-    FEndSample: Integer;
-    FFileName: string;
     FInput: TAcsCustomFileIn;
     FDialog: TOpenDialog;
-    FLoop: Boolean;
-    FStartSample: Integer;
     FTotalSamples: Integer;
-    function GetTime: Integer;
-    function GetValid: Boolean;
-    procedure SetFileName(const AValue: String);
-    function GetSize: Integer;
-    function GetPosition: Integer;
   protected
-    function GetBPS: Integer; override;
-    function GetCh: Integer; override;
-    function GetSR: Integer; override;
-    function GetTotalTime: Real; override;
+    function GetBPS(): Integer; override;
+    function GetCh(): Integer; override;
+    function GetSR(): Integer; override;
+    function GetTotalTime(): Real; override;
+    function GetValid(): Boolean; override;
+    procedure SetFileName(const AValue: TFileName); override;
+    function GetSize(): Integer; override;
+    function GetPosition(): Integer; override;
+    function GetPositionTime(): Real; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    procedure Open;
-    procedure Flush; override;
-    procedure Init; override;
-    procedure Reset; override;
+    procedure Open();
+    procedure Flush(); override;
+    procedure Init(); override;
+    procedure Reset(); override;
     function Seek(SampleNum: Integer): Boolean; override;
     function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
     function SetStartTime(Minutes, Seconds: Integer): Boolean;
     function SetEndTime(Minutes, Seconds: Integer): Boolean;
-    procedure Jump(Offs: Real);
-    property Time: Integer read GetTime;
+    procedure Jump(Offs: Real); override;
     property TotalSamples: Integer read FTotalSamples;
     property Valid: Boolean read GetValid;
     property Size: Integer read GetSize;
     property Position: Integer read GetPosition;
   published
-    property EndSample: Integer read FEndSample write FEndSample;
-    property FileName: string read FFileName write SetFileName;
-    property Loop: Boolean read FLoop write FLoop;
-    property StartSample: Integer read FStartSample write FStartSample;
+    property FileName;
   end;
 
 
@@ -189,17 +179,10 @@ begin
   if Assigned(FInput) then Result:=FInput.SampleRate;
 end;
 
-function TAcsFileIn.GetTime(): Integer;
-begin
-  Result:=0;
-  if Assigned(FInput) then Result:=FInput.Time;
-end;
-
 function TAcsFileIn.GetValid(): Boolean;
 begin
   Result:=False;
   if Assigned(FInput) then Result:=FInput.Valid;
-    //raise EAcsException.Create(strNoFileOpened);
 end;
 
 function TAcsFileIn.GetTotalTime(): Real;
@@ -213,7 +196,7 @@ begin
   if Assigned(FInput) then FInput.Reset;
 end;
 
-procedure TAcsFileIn.SetFileName(const AValue: string);
+procedure TAcsFileIn.SetFileName(const AValue: TFileName);
 begin
   FFileName:=AValue;
   if Assigned(FInput) then FreeAndNil(FInput);
@@ -232,6 +215,12 @@ function TAcsFileIn.GetPosition(): Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.Position;
+end;
+
+function TAcsFileIn.GetPositionTime(): Real;
+begin
+  Result:=inherited GetPositionTime();
+  if Assigned(FInput) then Result:=FInput.PositionTime;
 end;
 
 constructor TAcsFileIn.Create(AOwner: TComponent);
@@ -364,12 +353,6 @@ function TAcsFileOut.GetPriority: TThreadPriority;
 begin
   Result:=TThreadPriority.tpNormal;
   if not Assigned(FOutput) then Result:=FOutput.ThreadPriority;
-end;
-
-function TAcsFileOut.GetProgress: Real;
-begin
-  Result:=0;
-  if Assigned(FOutput) then Result:=FOutput.Progress;
 end;
 
 function TAcsFileOut.GetStatus: TAcsOutputStatus;

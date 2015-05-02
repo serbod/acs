@@ -70,6 +70,7 @@ implementation
 constructor TDSIn.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FStreamDisabled:=True;
   BufferSize:=$8000;
 end;
 
@@ -114,14 +115,18 @@ begin
     FSR   := FxFormat.nSamplesPerSec;
     FBPS  := FxFormat.wBitsPerSample;
     FChan := FxFormat.nChannels;
-    FTotalSamples := FSize;
+    // FDuration in 100-nanosecond units
+    FTotalTime    := FDuration / 10000000;
+    FSize         := (FDuration div 10000000) * FSR * FChan * (FBPS div 8);
+    FTotalSamples := Trunc(FTotalTime * FSR);
     FSeekable     := True;
-    if fDuration = 0 then Exit;
-    FSize := (FDuration div 10000000) * FSR * FChan * (FBPS div 8);
-    FSeekScale := FDuration div FSize;
+    FSeekScale    := 0;
+    if FDuration <> 0 then
+      FSeekScale := FDuration div FSize;
     FOpened:=True;
     FValid:=True;
   end;
+  if not FOpened then CloseFile();
 end;
 
 procedure TDSIn.CloseFile();
@@ -150,7 +155,8 @@ var
   nOffs: Integer;
 begin
   Result:=0;
-  if not Busy then raise EAcsException.Create('The Stream is not opened');
+  if not Busy then
+    raise EAcsException.Create('The Stream is not opened');
   if BufStart > BufEnd then
   begin
     if FOffset <> 0 then
@@ -164,6 +170,7 @@ begin
       SetPosition(Int64(FPosition)*FSeekScale);
       FOffset:=0;
     end;
+
     BufStart:=1;
     nDone:=Read(FBuffer, BufferSize);
     if nDone = 0 then
@@ -280,8 +287,6 @@ begin
       MS_E_SOURCEALREADYDEFINED: s:='Source already defined.';
       MS_E_INVALIDSTREAMTYPE: s:='The stream type is not valid for this operation.';
       MS_E_NOTRUNNING: s:='The IMultiMediaStream object is not in running state.';
-      // standard results
-      S_FALSE: s:='The COM library is already initialized on this thread.';
       DWord(RPC_E_CHANGED_MODE): s:='A previous call to CoInitializeEx specified the concurrency model for this thread as multithread apartment (MTA).';
       else
       begin
@@ -300,10 +305,10 @@ end ;
 
 initialization
   { TODO : Enumerate available file formats }
-  FileFormats.Add('mp3',  'Mpeg Audio Layer III', TDSIn);
-  FileFormats.Add('mp2',  'Mpeg Audio Layer II', TDSIn);
-  FileFormats.Add('mpeg', 'Mpeg Audio', TDSIn);
-  FileFormats.Add('wma',  'Windows Media Audio', TDSIn);
+  FileFormats.Add('mp3',  'DirectShow Mpeg Audio Layer III', TDSIn);
+  FileFormats.Add('mp2',  'DirectShow Mpeg Audio Layer II', TDSIn);
+  FileFormats.Add('mpeg', 'DirectShow Mpeg Audio', TDSIn);
+  FileFormats.Add('wma',  'DirectShow Windows Media Audio', TDSIn);
 
 end.
 

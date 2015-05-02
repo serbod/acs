@@ -43,13 +43,12 @@ type
     FMinResidualPartitionOrder: Word;
     procedure SetEnableLooseMidSideStereo(val: Boolean);
     procedure SetBestModelSearch(val: Boolean);
-  protected
-    procedure Prepare(); override;
-    procedure Done(); override;
-    function DoOutput(Abort: Boolean):Boolean; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
+    procedure Prepare(); override;
+    procedure Done(); override;
+    function DoOutput(Abort: Boolean):Boolean; override;
   published
     property BestModelSearch: Boolean read FBestModelSearch write SetBestModelSearch;
     property BlockSize: Word read FBlockSize write FBlockSize;
@@ -346,8 +345,8 @@ begin
   FLAC__seekable_stream_encoder_set_min_residual_partition_order(_encoder, FMinResidualPartitionOrder);
   FLAC__seekable_stream_encoder_set_max_residual_partition_order(_encoder, FMaxResidualPartitionOrder);
   FLAC__seekable_stream_encoder_set_do_exhaustive_model_search(_encoder, FBestModelSearch);
-  if FInput.Size > 0 then
-    FLAC__seekable_stream_encoder_set_total_samples_estimate(_encoder, Round(FInput.Size / (FInput.BitsPerSample shr 3) / FInput.Channels));
+  {if FInput.Size > 0 then
+    FLAC__seekable_stream_encoder_set_total_samples_estimate(_encoder, Round(FInput.Size / (FInput.BitsPerSample div 8) / FInput.Channels)); }
   FLAC__seekable_stream_encoder_set_seek_callback(_encoder, EncSeekCBFunc);
   FLAC__seekable_stream_encoder_set_write_callback(_encoder, EncWriteCBFunc);
   FLAC__seekable_stream_encoder_set_client_data(_encoder, Self);

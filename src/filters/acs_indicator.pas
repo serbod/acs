@@ -143,7 +143,7 @@ begin
     raise EAcsException.Create(strInputnotassigned);
   FBusy:=True;
   FInput.Init;
-  FSize:=FInput.Size;
+  //FSize:=FInput.Size;
   //FillChar(FValues[0], SizeOf(Double)*32, 0);
   FLocked:=False;
   FPosition:=0;

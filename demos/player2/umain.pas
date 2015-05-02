@@ -188,9 +188,11 @@ begin
   case TimeFormat of
   tfElapsed:
     begin
-      tmp := ((FileIn1.Position * FileIn1.TotalTime) / FileIn1.Size);
+      // Current position
+      tmp := FileIn1.PositionTime;
       lTime.Caption := Format('%.2d:%.2d:%.2d', [round((tmp-30) / 60) mod 120, round(tmp) mod 60, round(tmp*100) mod 100]);
-      tmp := FileIn1.TotalTime-((FileIn1.Position * FileIn1.TotalTime) / FileIn1.Size);
+      // Time left
+      tmp := FileIn1.TotalTime - FileIn1.PositionTime;
       lLeft.Caption := Format('%.2d:%.2d:%.2d', [round((tmp-30) / 60) mod 120, round(tmp) mod 60, round(tmp*100) mod 100]);
       lTime1.Caption := 'Time elapsed';
       lTime2.Caption := 'left';
@@ -205,7 +207,8 @@ begin
       lTime2.Caption := 'elapsed';
     end;
   end;
-  Progress.Position := round((FileIn1.Position * 100) / FileIn1.Size);
+  //Progress.Position := Round((FileIn1.Position * 100) / FileIn1.Size);
+  Progress.Position := Round(FileIn1.Progress);
 end;
 
 procedure TfMain.btFfwClick(Sender: TObject);

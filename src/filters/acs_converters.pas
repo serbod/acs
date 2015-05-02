@@ -482,7 +482,7 @@ implementation
     end;
     GetMem(Tail, TailSize);
     FillChar(Tail^, TailSize, 0);
-    FSize := Round(FInput.Size*Ratio);
+    {FSize := Round(FInput.Size*Ratio);  }
     remainder := -1;
     if Ratio > 1. then Ratio := 1/Ratio;
     Ratio := Ratio*0.4;
@@ -613,8 +613,8 @@ implementation
     if FInput.Channels = 2 then WantedSize := BUF_SIZE else
     WantedSize := BUF_SIZE shr 1;
     if FInput.Channels = 2 then
-    FSize := FInput.Size shr 1
-    else FSize := FInput.Size shl 1;
+    {FSize := FInput.Size shr 1
+    else FSize := FInput.Size shl 1;  }
   end;
 
   procedure TAcsMSConverter.Flush;
@@ -721,8 +721,8 @@ implementation
     if FInput.BitsPerSample = 16 then WantedSize := BUF_SIZE else
     WantedSize := BUF_SIZE shr 1;
     if FInput.BitsPerSample = 16 then
-    FSize := FInput.Size shr 1
-    else FSize := FInput.Size shl 1;
+    {FSize := FInput.Size shr 1
+    else FSize := FInput.Size shl 1;  }
   end;
 
   procedure TAcsSampleConverter.Flush;
@@ -747,7 +747,7 @@ implementation
       BufStart := 1;
       while InputLock do;
       InputLock := True;
-      l := Finput.GetData(@InOutBuf[1], WantedSize);
+      l := FInput.GetData(@InOutBuf[1], WantedSize);
       InputLock := False;
       if l = 0 then
       begin
@@ -767,20 +767,21 @@ implementation
       if FInput.BitsPerSample = 16 then
       begin
         Convert16To8(@InOutBuf[1], InSize);
-        BufEnd := InSize shr 1;
+        BufEnd := InSize div 2;
       end else
       begin
         Convert8To16(@InOutBuf[1], InSize);
-        BufEnd := InSize shl 1;
+        BufEnd := InSize div 2;
       end;
     end;
-    if BufferSize < (BufEnd - BufStart + 1)
-    then Result := BufferSize
-    else Result := BufEnd - BufStart + 1;
+    if BufferSize < (BufEnd - BufStart + 1) then
+      Result := BufferSize
+    else
+      Result := BufEnd - BufStart + 1;
     Move(InOutBuf[BufStart], Buffer^, Result);
     Inc(BufStart, Result);
-    FPosition := Round(FInput.Position*(FSize/FInput.Size));
- //   Inc(FPosition, Result);
+    //FPosition := Round(FInput.Position*(FSize/FInput.Size));
+    Inc(FPosition, Result);
   end;
 
   procedure TAcsRateConverter.SetOutSampleRate(aSR : Integer);
@@ -836,8 +837,10 @@ implementation
     raise EAcsException.Create(strInputnotAssigned);
     FInput.Init;
     FBusy := True;
-    if FInput.Channels = 2 then FSize := FInput.Size
-    else FSize := FInput.Size*2;
+    {if FInput.Channels = 2 then
+      FSize := FInput.Size
+    else
+      FSize := FInput.Size*2;  }
     FPosition := 0;
     InputLock := False;
   end;
@@ -904,7 +907,7 @@ implementation
         P16[i*2+1] := Round(P16[i*2+1]*FBalance);
       end;
     end;
-    FPosition := Round(FSize/FInput.Size)*FInput.Position;
+    FPosition := FInput.Position;
   end;
 
 end.

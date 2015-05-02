@@ -259,8 +259,8 @@ const
   akriplib = 'akrip32.dll';
   
 var
-  LibHandle : Integer;
-  CDRipLoaded : Boolean;
+  LibHandle: Integer;
+  CDRipLoaded: Boolean;
 
 type
   GetNumAdapters_t = function : Integer; cdecl;
@@ -279,54 +279,57 @@ type
   ReadCDAudioLBAEx_t = function (hCD: HCDROM; TrackBuf, Overlap: PTRACKBUF): DWord; cdecl;
 
 var
-  GetNumAdapters : GetNumAdapters_t;
-  GetCDList : GetCDList_t;
-  GetAspiLibError : GetAspiLibError_t;
-  GetAspiLibAspiError : GetAspiLibAspiError_t;
+  GetNumAdapters: GetNumAdapters_t;
+  GetCDList: GetCDList_t;
+  GetAspiLibError: GetAspiLibError_t;
+  GetAspiLibAspiError: GetAspiLibAspiError_t;
 
-  GetCDId : GetCDId_t;
-  GetDriveInfo : GetDriveInfo_t;
-  ReadTOC : ReadTOC_t;
-  ReadCDAudioLBA : ReadCDAudioLBA_t;
-  QueryCDParms : QueryCDParms_t;
-  ModifyCDParms : ModifyCDParms_t;
-  GetCDHandle : GetCDHandle_t;
-  CloseCDHandle : CloseCDHandle_t;
-  ReadCDAudioLBAEx : ReadCDAudioLBAEx_t;
+  GetCDId: GetCDId_t;
+  GetDriveInfo: GetDriveInfo_t;
+  ReadTOC: ReadTOC_t;
+  ReadCDAudioLBA: ReadCDAudioLBA_t;
+  QueryCDParms: QueryCDParms_t;
+  ModifyCDParms: ModifyCDParms_t;
+  GetCDHandle: GetCDHandle_t;
+  CloseCDHandle: CloseCDHandle_t;
+  ReadCDAudioLBAEx: ReadCDAudioLBAEx_t;
 
-  procedure CDRIPInit(FilePath:String);
+function LoadCDRip(): Boolean;
+procedure UnloadCDRip();
 
 implementation
 
-  procedure CDRIPInit(FilePath:String);
+function LoadCDRip(): Boolean;
+begin
+  Libhandle:=LoadLibraryEx(akriplib, 0, 0);
+  if Libhandle <> 0 then
   begin
-    Libhandle := LoadLibraryEx(akriplib, 0, 0);
-    if Libhandle <> 0 then
-    begin
-      CDRipLoaded := True;
-      GetNumAdapters := GetProcAddress(Libhandle, 'GetNumAdapters');
-      GetCDList := GetProcAddress(Libhandle, 'GetCDList');
-      GetAspiLibError := GetProcAddress(Libhandle, 'GetAspiLibError');
-      GetAspiLibAspiError := GetProcAddress(Libhandle, 'GetAspiLibAspiError');
-      GetCDId := GetProcAddress(Libhandle, 'GetCDId');
-      GetDriveInfo := GetProcAddress(Libhandle, 'GetCDDriveInfo');
-      ReadTOC := GetProcAddress(Libhandle, 'ReadTOC');
-      ReadCDAudioLBA := GetProcAddress(Libhandle, 'ReadCDAudioLBA');
-      QueryCDParms := GetProcAddress(Libhandle, 'QueryCDParams');
-      ModifyCDParms := GetProcAddress(Libhandle, 'ModifyCDParms');
-      GetCDHandle := GetProcAddress(Libhandle, 'GetCDHandle');
-      CloseCDHandle := GetProcAddress(Libhandle, 'CloseCDHandle');
-      ReadCDAudioLBAEx := GetProcAddress(Libhandle, 'ReadCDAudioLBAEx');
-    end;
+    CDRipLoaded:=True;
+    GetNumAdapters:=GetProcAddress(Libhandle, 'GetNumAdapters');
+    GetCDList:=GetProcAddress(Libhandle, 'GetCDList');
+    GetAspiLibError:=GetProcAddress(Libhandle, 'GetAspiLibError');
+    GetAspiLibAspiError:=GetProcAddress(Libhandle, 'GetAspiLibAspiError');
+    GetCDId:=GetProcAddress(Libhandle, 'GetCDId');
+    GetDriveInfo:=GetProcAddress(Libhandle, 'GetCDDriveInfo');
+    ReadTOC:=GetProcAddress(Libhandle, 'ReadTOC');
+    ReadCDAudioLBA:=GetProcAddress(Libhandle, 'ReadCDAudioLBA');
+    QueryCDParms:=GetProcAddress(Libhandle, 'QueryCDParams');
+    ModifyCDParms:=GetProcAddress(Libhandle, 'ModifyCDParms');
+    GetCDHandle:=GetProcAddress(Libhandle, 'GetCDHandle');
+    CloseCDHandle:=GetProcAddress(Libhandle, 'CloseCDHandle');
+    ReadCDAudioLBAEx:=GetProcAddress(Libhandle, 'ReadCDAudioLBAEx');
   end;
+  Result:=(Libhandle <> 0);
+end;
 
-initialization
-
-finalization
+procedure UnloadCDRip();
+begin
   if Libhandle <> 0 then
   begin
     FreeLibrary(Libhandle);
+    CDRipLoaded:=False;
   end;
+end;
 
 end.
 

@@ -467,7 +467,7 @@ end;
       FTotalSamples := ov_pcm_total(VFile, -1);
       FSize := (FTotalSamples shl 1) * PVInfo.channels;
       cursec := -1;
-      FTime := Round(ov_time_total(VFile, -1));
+      FTotalTime := ov_time_total(VFile, -1);
   //    ov_pcm_seek(VFile, FOffset);
       FValid := True;
       FOpened := True;

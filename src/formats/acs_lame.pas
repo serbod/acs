@@ -136,8 +136,8 @@ var
 begin
   inherited Prepare();
   _plgf:=lame_init;
-  if FInput.Size > 0 then
-    samples:=FInput.Size div ((FInput.BitsPerSample shr 3) * FInput.Channels);
+  {if FInput.Size > 0 then
+    samples:=FInput.Size div ((FInput.BitsPerSample shr 3) * FInput.Channels); }
   lame_set_num_samples(_plgf, samples);
   lame_set_in_samplerate(_plgf, FInput.SampleRate);
   lame_set_num_channels(_plgf, 2); // not Finput.Channels see the note below

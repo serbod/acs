@@ -515,7 +515,8 @@ var
   Size: Integer;
   Hdr: TDVIADPCMHeader;
 begin
-  if ((FInput.Size < 0) or (FFileMode = foAppend)) and (FStream <> nil) then
+  //if ((FInput.Size < 0) or (FFileMode = foAppend)) and (FStream <> nil) then
+  if ((FFileMode = foAppend)) and (FStream <> nil) then
   begin
     case FWavType of
       wtPCM:
@@ -654,7 +655,8 @@ var
 begin
   text := 'RIFF';
   Move(text[0], Header.RIFF[0], 4);
-  Header.FileSize := FInput.Size + WaveHeaderOffs;
+  //Header.FileSize := FInput.Size + WaveHeaderOffs;
+  Header.FileSize := WaveHeaderOffs;
   text := 'WAVE';
   Move(text[0], Header.RIFFType[0], 4);
   text := 'fmt ';
@@ -668,7 +670,8 @@ begin
   Header.BytesPerSecond := Header.SampleRate * Header.BlockAlign;
   text := 'data';
   Move(text[0], Header.DataChunkId[0], 4);
-  Header.DataSize := FInput.Size;
+  //Header.DataSize := FInput.Size;
+  Header.DataSize := 0;
 end;
 
 procedure TWaveOut.FillHeaderDVIADPCM(var Header : TDVIADPCMHeader);
@@ -691,8 +694,9 @@ begin
   Header.SamplesPerBlock := (Header.BlockAlign- 4*FInput.Channels) * (2 div FInput.Channels) + 1;
   Header.cbSize := 2;
   Header.BytesPerSecond := (FInput.SampleRate div Header.SamplesPerBlock)*Header.BlockAlign;
-  samples := (FInput.Size div (FInput.BitsPerSample shr 3)) div FInput.Channels;
-  Header.DataSize := Round(samples/Header.SamplesPerBlock)*Header.BlockAlign;
+  //samples := (FInput.Size div (FInput.BitsPerSample shr 3)) div FInput.Channels;
+  samples := 0;
+  Header.DataSize := Round(samples/Header.SamplesPerBlock) * Header.BlockAlign;
   Header.FileSize := Header.DataSize + SizeOf(TDVIADPCMHeader);
   text := 'data';
   Move(text[0], Header.DataChunkId[0], 4);

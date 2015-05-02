@@ -160,7 +160,6 @@ type
     procedure SetFramesInBuffer(Value: LongWord);
   protected
     procedure SetDevice(i: Integer); override;
-    function GetTotalTime(): Real; override;
     function GetDeviceName(ADeviceNumber: Integer): string; override;
 
     //function GetTotalTime : LongWord; override;
@@ -555,7 +554,7 @@ begin
   FBPS:=8;
   FChan:=1;
   FSampleRate:=8000;
-  FSize:=-1;
+  //FSize:=-1;
   FRecTime:=-1;
   FSamplesToRead:=-1;
   FFramesInBuffer:=$6000;
@@ -650,7 +649,7 @@ begin
   FPosition:=0;
   FBusy:=True;
   FSampleSize:=FChan*(FBPS div 8);
-  FSize:=FSamplesToRead*FSampleSize;
+  //FSize:=FSamplesToRead*FSampleSize;
 
   OpenAudio;
   DSW_StartInput(DSW);
@@ -771,14 +770,6 @@ function TDXAudioIn.GetDeviceName(ADeviceNumber: Integer): string;
 begin
   Result:='';
   if (ADeviceNumber < DeviceCount) then Result:=PChar(@(Devices.dinfo[ADeviceNumber].Name[0]));
-end;
-
-function TDXAudioIn.GetTotalTime: Real;
-var
-  BytesPerSec: Integer;
-begin
-  BytesPerSec:=FSampleRate*FChan*(FBPS div 8);
-  Result:=FBytesToRead/BytesPerSec;
 end;
 
 initialization
