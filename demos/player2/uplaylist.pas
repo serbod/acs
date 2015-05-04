@@ -40,14 +40,15 @@ uses ACS_File;
 
 procedure TfPlaylist.btAddClick(Sender: TObject);
 var
-  desc : string;
+  desc: string;
 begin
+  desc:='';
   FileFormats.BuildFilterStrings(desc,[fcLoad]);
   OpenDialog.Filter := desc;
   if OpenDialog.Execute then
-    begin
-      lbPlayList.Items.AddStrings(OpenDialog.Files);
-    end;
+  begin
+    lbPlayList.Items.AddStrings(OpenDialog.Files);
+  end;
 end;
 
 procedure TfPlaylist.Button1Click(Sender: TObject);

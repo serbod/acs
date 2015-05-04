@@ -96,7 +96,7 @@ type
     destructor Destroy(); override;
     function GetData(Buffer: Pointer; oBufferSize: Integer): Integer; override;
     procedure Init(); override;
-    procedure Flush(); override;
+    procedure Done(); override;
   end;
 
 var

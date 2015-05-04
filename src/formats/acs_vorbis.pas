@@ -99,13 +99,13 @@ type
     procedure SetDesiredMaximumBitrate(Value : TVorbisBitRate);
     procedure SetMinimumBitrate(Value : TVorbisBitRate);
   protected
-    procedure Done; override;
-    function DoOutput(Abort : Boolean):Boolean; override;
-    procedure Prepare; override;
     procedure SetFileMode(aMode : TAcsFileOutputMode); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure Prepare(); override;
+    procedure Done(); override;
+    function DoOutput(Abort : Boolean):Boolean; override;
   published
     property Compression : Single read FCompression write FCompression stored True;
     property Comments : TStringList read FComments write SetComments stored True;
@@ -265,7 +265,6 @@ procedure TVorbisOut.Prepare();
 var
   i, maxbr, minbr, nombr: Integer;
   Name, Value: String;
-  rm: ovectl_ratemanage2_arg;
 begin
   inherited Prepare();
 
@@ -529,8 +528,8 @@ end;
       end;
       if EndOfStream and FLoop then
       begin
-        Flush;
-        Init;
+        Done();
+        Init();
         EndOfStream := False;
         while BufEnd < BufferSize do
         begin

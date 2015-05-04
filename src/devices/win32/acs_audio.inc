@@ -279,13 +279,8 @@ end;
 
 procedure TStdAudioIn.Init();
 begin
-  if Busy then
-    raise EAcsException.Create(strBusy);
-  BufEnd:=0;
-  BufStart:=1;
-  FPosition:=0;
+  inherited Init();
   FRecBytes:=Trunc(FRecTime * (GetBPS div 8) * GetCh * GetSR);
-  FBusy:=True;
   OpenAudio;
   waveInStart(_audio_fd);
   BlockChain:=nil;
@@ -294,7 +289,7 @@ begin
   EOC:=@BlockChain;
 end;
 
-procedure TStdAudioIn.Flush();
+procedure TStdAudioIn.Done();
 var
   Tmp: PWaveHdr;
 begin
@@ -311,7 +306,7 @@ begin
     Tmp:=BlockChain;
   end;
   CloseAudio;
-  FBusy:=False;
+  inherited Done();
 end;
 
 procedure TStdAudioIn.SetDevice(Ch: Integer);

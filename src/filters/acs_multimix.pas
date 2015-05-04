@@ -28,35 +28,9 @@ eg.
 
 *)
 
-{
-$Log: acs_multimix.pas,v $
-Revision 1.3  2006/07/04 17:12:45  z0m3ie
-ACS 2.4 alt wiederhergestellt (unterschiedliche Sampleformate ...)
-
-Revision 1.1  2005/12/19 18:34:35  z0m3ie
-*** empty log message ***
-
-Revision 1.3  2005/12/04 16:54:34  z0m3ie
-All classes are renamed, Style TAcs... than T... to avoid conflicts with other components (eg TMixer is TAcsMixer now)
-
-Revision 1.2  2005/09/13 21:54:11  z0m3ie
-acs is localizeable now (ACS_Strings)
-
-Revision 1.1  2005/09/12 22:04:52  z0m3ie
-modified structure again, fileformats are now in an sperat folder.
-all File In/Out classes are capsulated from TFileIn and TFileOut
-
-Revision 1.1  2005/08/25 21:02:31  z0m3ie
-TMultiMixer by Ross Levis added
-
-}
 
 {$hints off}
 unit acs_multimix;
-
-{$ifdef fpc}
-{$mode delphi}
-{$endif}
 
 interface
 
@@ -80,9 +54,9 @@ type
   public
     constructor Create(AOwner: TAcsMultiMixer); virtual;
     destructor Destroy; override;
-    procedure Preload;
-    procedure Start;
-    procedure Stop;
+    procedure Preload();
+    procedure Start();
+    procedure Stop();
     property Input: TAcsCustomInput read FInput write FInput;
     property Volume: Word read FVolume write FVolume;
   end;
@@ -92,208 +66,220 @@ type
     FChannel: array of TAcsChannel;
     FTotalChannels: Integer;
     OutBuf: array[1..BUF_SIZE] of Byte;
-    Buisy : Boolean;
+    Buisy: Boolean;
     FLock: Boolean;
     function GetChannel(Index: Integer): TAcsChannel;
     procedure SetTotalChannels(Num: Integer);
-    function GetBPS : Integer; override;
-    function GetCh : Integer; override;
-    function GetSR : Integer; override;
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
-    property Channel[Index: Integer]: TAcsChannel read GetChannel; default;
+    destructor Destroy(); override;
+    function GetBPS(): Integer; override;
+    function GetCh(): Integer; override;
+    function GetSR(): Integer; override;
+    procedure Init(); override;
+    procedure Done(); override;
     function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
-    procedure Init; override;
-    procedure Flush; override;
+    property Channel[Index: Integer]: TAcsChannel read GetChannel; default;
   published
     property TotalChannels: Integer read FTotalChannels write SetTotalChannels;
   end;
 
 implementation
 
-  // TChannel
+{ TAcsChannel }
 
-  constructor TAcsChannel.Create;
+constructor TAcsChannel.Create();
+begin
+  inherited Create;
+  FOwner:=AOwner;
+  FVolume:=32768;
+  EndOfInput:=True;
+  Preloaded:=False;
+end;
+
+destructor TAcsChannel.Destroy();
+begin
+  inherited Destroy;
+end;
+
+procedure TAcsChannel.Preload();
+begin
+  if EndOfInput and not Preloaded and Assigned(FInput) then
   begin
-    inherited Create;
-    FOwner := AOwner;
-    FVolume := 32768;
-    EndOfInput := True;
-    Preloaded := False;
+    FInput.Init();
+    Preloaded:=True;
   end;
+end;
 
-  destructor TAcsChannel.Destroy;
+procedure TAcsChannel.Start();
+begin
+  if FOwner.Buisy and EndOfInput and Assigned(FInput) then
   begin
-    inherited Destroy;
+    if not Preloaded then Preload();
+    EndOfInput:=False;
   end;
+end;
 
-  procedure TAcsChannel.Preload;
+procedure TAcsChannel.Stop();
+begin
+  if not EndOfInput then
   begin
-    if EndOfInput and not Preloaded and Assigned(FInput) then
+    EndOfInput:=True;
+    Preloaded:=False;
+    while FOwner.Flock do Sleep(1);
+    FOwner.FLock:=True;
+    FInput.Done();
+    FOwner.Flock:=False;
+  end;
+end;
+
+{ TAcsMultiMixer }
+
+constructor TAcsMultiMixer.Create();
+begin
+  inherited Create(AOwner);
+  FLock:=False;
+end;
+
+destructor TAcsMultiMixer.Destroy();
+begin
+  SetTotalChannels(0); // free channels
+  inherited Destroy;
+end;
+
+procedure TAcsMultiMixer.SetTotalChannels(Num: Integer);
+var
+  chan: Integer;
+begin
+  if (Num >= 0) and (Num <> FTotalChannels) then
+  begin
+    while Flock do;
+    FLock:=True;
+    if Num < FTotalChannels then // remove channels
     begin
-      FInput.Init;
-      Preloaded := True;
-    end;
-  end;
-
-  procedure TAcsChannel.Start;
-  begin
-    if FOwner.Buisy and EndOfInput and Assigned(FInput) then
-    begin
-      if not Preloaded then Preload;
-      EndOfInput := False;
-    end;
-  end;
-
-  procedure TAcsChannel.Stop;
-  begin
-    if not EndOfInput then
-    begin
-      EndOfInput := True;
-      Preloaded := False;
-      while FOwner.Flock do;
-      FOwner.FLock := True;
-      FInput.Flush;
-      FOwner.Flock := False;
-    end;
-  end;
-
-  // TAcsMultiMixer
-
-  constructor TAcsMultiMixer.Create;
-  begin
-    inherited Create(AOwner);
-    FLock := False;
-  end;
-
-  destructor TAcsMultiMixer.Destroy;
-  begin
-    SetTotalChannels(0); // free channels
-    inherited Destroy;
-  end;
-
-  procedure TAcsMultiMixer.SetTotalChannels(Num: Integer);
-  var
-    chan: Integer;
-  begin
-    if (Num >= 0) and (Num <> FTotalChannels) then
-    begin
-      while Flock do;
-      FLock := True;
-      if Num < FTotalChannels then // remove channels
+      for chan:=FTotalChannels-1 downto Num do
+      with FChannel[chan] do
       begin
-        for chan := FTotalChannels-1 downto Num do
-        with FChannel[chan] do
-        begin
-          if not EndOfInput then FInput.Flush;
-          Free;
-        end;
-        SetLength(FChannel,Num);
-      end
-      else begin // add channels
-        SetLength(FChannel,Num);
-        for chan := FTotalChannels to Num-1 do
-          FChannel[chan] := TAcsChannel.Create(Self);
+        if not EndOfInput then FInput.Done();
+        Free();
       end;
-      FTotalChannels := Num;
-      FLock := False;
+      SetLength(FChannel, Num);
+    end
+    else begin // add channels
+      SetLength(FChannel, Num);
+      for chan:=FTotalChannels to Num-1 do
+        FChannel[chan]:=TAcsChannel.Create(Self);
     end;
+    FTotalChannels:=Num;
+    FLock:=False;
   end;
+end;
 
-  function TAcsMultiMixer.GetBPS;
+{ TODO : Variable sample params and resample }
+function TAcsMultiMixer.GetBPS();
+begin
+  Result:=16;
+end;
+
+function TAcsMultiMixer.GetCh();
+begin
+  Result:=2;
+end;
+
+function TAcsMultiMixer.GetSR();
+begin
+  Result:=44100;
+end;
+
+procedure TAcsMultiMixer.Init();
+var
+  chan: Integer;
+begin
+  Buisy:=True;
+  FPosition:=0;
+  for chan:=0 to FTotalChannels-1 do
+    FChannel[chan].Start();
+  //FSize:=0;
+  FLock:=False;
+end;
+
+procedure TAcsMultiMixer.Done();
+var
+  chan: Integer;
+begin
+  for chan:=0 to FTotalChannels-1 do
+  with FChannel[chan] do
   begin
-    Result := 16;
+    if Assigned(FInput) then FInput.Done();
+    EndOfInput:=True;
+    Preloaded:=False;
   end;
+  Buisy:=False;
+end;
 
-  function TAcsMultiMixer.GetCh;
+function TAcsMultiMixer.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+var
+  i, chan, ReadSize, BufSize: Integer;
+  InBuf16, OutBuf16: PAcsBuffer16;
+begin
+  if not Buisy then
+    raise EAcsException.Create(strStreamnotopen);
+  while Flock do sleep(0);
+  Flock:=True;
+  BufSize:=0;
+  if BufferSize > BUF_SIZE then BufferSize:=BUF_SIZE;
+  for chan:=0 to FTotalChannels-1 do
   begin
-    Result:= 2;
-  end;
-
-  function TAcsMultiMixer.GetSR;
-  begin
-    Result := 44100;
-  end;
-
-  procedure TAcsMultiMixer.Init;
-  var
-    chan: Integer;
-  begin
-    Buisy := True;
-    FPosition := 0;
-    for chan := 0 to FTotalChannels-1 do
-     FChannel[chan].Start;
-    //FSize := 0;
-    FLock := False;
-  end;
-
-  procedure TAcsMultiMixer.Flush;
-  var
-    chan: Integer;
-  begin
-    for chan := 0 to FTotalChannels-1 do
     with FChannel[chan] do
     begin
-      if Assigned(FInput) then FInput.Flush;
-      EndOfInput := True;
-      Preloaded := False;
-    end;
-    Buisy := False;
-  end;
-
-  function TAcsMultiMixer.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
-  var
-    i, chan, ReadSize, BufSize: Integer;
-    InBuf16, OutBuf16: PAcsBuffer16;
-  begin
-    if not Buisy then raise EAcsException.Create(strStreamnotopen);
-    begin
-      while Flock do sleep(0);
-      Flock := True;
-      BufSize := 0;
-      if BufferSize > BUF_SIZE then BufferSize := BUF_SIZE;
-      for chan := 0 to FTotalChannels-1 do
-      with FChannel[chan] do
       if not EndOfInput then
       begin
-        ReadSize := FInput.GetData(@InBuf[1], BufferSize);
+        ReadSize:=FInput.GetData(@InBuf[1], BufferSize);
         while (ReadSize < BufferSize) and (ReadSize <> 0) do
         begin
-          Result := FInput.GetData(@InBuf[ReadSize+1], BufferSize-ReadSize);
+          Result:=FInput.GetData(@InBuf[ReadSize+1], BufferSize-ReadSize);
           Inc(ReadSize, Result);
         end;
         FillChar(InBuf[ReadSize+1], BufferSize-ReadSize, 0); // zero rest of buffer
-        if ReadSize = 0 then EndOfInput := True
-        else if ReadSize > BufSize then BufSize := ReadSize;
+        if ReadSize = 0 then
+          EndOfInput:=True
+        else
+          if ReadSize > BufSize then BufSize:=ReadSize;
       end;
-      if BufSize = 0 then
-      begin
-        Flock := False;
-        Result := 0;
-        Exit;
-      end;
-      // mix
-      FillChar(OutBuf[1], BufferSize, 0);
-      OutBuf16 := @OutBuf;
-      for chan := 0 to FTotalChannels-1 do
-      with FChannel[chan] do
-      if not EndOfInput then
-      begin
-        InBuf16 := @InBuf;
-        for i := 0 to (BufSize shr 1) - 1 do
-          OutBuf16[i] := OutBuf16[i] + (InBuf16[i] * FVolume div 32768);
-      end;
-      Flock := False;
     end;
-    Result := BufSize;
-    Move(OutBuf[1], Buffer^, Result);
-    Inc(FPosition, Result);
+  end;
+  if BufSize = 0 then
+  begin
+    Flock:=False;
+    Result:=0;
+    Exit;
   end;
 
-  function TAcsMultiMixer.GetChannel(Index: Integer): TAcsChannel;
+  // mix
+  FillChar(OutBuf[1], BufferSize, 0);
+  OutBuf16:=@OutBuf;
+  for chan:=0 to FTotalChannels-1 do
   begin
-    Result := FChannel[Index];
+    with FChannel[chan] do
+    begin
+      if not EndOfInput then
+      begin
+        InBuf16:=@InBuf;
+        for i:=0 to (BufSize div 2)-1 do
+          OutBuf16[i]:=OutBuf16[i] + (InBuf16[i] * FVolume div 32768);
+      end;
+    end;
   end;
+  Flock:=False;
+
+  Result:=BufSize;
+  Move(OutBuf[1], Buffer^, Result);
+  Inc(FPosition, Result);
+end;
+
+function TAcsMultiMixer.GetChannel(Index: Integer): TAcsChannel;
+begin
+  Result:=FChannel[Index];
+end;
 
 end.

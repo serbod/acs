@@ -26,7 +26,7 @@ type
   TAcsOnBufferDone = procedure(Sender: TComponent) of object;
 
   TAcsAudioProcessorInitEvent = procedure(Sender: TComponent; var TotalSize: Integer) of object;
-  TAcsAudioProcessorFlushEvent = procedure(Sender: TComponent) of object;
+  TAcsAudioProcessorDoneEvent = procedure(Sender: TComponent) of object;
 
   TAcsGetParameterEvent = procedure(Sender: TComponent; var Param: Integer) of object;
 
@@ -53,8 +53,8 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
-    procedure Init; override;
-    procedure Flush; override;
+    procedure Init(); override;
+    procedure Done(); override;
     property DataBuffer: Pointer read GetBuffer write SetBuffer;
     property DataSize: Integer read FDataSize write FDataSize;
   published
@@ -68,7 +68,7 @@ type
   TAcsAudioProcessor = class(TAcsCustomConverter)
   private
     FOnInit: TAcsAudioProcessorInitEvent;
-    FOnFlush: TAcsAudioProcessorFlushEvent;
+    FOnDone: TAcsAudioProcessorDoneEvent;
     FOnGetData: TAcsGetDataEvent;
     FOnGetSampleRate: TAcsGetParameterEvent;
     FOnGetBitsPerSample: TAcsGetParameterEvent;
@@ -81,10 +81,10 @@ type
     function GetSR: Integer; override;
   public
     function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
-    procedure Init; override;
-    procedure Flush; override;
+    procedure Init(); override;
+    procedure Done(); override;
   published
-    property OnFlush: TAcsAudioProcessorFlushEvent read FOnFlush write FOnFlush;
+    property OnDone: TAcsAudioProcessorDoneEvent read FOnDone write FOnDone;
     property OnGetBitsPerSample: TAcsGetParameterEvent read FOnGetBitsPerSample write FOnGetBitsPerSample;
     property OnGetChannels: TAcsGetParameterEvent read FOnGetChannels write FOnGetChannels;
     property OnGetData: TAcsGetDataEvent read FOnGetData write FOnGetData;
@@ -124,15 +124,15 @@ type
     procedure SetCurrentInput(AInput: Integer);
     procedure SetInputItems(AItems: TAcsInputItems);
   protected
-    function GetBPS: Integer; override;
-    function GetCh: Integer; override;
-    function GetSR: Integer; override;
+    function GetBPS(): Integer; override;
+    function GetCh(): Integer; override;
+    function GetSR(): Integer; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
-    procedure Init; override;
-    procedure Flush; override;
+    procedure Init(); override;
+    procedure Done(); override;
     property CurrentInput: Integer read FCurrentInput write SetCurrentInput;
   published
     property IndicateProgress: Boolean read FIndicateProgress write FIndicateProgress;
@@ -143,17 +143,17 @@ type
   {
   TAcsSplitter = class(TAcsCustomConverter)
   protected
-    function GetBPS: Integer; override;
-    function GetCh: Integer; override;
-    function GetSR: Integer; override;
+    function GetBPS(): Integer; override;
+    function GetCh(): Integer; override;
+    function GetSR(): Integer; override;
     procedure SetValuesCount(AValue: integer);
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
+    destructor Destroy(); override;
     function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
     procedure GetValues(var Values: array of Double);
-    procedure Init; override;
-    procedure Flush; override;
+    procedure Init(); override;
+    procedure Done(); override;
   end;
   }
 
@@ -195,18 +195,16 @@ begin
   Result:=FSR;
 end;
 
-procedure TAcsMemoryIn.Init;
+procedure TAcsMemoryIn.Init();
 begin
-  FPosition:=0;
+  inherited Init();
   BufEnd:=FDataSize;
-  BufStart:=1;
-  Busy:=True;
 end;
 
-procedure TAcsMemoryIn.Flush;
+procedure TAcsMemoryIn.Done();
 begin
-  Busy:=False;
   FDataSize:=0;
+  inherited Done();
 end;
 
 function TAcsMemoryIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
@@ -288,36 +286,21 @@ begin
 //  if Result=0 then Result:=(Result shl 1);
 end;
 
-procedure TAcsAudioProcessor.Init;
+procedure TAcsAudioProcessor.Init();
 var
   FSize: Integer;
 begin
+  inherited Init();
   //if not Assigned(FInput) then raise EAcsException.Create(strInputnotAssigned);
   FSize:=0;
-  if Assigned(FOnInit) then FOnInit(Self, FSize)
-  else
-  begin
-    if Assigned(FInput) then
-    begin
-      FInput.Init;
-      {if Assigned(FOnGetSize) then
-        FOnGetSize(Self, FSize)
-      else
-        FSize:=Finput.Size;  }
-    end;
-  end;
-  FBusy:=True;
-  FPosition:=0;
+  if Assigned(FOnInit) then FOnInit(Self, FSize);
 end;
 
-procedure TAcsAudioProcessor.Flush;
+procedure TAcsAudioProcessor.Done();
 begin
   //if not Assigned(FInput) then raise EAcsException.Create(strInputnotAssigned);
-  if Assigned(FOnFlush) then
-    FOnFlush(Self)
-  else
-    if Assigned(FInput) then FInput.Flush;
-  FBusy:=False;
+  if Assigned(OnDone) then OnDone(Self);
+  inherited Done();
 end;
 
 function TAcsNULLOut.DoOutput(Abort: Boolean): Boolean;
@@ -366,9 +349,9 @@ begin
       while Lock do;
       Lock:=True;
       Item:=TAcsInputItem(InputItems.Items[FCurrentInput]);
-      Item.Input.Flush;
+      Item.Input.Done();
       Item:=TAcsInputItem(InputItems.Items[AInput]);
-      Item.Input.Init;
+      Item.Input.Init();
       if FIndicateProgress then
       {FSize:=Item.Input.Size
       else FSize:=-1; }
@@ -379,7 +362,7 @@ begin
   FCurrentInput:=AInput;
 end;
 
-function TAcsInputList.GetBPS: Integer;
+function TAcsInputList.GetBPS(): Integer;
 var
   Item: TAcsInputItem;
 begin
@@ -399,7 +382,7 @@ begin
   end;
 end;
 
-function TAcsInputList.GetCh: Integer;
+function TAcsInputList.GetCh(): Integer;
 var
   Item: TAcsInputItem;
 begin
@@ -419,7 +402,7 @@ begin
   end;
 end;
 
-function TAcsInputList.GetSR: Integer;
+function TAcsInputList.GetSR(): Integer;
 var
   Item: TAcsInputItem;
 begin
@@ -436,7 +419,7 @@ begin
   end;
 end;
 
-procedure TAcsInputList.Init;
+procedure TAcsInputList.Init();
 var
   Item: TAcsInputItem;
 begin
@@ -446,19 +429,18 @@ begin
     raise EAcsException.Create(strNoInputItems);
   Item:=TAcsInputItem(InputItems.Items[FCurrentInput]);
   if not Assigned(Item.Input) then
-    raise EAcsException.Create(Format(strNoInputAssigned,[FCurrentInput]));
+    raise EAcsException.Create(Format(strNoInputAssigned, [FCurrentInput]));
   FBusy:=True;
-  Item.Input.Init;
-  //if FIndicateProgress then FSize:=Item.Input.Size else FSize:=-1;
+  Item.Input.Init();
   FPosition:=0;
 end;
 
-procedure TAcsInputList.Flush;
+procedure TAcsInputList.Done();
 var
   Item: TAcsInputItem;
 begin
   Item:=TAcsInputItem(InputItems.Items[FCurrentInput]);
-  if Assigned(Item.Input) then Item.Input.Flush;
+  if Assigned(Item.Input) then Item.Input.Done();
   FCurrentInput:=0;
   Lock:=False;
   FBusy:=False;
@@ -470,7 +452,7 @@ var
   IsContinue: Boolean;
 begin
   Result:=0;
-  while Lock do;
+  while Lock do Sleep(1);
   Lock:=True;
   Item:=TAcsInputItem(InputItems.Items[FCurrentInput]);
   if Assigned(Item.Input) then Result:=Item.Input.GetData(Buffer, BufferSize);
@@ -478,8 +460,7 @@ begin
   begin
     if FCurrentInput < InputItems.Count-1 then
     begin
-      { TODO : Item.Input check }
-      Item.Input.Flush;
+      if Assigned(Item.Input) then Item.Input.Done();
       Inc(FCurrentInput);
       IsContinue:=True;
       if Assigned(FonInputChanged) then
@@ -489,7 +470,7 @@ begin
         Item:=TAcsInputItem(InputItems.Items[FCurrentInput]);
         if not Assigned(Item.Input) then
           raise EAcsException.Create(Format(strNoInputAssigned, [FCurrentInput]));
-        Item.Input.Init;
+        Item.Input.Init();
         {if FIndicateProgress then
           FSize:=Item.Input.Size
         else FSize:=-1;  }

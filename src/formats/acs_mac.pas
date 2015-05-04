@@ -66,9 +66,6 @@ type
 
     function Seek(Sample: Integer): Boolean; override;
 
-    procedure Flush(); override;
-    procedure Init(); override;
-
     property AverageBitrate: Integer read GetAverageBitrate;
     property CurrentBitrate: Integer read GetCurrentBitrate;
     property CurrentBlock: Integer read GetCurrentBlock;
@@ -240,7 +237,6 @@ function TMACIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
 var
   l, csize, offs: Integer;
   blocks: Integer;
-  tmp: Double;
 begin
   if not Busy then raise EAcsException.Create('The Stream is not opened');
   if BufStart > BufEnd then
@@ -288,7 +284,7 @@ begin
     end;
     if EndOfStream and FLoop then
     begin
-      Flush();
+      Done();
       Init();
       EndOfStream:=False;
       while BufEnd < BufferSize do
@@ -366,18 +362,6 @@ begin
   else
     FCompressionLevel:=COMPRESSION_LEVEL_NORMAL;
   end;
-end;
-
-procedure TMACIn.Flush();
-begin
-  inherited Flush();
-end;
-
-procedure TMACIn.Init();
-begin
-  inherited Init;
-  BufStart:=1;
-  BufEnd:=0;
 end;
 
 function TMACIn.Seek(Sample: Integer): Boolean;

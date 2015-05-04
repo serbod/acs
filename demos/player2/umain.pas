@@ -11,8 +11,8 @@ uses
   LResources,
   {$ENDIF}
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, Buttons,
-  ACS_Audio,ACS_File,ACS_Classes,ACS_Allformats, ExtCtrls, StdCtrls,
-  ComCtrls,uPlaylist, ACS_Indicator,uvis
+  ACS_Audio, ACS_File, ACS_Classes, ACS_Allformats, ExtCtrls, StdCtrls,
+  ComCtrls, uPlaylist, ACS_Indicator, uvis
   //You must include Output drivers to not get an "No drier selected" exception
   {$IFDEF WINDOWS}
   ,ACS_DXAudio  //DirectSound Driver
@@ -247,8 +247,6 @@ begin
 end;
 
 procedure TfMain.resetDisplay;
-var
-  tmp : real;
 begin
   lFilename.Caption := Format('File:%s',[ExtractFileName(FileIn1.FileName)]);
   lTime.Caption := '00:00:00';

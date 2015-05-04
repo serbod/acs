@@ -29,7 +29,7 @@ end;
 
 destructor TAcsCDIn.Destroy();
 begin
-  if Busy then Flush();
+  if Busy then Done();
   CloseCD();
   UnloadCDRip();
   inherited Destroy;
@@ -101,9 +101,6 @@ begin
 end;
 
 function TAcsCDIn.GetStatus(): TAcsCDStatus;
-var
-  ms: Integer;
-  AP: LongBool;
 begin
   if FPlaying then
     Result := cdsPlaying
@@ -132,7 +129,6 @@ end;
 FUNCTION TAcsCDIn.GetTrackInfo(const vIndex : Integer) : TAcsCDTrackInfo;
 VAR
   Frames: Integer;
-  tmpmsf : TAcsCDMSF;
 BEGIN
   IF Busy THEN
     RAISE EAcsException.Create(strBusy);
@@ -198,20 +194,15 @@ procedure TAcsCDIn.Init();
 var
   Sect1, Sect2: Integer;
 begin
-  if Busy then
-    raise EAcsException.Create(strBusy);
   if Status = cdsNotReady then
     raise EAcsException.Create(strDrivenotready);
   if (FStartPos.Track in [0..GetNumTracks-1]) = False then
     raise EAcsException.Create(strTrackoutofRange);
   if Tracks[FStartPos.Track].TrackType = ttData then
     raise EAcsException.Create(strnoAudioTreck);
+  inherited Init();
   OpenCD();
   FSize := GetSize();
-  FBusy := True;
-  BufStart := 1;
-  BufEnd := 0;
-  FPosition := 0;
   Sect1 := MSF2Frames(Toc2MSF(MSFAddr(FToc.tracks[FStartPos.Track].addr)));
   Sect1 := Sect1 + MSF2Frames(FStartPos.MSF);
   Sect2 := MSF2Frames(Toc2MSF(MSFAddr(FToc.tracks[FEndPos.Track].addr)));
@@ -221,13 +212,13 @@ begin
   SetLength(FBuffer, (BUF_SIZE * CD_FRAMESIZE_RAW) + TRACKBUFEXTRA);
 end;
 
-procedure TAcsCDIn.Flush();
+procedure TAcsCDIn.Done();
 begin
   CloseCD();
-  FBusy := False;
   SetLength(FBuffer,0);
   FBuffer := nil;
   FSize := 0;
+  inherited Done();
 end;
 
 function TAcsCDIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;

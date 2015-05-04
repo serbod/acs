@@ -57,7 +57,7 @@ type
     (* As the actual input process begins, ALSAAudioIn may return a bit different
        value of the samplerate that is actually set by the ALSA drivers.*)
     procedure Init(); override;
-    procedure Flush(); override;
+    procedure Done(); override;
     property DriverState: Integer read GetDriverState;
   published
     property PeriodSize: Integer read FPeriodSize write FPeriodSize;
@@ -155,11 +155,7 @@ procedure TALSAAudioIn.Init();
 var
   aBufSize: Integer;
 begin
-  if Busy then
-    raise EACSException.Create(strBusy);
-  BufEnd:=0;
-  BufStart:=1;
-  FPosition:=0;
+  inherited Init();
   OpenAudio();
 
   snd_pcm_hw_params_malloc(_hw_params);
@@ -193,15 +189,13 @@ begin
   except
   end;
   FRecBytes:=FRecTime * (GetBPS div 8) * GetCh * GetSR;
-  Busy:=True;
-  FSize:=FRecBytes;
 end;
 
-procedure TALSAAudioIn.Flush();
+procedure TALSAAudioIn.Done();
 begin
   snd_pcm_drain(_audio_handle);
   CloseAudio();
-  Busy:=False;
+  inherited Done();
 end;
 
 function TALSAAudioIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;

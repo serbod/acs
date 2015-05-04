@@ -92,34 +92,33 @@ end;
  Direction = 1 - forward FFT, Direction = -1 - inverse FFT. *)
 procedure ComplexFFT(PData: PAcsComplexArray; DataSize, Direction: Integer);
 var
-  i, i1, j, k, i2, l, l1, l2, Log2n: Integer;
-  c1, c2, tx, ty, t1, t2, u1, u2, z: Double;
+  i, ii, i1, j, m, n, l, l1, l2, Log2n: Integer;
+  c1, c2, tr, ti, t1, t2, u1, u2, z: Double;
   Data: PAcsComplexArray;
 begin
   Data:=PData;
   {$R-}
   Log2n:=Trunc(Log2(DataSize));
   // Do the bit reversal
-  i2:=(DataSize shr 1);
-  j:=0;
-  for i:=0 to DataSize-2 do
+  j:=1;
+  for i:=0 to DataSize-1 do
   begin
     if i < j then
     begin
-      tx:=Data[i].Re;
-      ty:=Data[i].Im;
+      tr:=Data[i].Re;
+      ti:=Data[i].Im;
       Data[i].Re:=Data[j].Re;
       Data[i].Im:= Data[j].Im;
-      Data[j].Re:=tx;
-      Data[j].Im:=ty;
+      Data[j].Re:=tr;
+      Data[j].Im:=ti;
     end;
-    k:=i2;
-    while k <= j do
+    m:=DataSize div 2;
+    while (m >=2) and (j > m) do
     begin
-      Dec(j, k);
-      k:=(k shr 1);
+      Dec(j, m);
+      m:=(m div 2);
     end;
-    Inc(j, k);
+    Inc(j, m);
   end;
   // Compute the FFT
   c1:=-1.0;
@@ -262,7 +261,7 @@ begin
 end;
 
 procedure MultDoubleArrays(Op1, Op2: PDouble; DataSize: Integer);
-{$ifdef CPU386}
+{$ifndef CPU386}
 var
   i: integer;
   pd1, pd2: PDouble;
@@ -299,7 +298,7 @@ end;
 {$endif}
 
 procedure LgMagnitude(InData: PAcsComplex; OutData: PDouble; DataSize, Shift: Integer);
-{$ifndef CPU386}
+{$ifdef CPU386}
 var
   LogBase, num: Double;
   pIn: PACSComplex;
@@ -312,7 +311,7 @@ begin
   for i:=0 to DataSize-1 do
   begin
     pOut^:=0;
-    num:=sqrt((pIn^.Re*pIn^.Re)+(pIn^.Im*pIn^.Im));
+    num:=sqrt((pIn^.Re*2)+(pIn^.Im*2));
     if num > 0 then
     begin
       num:=log10(num)+Shift;

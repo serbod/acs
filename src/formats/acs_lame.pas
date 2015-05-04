@@ -65,13 +65,12 @@ type
     FQuality: TMP3Quality;
     FMode: TMP3Mode;
     FSampleRate: TMP3SampleRate;
-  protected
-    procedure Done(); override;
-    function DoOutput(Abort: Boolean): Boolean; override;
-    procedure Prepare(); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
+    procedure Prepare(); override;
+    procedure Done(); override;
+    function DoOutput(Abort: Boolean): Boolean; override;
   published
     property BitRate         : TMP3BitRate read FBitRate write FBitRate stored True;
     property Id3TagTitle     : String read FTitle write FTitle;
@@ -138,6 +137,7 @@ begin
   _plgf:=lame_init;
   {if FInput.Size > 0 then
     samples:=FInput.Size div ((FInput.BitsPerSample shr 3) * FInput.Channels); }
+  samples:=0;
   lame_set_num_samples(_plgf, samples);
   lame_set_in_samplerate(_plgf, FInput.SampleRate);
   lame_set_num_channels(_plgf, 2); // not Finput.Channels see the note below

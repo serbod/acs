@@ -1,5 +1,10 @@
+2015-05-04  serbod
++ TAcsCircularAudioBuffer
+* TAcsCustomInput.Flush() renamed to Done() and all descendents
+* Init() and Done() inheritance fixed
+
 2015-05-02  serbod
-! note: Total size/time not for all components. It actial only for file-based
+! note: Total size/time not for all components. It actual only for file-based
   components. Default position in bytes, but it must be in samples.
 * TAcsCustomInput.Time property replaced by PositionTime
 - TAcsCustomInput.Size property moved to TAcsCustomFileIn 
@@ -151,6 +156,9 @@ restructured tmixer its better handleable now
 2005/08/25 21:06:29  z0m3ie
 Added TMultiMixer
 
+2005/08/25 21:02:31  z0m3ie
+TMultiMixer by Ross Levis added
+
 2005/08/25 20:18:00  z0m3ie
 Version 2.4 restructure
 TCDPlayer removed (fits not in component structure)
@@ -159,3 +167,4 @@ TMP3ToWavConverter removed (fits not in component structure)
 2005/08/22 20:17:01  z0m3ie
 changed Headers to log
 changed mail adress
+

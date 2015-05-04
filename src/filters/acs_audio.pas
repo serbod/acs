@@ -197,8 +197,8 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
-    procedure Init; override;
-    procedure Flush; override;
+    procedure Init(); override;
+    procedure Done(); override;
     { Returns the total count of avalible devices from current Driver }
     property DeviceCount: Integer read GetDeviceCount;
     { The result returns an deviceinfo record that can be used to enumerate devices
@@ -767,13 +767,11 @@ end;
 procedure TAcsAudioIn.Init();
 begin
   if Assigned(FInput) then FInput.Init;
-    //raise EAcsException.Create(strNoDriverselected);
 end;
 
-procedure TAcsAudioIn.Flush();
+procedure TAcsAudioIn.Done();
 begin
-  if not Assigned(FInput) then FInput.Flush;
-    //raise EAcsException.Create(strNoDriverselected);
+  if not Assigned(FInput) then FInput.Done();
 end;
 
 procedure RegisterAudioOut(DrvName: string; OutClass: TAcsAudioOutDriverClass; Latency: Integer);
