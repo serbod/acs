@@ -1186,8 +1186,8 @@ begin
           begin
             if FLoop then
             begin
-              Flush;
-              Init;
+              Done();
+              Init();
             end else
             begin
               Result := 0;
@@ -1221,6 +1221,7 @@ begin
           else BufEnd := 0;
         end;
       end;
+
       wtMSADPCM :
       begin
         if FOffset <> 0 then
@@ -1238,8 +1239,8 @@ begin
         begin
           if FLoop then
           begin
-            Flush;
-            Init;
+            Done();
+            Init();
           end else
           begin
             Result := 0;
@@ -1271,6 +1272,7 @@ begin
           end else BufEnd := 0;
         end;
       end;
+
       wtPCM:
       begin
         if FOffset <> 0 then
@@ -1290,8 +1292,8 @@ begin
         begin
           if FLoop then
           begin
-            Flush;
-            Init;
+            Done();
+            Init();
           end else
           begin
             Result := 0;
@@ -1302,8 +1304,8 @@ begin
         begin
           if FLoop then
           begin
-            Flush;
-            Init;
+            Done();
+            Init();
             l := FStream.Read(buf, aBufferSize);
           end else
           begin
@@ -1313,6 +1315,7 @@ begin
         end;
         BufEnd := l;
       end;
+
       wtACM:
       begin
         if FOffset <> 0 then
@@ -1332,8 +1335,8 @@ begin
         begin
           if FLoop then
           begin
-            Flush;
-            Init;
+            Done();
+            Init();
           end else
           begin
             Result := 0;

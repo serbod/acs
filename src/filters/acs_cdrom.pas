@@ -105,25 +105,25 @@ type
     procedure SetET(Track: Integer);
     procedure SetSP(Pos: TAcsCDPosition);
     procedure SetEP(Pos: TAcsCDPosition);
-    function GetSize: Integer;
-    function GetInfo: TAcsCDInfo;
-    function GetDrivesCount: Integer;
+    function GetSize(): Integer; override;
+    function GetInfo(): TAcsCDInfo;
+    function GetDrivesCount(): Integer;
     procedure SetCurrentDrive(Value: Integer);
-    function GetDriveName: String;
-    function GetCDDBID: LongInt;
+    function GetDriveName(): string;
+    function GetCDDBID(): LongInt;
   protected
-    function GetBPS: Integer; override;
-    function GetCh: Integer; override;
-    function GetSR: Integer; override;
+    function GetBPS(): Integer; override;
+    function GetCh(): Integer; override;
+    function GetSR(): Integer; override;
     function GetTotalTime(): Real; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
-    procedure Init; override;
-    procedure Flush; override;
-    procedure Eject;
-    procedure CloseTray;
+    procedure Init(); override;
+    procedure Done(); override;
+    procedure Eject();
+    procedure CloseTray();
     property DiscInfo: TAcsCDInfo read GetInfo;
     property Status: TAcsCDStatus read GetStatus;
     property Tracks[const vIndex: Integer]: TAcsCDTrackInfo read GetTrackInfo;

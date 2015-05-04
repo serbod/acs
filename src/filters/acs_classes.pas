@@ -157,6 +157,33 @@ type
     property Samples[Index: Integer]: Pointer read GetSamplePtr;
   end;
 
+  { TAcsCircularAudioBuffer }
+
+  TAcsCircularAudioBuffer = class(TAcsAudioBuffer)
+  private
+    { Read() position }
+    FReadPos: Int64;
+    { Write() position }
+    FWritePos: Int64;
+    { Size of unread data. Increased when data written and decreased when data readed }
+    FDataSize: Int64;
+    FReadExtract: Boolean;
+  protected
+    function GetByte(Index: Integer): Byte; override;
+    procedure SetByte(Index: Integer; AValue: Byte); override;
+    function GetSamplePtr(Index: Integer): Pointer; override;
+  public
+    function Read(var Buffer; Count: Longint): Longint; override;
+    function Write(const Buffer; Count: Longint): Longint; override;
+    { If Origin = soCurrent, then changed ReadPosition, otherwise changed WritePosition }
+    function Seek(const Offset: Int64; Origin: TSeekOrigin): Int64; override;
+    { If True, then readed data extracted from buffer, and ReadPosition changed
+      to new value. If False, then ReadPosition not changed after read and data
+      can be read again from same position. }
+    property ReadExtract: Boolean read FReadExtract write FReadExtract;
+
+  end;
+
 
   { TAcsCustomInput }
   { TAcsInput is the base class for all input and converter components. }
@@ -189,29 +216,24 @@ type
       get direct access to the audio stream. In such a case the sequence of calls should
       look like this:
       
-      InputComponent.Init;
+      InputComponent.Init();
       
       InputComponent.GetData(...); // in a loop
       
-      InputComponent.Flush;
+      InputComponent.Done();
     }
     function GetData(Buffer: Pointer; BufferSize: Integer): Integer; virtual; overload;
     function GetData(AStream: TStream): Integer; virtual; overload;
-    { This function is called from output component when the buffer must be filled.
-    }
+    { This function is called from output component when the buffer must be filled. }
     procedure Reset(); virtual;
-    { This is an abstract method. In TAcsInput descendands it prepares input
-      component for reading data.
-    }
-    procedure Init(); virtual; abstract;
-    { This is an abstract method. In TAcsInput descendands it closes the current input,
-      clearing up all temporary structures alocated during data transfer.
+    { In TAcsInput descendands it prepares input component for reading data. }
+    procedure Init(); virtual;
+    { In TAcsInput descendands it closes the current input, clearing up all temporary structures alocated during data transfer.
       
       Note: usually this method is called internally by the output or converter component to
       which the input component is assigned. You can call this method if you want to get direct
-      access to the audio stream.
-    }
-    procedure Flush(); virtual; abstract;
+      access to the audio stream. }
+    procedure Done(); virtual;
     { Read this property to determine the number of bits per sample in the input audio stream.
       Possible values are 8 and 16. }
     property BitsPerSample: Integer read GetBPS;
@@ -274,7 +296,7 @@ type
     procedure Prepare(); virtual;
     { Called from Thread }
     function DoOutput(Abort: Boolean): Boolean; virtual; abstract;
-    { Calls FInput.Flush() and reset buffer to zero }
+    { Calls FInput.Done() and reset buffer to zero }
     procedure Done(); virtual;
 
     { This is the most important method in the output components.
@@ -454,7 +476,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     procedure Reset(); override;
-    procedure Flush(); override;
+    procedure Done(); override;
     procedure Init(); override;
     { Read Size to determine the size of the input stream in bytes. }
     property Size: Integer read FSize;
@@ -558,14 +580,125 @@ type
     FInput: TAcsCustomInput;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure SetInput(AInput: TAcsCustomInput); virtual;
+    function GetBPS(): Integer; override;
+    function GetCh(): Integer; override;
+    function GetSR(): Integer; override;
   public
     procedure UnlockInput();
+    { Check Input and call Input.Init(), set Busy to True }
+    procedure Init(); override;
+    { Call Input.Done() and set Busy to False }
+    procedure Done(); override;
   published
     property Input: TAcsCustomInput read FInput write SetInput;
   end;
 
 
 implementation
+
+{ TAcsCircularAudioBuffer }
+
+function TAcsCircularAudioBuffer.GetByte(Index: Integer): Byte;
+var
+  NewIndex: Integer;
+begin
+  NewIndex:=FReadPos+Index;
+  while NewIndex >= Size do NewIndex:=NewIndex-Size;
+  Result:=inherited GetByte(NewIndex);
+end;
+
+procedure TAcsCircularAudioBuffer.SetByte(Index: Integer; AValue: Byte);
+var
+  NewIndex: Integer;
+begin
+  NewIndex:=FReadPos+Index;
+  while NewIndex >= Size do NewIndex:=NewIndex-Size;
+  inherited SetByte(NewIndex, AValue);
+end;
+
+function TAcsCircularAudioBuffer.GetSamplePtr(Index: Integer): Pointer;
+var
+  NewIndex: Integer;
+begin
+  NewIndex:=FReadPos+Index;
+  while NewIndex >= Size do NewIndex:=NewIndex-Size;
+  Result:=inherited GetSamplePtr(NewIndex);
+end;
+
+function TAcsCircularAudioBuffer.Read(var Buffer; Count: Longint): Longint;
+var
+  SizeToEnd, SizeFromBegin: Longint;
+begin
+  SizeToEnd:=(Size-FReadPos);
+  if Count < SizeToEnd then
+  begin
+    Position:=FReadPos;
+    Result:=inherited Read(Buffer, Count);
+    if FReadExtract then
+    begin
+      Inc(FReadPos, Result);
+      Dec(FDataSize, Result);
+    end;
+  end
+  else
+  begin
+    // fill buffer direct from memory, no inherited Read() called
+    Result:=Count;
+    if Result > Size then Result:=Size;
+    FLock.Beginread();
+    // read from pos to end of buffer
+    Move((Self.Memory+FReadPos)^, Buffer, SizeToEnd);
+    // read from begin to remain size of buffer
+    SizeFromBegin:=Result-SizeToEnd;
+    Move(Self.Memory, (@Buffer+SizeToEnd)^, SizeFromBegin);
+    FLock.Endread();
+    if FReadExtract then
+    begin
+      FReadPos:=SizeFromBegin;
+      Dec(FDataSize, Result);
+    end;
+  end;
+end;
+
+function TAcsCircularAudioBuffer.Write(const Buffer; Count: Longint): Longint;
+var
+  SizeToEnd, SizeFromBegin: Longint;
+begin
+  SizeToEnd:=(Size-FWritePos);
+  if Count < SizeToEnd then
+  begin
+    Position:=FWritePos;
+    Result:=inherited Write(Buffer, Count);
+    Inc(FWritePos, Result);
+    Inc(FDataSize, Result);
+  end
+  else
+  begin
+    // write from buffer direct to memory, no inherited Write() called
+    Result:=Count;
+    if Result > Size then Result:=Size;
+    FLock.Beginwrite();
+    // write from pos to end of local buffer
+    Move(Buffer, (Self.Memory+FWritePos)^, SizeToEnd);
+    // write from begin to remain size of local buffer
+    SizeFromBegin:=Result-SizeToEnd;
+    Move((@Buffer+SizeToEnd)^, Self.Memory^, SizeFromBegin);
+    FLock.Endwrite();
+    FWritePos:=SizeFromBegin;
+    Inc(FDataSize, Result);
+  end;
+end;
+
+function TAcsCircularAudioBuffer.Seek(const Offset: Int64; Origin: TSeekOrigin
+  ): Int64;
+begin
+  if Origin = soCurrent then Position:=FReadPos else Position:=FWritePos;
+  Result:=inherited Seek(Offset, Origin);
+  if Origin = soCurrent then
+    FReadPos:=FReadPos+Offset
+  else
+    FWritePos:=Offset;
+end;
 
 { TAcsAudioBuffer }
 
@@ -819,9 +952,24 @@ end;
 procedure TAcsCustomInput.Reset();
 begin
   try
-    Flush();
+    Done();
   except
   end;
+  FBusy:=False;
+end;
+
+procedure TAcsCustomInput.Init();
+begin
+  if Busy then
+    raise EACSException.Create(strBusy);
+  FBusy:=True;
+  FPosition:=0;
+  BufStart:=1;
+  BufEnd:=0;
+end;
+
+procedure TAcsCustomInput.Done();
+begin
   FBusy:=False;
 end;
 
@@ -853,7 +1001,7 @@ end;
 
 procedure TAcsCustomOutput.Done();
 begin
-  if Assigned(FInput) then FInput.Flush();
+  if Assigned(FInput) then FInput.Done();
   SetBufferSize(0);
 end;
 
@@ -965,13 +1113,13 @@ begin
   if Active then
   begin
     NewInput:=AInput;
-    NewInput.Init;
+    NewInput.Init();
     OldInput:=FInput;
-    while InputLock do;
+    while InputLock do Sleep(1);
     InputLock:=True;
     FInput:=NewInput;
     InputLock:=False;
-    OldInput.Flush;
+    OldInput.Done();
   end
   else
     FInput:=AInput;
@@ -1066,7 +1214,7 @@ begin
   CloseFile();
 end;
 
-procedure TAcsCustomFileIn.Flush();
+procedure TAcsCustomFileIn.Done();
 begin
   CloseFile();
   FBusy:=False;
@@ -1074,21 +1222,24 @@ end;
 
 procedure TAcsCustomFileIn.Init();
 begin
-  if Busy then raise EAcsException.Create(strBusy);
+  inherited Init();
+  if FStreamDisabled then Exit;
+
   if not Assigned(FStream) then
-    if FFileName = '' then raise EAcsException.Create(strFilenamenotassigned);
+    if FFileName = '' then
+    begin
+      inherited Done();
+      raise EAcsException.Create(strFilenamenotassigned);
+    end;
+
   OpenFile();
   if StartSample <> 0 then Seek(StartSample);
   if (StartSample <> 0) or (FEndSample <> -1) then
   begin
     FSize:=FEndSample-FStartSample;
     if FEndSample = -1 then FSize:=FSize+FTotalSamples+1;
-    FSize:=FSize*(BitsPerSample shr 3)*FChan;
+    FSize:=FSize*(BitsPerSample div 8) * FChan;
   end;
-  FBusy:=True;
-  BufStart:=1;
-  BufEnd:=0;
-  FPosition:=0;
 end;
 
 function TAcsCustomFileIn.GetBPS(): Integer;
@@ -1273,16 +1424,40 @@ begin
   if Busy then
   begin
     NewInput:=AInput;
-    NewInput.Init;
+    NewInput.Init();
     OldInput:=FInput;
-    while InputLock do;
+    while InputLock do Sleep(1);
     InputLock:=True;
     FInput:=NewInput;
     InputLock:=False;
-    OldInput.Flush;
+    OldInput.Done();
   end
   else
     FInput:=AInput;
+end;
+
+function TAcsCustomConverter.GetBPS(): Integer;
+begin
+  if Assigned(FInput) then
+    Result:=FInput.BitsPerSample
+  else
+    Result:=inherited GetBPS();
+end;
+
+function TAcsCustomConverter.GetCh(): Integer;
+begin
+  if Assigned(FInput) then
+    Result:=FInput.Channels
+  else
+    Result:=inherited GetCh();
+end;
+
+function TAcsCustomConverter.GetSR(): Integer;
+begin
+  if Assigned(FInput) then
+    Result:=FInput.SampleRate
+  else
+    Result:=inherited GetSR();
 end;
 
 procedure TAcsCustomConverter.UnlockInput();
@@ -1296,6 +1471,21 @@ begin
     Conv:=(FInput as TAcsCustomConverter);
     Conv.UnlockInput();
   end;
+end;
+
+procedure TAcsCustomConverter.Init();
+begin
+  if not Assigned(FInput) then
+    raise EAcsException.Create(strInputnotAssigned);
+  inherited Init();
+  FInput.Init();
+  InputLock:=False;
+end;
+
+procedure TAcsCustomConverter.Done();
+begin
+  if Assigned(FInput) then FInput.Done();
+  inherited Done();
 end;
 
 { TAcsCircularBuffer }

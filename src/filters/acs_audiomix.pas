@@ -57,8 +57,6 @@ type
   private
     FInput1: TAcsCustomInput;
     FInput2: TAcsCustomInput;
-    BufStart: Integer;
-    BufEnd: Integer;
     ByteCount: Cardinal;                // add by leozhang
     FVolume1: Byte;
     FVolume2: Byte;
@@ -81,8 +79,8 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
-    procedure Init; override;
-    procedure Flush; override;
+    procedure Init(); override;
+    procedure Done(); override;
     property FgPlaying: Boolean read FFgPlaying;
   published
     property Input1: TAcsCustomInput read FInput1 write SetInput1;
@@ -130,51 +128,45 @@ begin
   FInput2:=nil;
 end;
 
-destructor TAcsAudioMixer.Destroy;
+destructor TAcsAudioMixer.Destroy();
 begin
-  inherited Destroy;
+  inherited Destroy();
 end;
 
-function TAcsAudioMixer.GetBPS: Integer;
+function TAcsAudioMixer.GetBPS(): Integer;
 begin
   if Assigned(FInput1) then Result:=FInput1.BitsPerSample
-  else Result:=inherited GetBPS;
-  //raise EAcsException.Create(strInputnotAssigned);
+  else Result:=inherited GetBPS();
 end;
 
-function TAcsAudioMixer.GetCh: Integer;
+function TAcsAudioMixer.GetCh(): Integer;
 begin
   if Assigned(FInput1) then Result:=FInput1.Channels
-  else Result:=inherited GetCh;
-  //raise EAcsException.Create(strInputnotAssigned);
+  else Result:=inherited GetCh();
 end;
 
-function TAcsAudioMixer.GetSR: Integer;
+function TAcsAudioMixer.GetSR(): Integer;
 begin
   if Assigned(FInput1) then Result:=FInput1.SampleRate
-  else Result:=inherited GetSR;
-  //raise EAcsException.Create(strInputnotAssigned);
+  else Result:=inherited GetSR();
 end;
 
-procedure TAcsAudioMixer.Init;
+procedure TAcsAudioMixer.Init();
 var
   In2StartByte: Cardinal;     // add by zhangl.
 begin
-  Busy:=True;
-  FPosition:=0;
-  BufStart:=1;
-  BufEnd:=0;
+  inherited Init();
   EndOfInput1:=False;
   EndOfInput2:=False;
   if not Assigned(FInput1) then Exit;
     //raise EAcsException.Create(strInputnotAssigned);
   if FMode=amRTMix then
   begin
-    FInput1.Init;
+    FInput1.Init();
     {FSize:=FInput1.Size;  }
     if Assigned(FInput2) then
     begin
-      FInput2.Init;
+      FInput2.Init();
       FFgPlaying := True;
     end
     else
@@ -185,8 +177,8 @@ begin
   begin
     if not Assigned(FInput2) then Exit;
     //raise EAcsException.Create(strInputnotAssigned);
-    FInput1.Init;
-    FInput2.Init;
+    FInput1.Init();
+    FInput2.Init();
     case FMode of
       {amMix:
         {if FInput1.Size > FInput2.Size then
@@ -213,11 +205,11 @@ begin
   end;
 end;
 
-procedure TAcsAudioMixer.Flush;
+procedure TAcsAudioMixer.Done();
 begin
-  if Assigned(FInput1) then FInput1.Flush;
-  if (FMode <> amRTMix) or Assigned(FInput2) then FInput2.Flush;
-  Busy:=False;
+  if Assigned(FInput1) then FInput1.Done();
+  if (FMode <> amRTMix) or Assigned(FInput2) then FInput2.Done();
+  inherited Done();
 end;
 
 function TAcsAudioMixer.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
@@ -368,7 +360,7 @@ begin
           begin
             EndOfInput2:=True;
             FFGPlaying:=False;
-            FInput2.Flush;
+            FInput2.Done();
             FInput2:=nil;
           end;
           FLock:=False;
@@ -407,11 +399,11 @@ begin
       begin
         while Flock do;
         FLock:=True;
-        Input2.Flush;
+        Input2.Done();
       end;
       FInput2:=AInput;
-      Finput2.Init;
-      Flock:=False;
+      FInput2.Init();
+      FLock:=False;
       FFgPlaying:=True;
       EndOfInput2:=False;
     end

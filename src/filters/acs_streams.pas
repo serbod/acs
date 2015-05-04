@@ -47,8 +47,8 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
-    procedure Init; override;
-    procedure Flush; override;
+    procedure Init(); override;
+    procedure Done(); override;
   published
     property InBitsPerSample: Integer read FBPS write FBPS;
     property InChannels: Integer read FChan write FChan;
@@ -109,21 +109,19 @@ begin
   inherited Destroy;
 end;
 
-procedure TAcsStreamIn.Init;
+procedure TAcsStreamIn.Init();
 begin
-  if Busy then
-    raise EAcsException.Create(strBusy);
   if not Assigned(FStream) then
     raise EAcsException.Create(strStreamObjectnotassigned);
+  inherited Init();
   FPosition:=FStream.Position;
-  FBusy:=True;
   //FSize:=FStream.Size;
 end;
 
-procedure TAcsStreamIn.Flush;
+procedure TAcsStreamIn.Done();
 begin
-//  FStream.Position := 0;
-  FBusy:=False;
+  //FStream.Position := 0;
+  inherited Done();
 end;
 
 function TAcsStreamIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;

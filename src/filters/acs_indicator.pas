@@ -4,13 +4,17 @@
   see the license file for more details.
   you can contact me at mail@z0m3ie.de
 *)
-
+{$define FFTREAL_}
 unit acs_indicator;
 
 interface
 
 uses
-   Classes, ACS_Types, ACS_Classes, ACS_Procs, ACS_Strings;
+   sysutils, Classes, ACS_Types, ACS_Classes, ACS_Procs, ACS_Strings
+{$ifdef FFTREAL}
+   , FFTReal
+{$endif}
+   ;
 
 type
 
@@ -19,22 +23,19 @@ type
   TAcsSoundIndicator = class(TAcsCustomConverter)
   private
     FLocked: Boolean;
-    Window: array of Double;
+    //Window: array of Double;
     FValuesCount: Integer;
     procedure CalculateSpectrum(PSampleWindow: Pointer; SamplesCount: integer;
       var AValues: array of Double);
   protected
-    function GetBPS: Integer; override;
-    function GetCh: Integer; override;
-    function GetSR: Integer; override;
     procedure SetValuesCount(AValue: integer);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
     procedure GetValues(var Values: array of Double);
-    procedure Init; override;
-    procedure Flush; override;
+    procedure Init(); override;
+    procedure Done(); override;
   published
     { Spectrum slices count }
     property ValuesCount: integer read FValuesCount write SetValuesCount;
@@ -55,13 +56,54 @@ begin
   inherited Destroy;
 end;
 
+{$ifdef FFTREAL}
+procedure TAcsSoundIndicator.CalculateSpectrum(PSampleWindow: Pointer;
+  SamplesCount: integer; var AValues: array of Double);
+var
+  pSample: PAcsDoubleArray;
+  pFFTResult: pflt_array;
+  i, ii, n, FreqCount: integer;
+  k, sum: Double;
+  fftr: TFFTReal;
+begin
+  if Length(AValues)<>ValuesCount then Exit;
+
+  pSample:=PSampleWindow;
+  pFFTResult:=GetMem(SamplesCount * SizeOf(flt_t));
+
+  fftr:=TFFTReal.Create(SamplesCount);
+
+  fftr.do_fft(pFFTResult, pflt_array(pSample));
+  // pFFTResult[0..length(x)/2] = real values
+  // pFFTResult[length(x)/2+1..length(x)-1] = imaginary values of coefficents 1..length(x)/2-1.
+
+  FreeAndNil(fftr);
+
+  // Using only real values, first half of result
+  FreqCount:=SamplesCount div 2;
+  // FreqCount to ValueCount ratio
+  k:=FreqCount / ValuesCount;
+
+  // use first half of result, second half is symmetric
+  //SetLength(AValues, SamplesCount);
+  {$R-}
+  for i:=0 to ValuesCount-1 do
+  begin
+    n:=Trunc(i*k);
+    AValues[i]:=pFFTResult[n];
+  end;
+  {$R+}
+  Freemem(pFFTResult);
+end;
+
+{$else}
 procedure TAcsSoundIndicator.CalculateSpectrum(PSampleWindow: Pointer;
   SamplesCount: integer; var AValues: array of Double);
 var
   pSample: PAcsDoubleArray;
   pWindow: PAcsDoubleArray;
   pCA: PAcsComplexArray;
-  i, ii, n, nn: integer;
+  i, ii, n: integer;
   sum: Double;
 begin
   if Length(AValues)<>ValuesCount then Exit;
@@ -110,50 +152,24 @@ begin
   end;
   {$R+}
 end;
-
-function TAcsSoundIndicator.GetBPS: Integer;
-begin
-  if not Assigned(FInput) then
-    raise EAcsException.Create(strInputnotassigned);
-  Result:=FInput.BitsPerSample;
-end;
-
-function TAcsSoundIndicator.GetCh: Integer;
-begin
-  if not Assigned(FInput) then
-    raise EAcsException.Create(strInputnotassigned);
-  Result:=FInput.Channels;
-end;
-
-function TAcsSoundIndicator.GetSR: Integer;
-begin
-  if not Assigned(FInput) then
-    raise EAcsException.Create(strInputnotassigned);
-  Result:=FInput.SampleRate;
-end;
+{$endif}
 
 procedure TAcsSoundIndicator.SetValuesCount(AValue: integer);
 begin
   FValuesCount:=AValue;
 end;
 
-procedure TAcsSoundIndicator.Init;
+procedure TAcsSoundIndicator.Init();
 begin
-  if not Assigned(FInput) then
-    raise EAcsException.Create(strInputnotassigned);
-  FBusy:=True;
-  FInput.Init;
-  //FSize:=FInput.Size;
+  inherited Init();
   //FillChar(FValues[0], SizeOf(Double)*32, 0);
   FLocked:=False;
-  FPosition:=0;
 end;
 
-procedure TAcsSoundIndicator.Flush;
+procedure TAcsSoundIndicator.Done();
 begin
-  FInput.Flush;
+  inherited Done();
   //FillChar(FValues[0], SizeOf(Double)*32, 0);
-  FBusy:=False;
   FLocked:=False;
 end;
 
@@ -161,15 +177,17 @@ function TAcsSoundIndicator.GetData(Buffer: Pointer; BufferSize: Integer): Integ
 begin
   if not Busy then
     raise EAcsException.Create(strStreamnotopen);
-  while InputLock do;
+
+  // copy input buffer to local buffer
+  while InputLock do Sleep(1);
   InputLock:=True;
   Result:=FInput.GetData(Buffer, BufferSize);
-  FPosition:=Finput.Position;
+  FPosition:=FInput.Position;
   InputLock:=False;
 
-  while FLocked do;
+  // copy local buffer to param buffer
+  while FLocked do Sleep(1);
   FLocked:=True;
-  // copy input buffer to local buffer
   if Length(FBuffer)<>Result then SetLength(FBuffer, Result);
   if Result > 0 then Move(Buffer^, FBuffer[0], Result);
   FLocked:=False;
@@ -181,20 +199,21 @@ var
   pSample: PAcsDoubleArray;
   P: Pointer;
 begin
-  while FLocked do;
-  FLocked:=True;
-
   if Length(Values)<>ValuesCount then Exit;
   //SetLength(Values, ValuesCount);
   if BufferSize=0 then
   begin
-    FillChar(Values[0], SizeOf(Double)*ValuesCount, 0);
+    FillChar(Values[0], SizeOf(Double) * ValuesCount, 0);
     Exit;
   end;
 
+  if (FInput.Channels = 0) or (FInput.BitsPerSample = 0) then Exit;
   NumSamples:=((BufferSize div FInput.Channels) div (FInput.BitsPerSample div 8));
 
-  i:=SizeOf(Double)*NumSamples;
+  while FLocked do Sleep(1);
+  FLocked:=True;
+
+  i:=SizeOf(Double) * NumSamples;
   pSample:=GetMem(i);
   // convert raw sample to mono sample array
   {$R-}
@@ -218,7 +237,7 @@ begin
   CalculateSpectrum(pSample, NumSamples, Values);
   Freemem(pSample);
 
-  for i:=0 to ValuesCount-1 do Values[i]:=Values[i]*0.4; //ValCount;
+  for i:=0 to ValuesCount-1 do Values[i]:=Values[i] * 0.4; //ValCount;
   FLocked:=False;
 end;
 

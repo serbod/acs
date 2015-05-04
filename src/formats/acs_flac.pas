@@ -29,7 +29,6 @@ type
   TFLACOut = class(TAcsCustomFileOut)
   private
     _encoder: PFLAC__SeekableStreamEncoder;
-    FBufSize: Integer;
     FVerify: Boolean;
     FBlockSize: Word;
     FBestModelSearch: Boolean;
@@ -352,7 +351,7 @@ begin
   FLAC__seekable_stream_encoder_set_client_data(_encoder, Self);
   if FLAC__seekable_stream_encoder_init(_encoder) <> FLAC__SEEKABLE_STREAM_ENCODER_OK then
   begin
-    FInput.Flush();
+    FInput.Done();
     raise EAcsException.Create('Failed to initialize FLAC encoder.');
   end;
 end;
@@ -367,7 +366,7 @@ end;
 
 function TFLACOut.DoOutput(Abort: Boolean):Boolean;
 var
-  Len, i, l, samples: Integer;
+  Len, i, samples: Integer;
   FB: PFLACBuf;
   B16: PAcsBuffer16;
 begin
@@ -505,7 +504,7 @@ begin
     begin
       if FLoop then
       begin
-        Flush();
+        Done();
         Init();
       end
       else

@@ -151,7 +151,7 @@ begin
   FBPS:=8;
   FChan:=1;
   FSampleRate:=8000;
-  FSize:=-1;
+  //FSize:=-1;
   FRecTime:=600;
   BufferSize:=$1000;
   {$IFDEF MSWINDOWS}

@@ -188,22 +188,16 @@ end;
 
 procedure TStdAudioIn.Init();
 begin
-  if Busy then
-    raise EACSException.Create(strBusy);
-  BufEnd:=0;
-  BufStart:=1;
-  FPosition:=0;
+  inherited Init();
   BufferSize:=$8000;
   OpenAudio();
   FRecBytes:=FRecTime * (GetBPS div 8) * GetCh * GetSR;
-  FBusy:=True;
-  FSize:=FRecBytes;
 end;
 
-procedure TStdAudioIn.Flush();
+procedure TStdAudioIn.Done();
 begin
   CloseAudio();
-  FBusy:=False;
+  inherited Done();
 end;
 
 procedure TStdAudioIn.SetDevice();

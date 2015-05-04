@@ -173,7 +173,7 @@ type
 
     function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
-    procedure Flush(); override;
+    procedure Done(); override;
 
     //procedure Pause; override;
     //procedure Resume; override;
@@ -230,6 +230,27 @@ type
   end;
 
 implementation
+
+function DSErrToString(Res: HRESULT): string;
+begin
+  Result:='Unknown';
+  if Res = HRESULT(DSERR_ALLOCATED) then Result:='The request failed because resources, such as a priority level, were already in use by another caller.';
+  if Res = HRESULT(DSERR_ALREADYINITIALIZED) then Result:='The object is already initialized.';
+  if Res = HRESULT(DSERR_BADFORMAT) then Result:='The specified wave format is not supported.';
+  if Res = HRESULT(DSERR_BUFFERLOST) then Result:='The buffer memory has been lost and must be restored.';
+  if Res = HRESULT(DSERR_CONTROLUNAVAIL) then Result:='The buffer control (volume, pan, and so on) requested by the caller is not available.';
+  if Res = HRESULT(DSERR_GENERIC) then Result:='An undetermined error occurred inside the DirectSound subsystem.';
+  if Res = HRESULT(DSERR_INVALIDCALL) then Result:='This function is not valid for the current state of this object.';
+  if Res = HRESULT(DSERR_INVALIDPARAM) then Result:='An invalid parameter was passed to the returning function.';
+  if Res = HRESULT(DSERR_NOAGGREGATION) then Result:='The object does not support aggregation.';
+  if Res = HRESULT(DSERR_NODRIVER) then Result:='No sound driver is available for use.';
+  if Res = HRESULT(DSERR_NOINTERFACE) then Result:='The requested COM interface is not available.';
+  if Res = HRESULT(DSERR_OTHERAPPHASPRIO) then Result:='Another application has a higher priority level, preventing this call from succeeding';
+  if Res = HRESULT(DSERR_OUTOFMEMORY) then Result:='The DirectSound subsystem could not allocate sufficient memory to complete the caller''Result request.';
+  if Res = HRESULT(DSERR_PRIOLEVELNEEDED) then Result:='The caller does not have the priority level required for the function to succeed.';
+  if Res = HRESULT(DSERR_UNINITIALIZED) then Result:='The IDirectSound::Initialize method has not been called or has not been called successfully before other methods were called.';
+  if Res = HRESULT(DSERR_UNSUPPORTED) then Result:='The function called is not supported at this time.';
+end;
 
 constructor TDXAudioOut.Create(AOwner: TComponent);
 var
@@ -568,7 +589,7 @@ begin
     SetLength(FDeviceInfoArray, Devices.devcount);
     for i:=0 to Devices.devcount-1 do
     begin
-      {$ifdef FPC}
+      {$ifdef WINDOWS}
       FDeviceInfoArray[i].DeviceName:=AnsiToUtf8(Devices.dinfo[i].name);
       {$else}
       FDeviceInfoArray[i].DeviceName:=Devices.dinfo[i].name;
@@ -577,23 +598,22 @@ begin
   end;
 end;
 
-destructor TDXAudioIn.Destroy;
+destructor TDXAudioIn.Destroy();
 begin
   DSW_Term(DSW);
-  inherited Destroy;
+  inherited Destroy();
 end;
 
-procedure TDXAudioIn.OpenAudio;
+procedure TDXAudioIn.OpenAudio();
 var
   Res: HRESULT;
-  s: string;
 begin
   if FOpened = 0 then
   begin
     if FLatency > 0 then
     begin
       if FLatency < 10 then Flatency:=10;
-      FFramesInBuffer:=(FLatency*FSampleRate div 1000);
+      FFramesInBuffer:=(FLatency * LongWord(FSampleRate) div 1000);
       FPollingInterval:=(FLatency div 2); //4)*3;
     end;
 
@@ -601,29 +621,17 @@ begin
     //if not Assigned(DSW_InitInputDevice) then raise EAcsException.Create(Format(strChannelNotAvailable,[FDeviceNumber]));
     Res:=DSW_InitInputDevice(DSW, @(Devices.dinfo[FDeviceNumber].guid));
     if Res <> 0 then
-    begin
-      {
-      s:='Unknown';
-      if Res = DSERR_ALLOCATED then s:='DSERR_ALLOCATED';
-      if Res = (DSERR_INVALIDPARAM) then s:='DSERR_INVALIDPARAM';
-      if (Res = DSERR_INVALIDCALL) then s:='DSERR_INVALIDCALL';
-      if (Res = DSERR_GENERIC) then s:='DSERR_GENERIC';
-      if (Res = DSERR_BADFORMAT) then s:='DSERR_BADFORMAT';
-      if (Res = DSERR_UNSUPPORTED) then s:='DSERR_UNSUPPORTED';
-      if (Res = DSERR_NODRIVER) then s:='DSERR_NODRIVER';
-      if (Res = DSERR_ALREADYINITIALIZED) then s:='DSERR_ALREADYINITIALIZED';
-      }
-      raise EAcsException.Create(strFailedtoCreateDSdev);
-    end;
+      raise EAcsException.Create(strFailedtoCreateDSdev+': '+DSErrToString(Res));
 
-    Self.BufferSize:=FFramesInBuffer*(FBPS shr 3)*FChan;
+    Self.BufferSize:=Integer(FFramesInBuffer) * (FBPS div 8) * FChan;
     Res:=DSW_InitInputBuffer(DSW, FBPS, FSampleRate, FChan, BufferSize);
-    if Res <> 0 then raise EAcsException.Create(strFailedtoCreateDSbuf);
+    if Res <> 0 then
+      raise EAcsException.Create(strFailedtoCreateDSbuf+': '+DSErrToString(Res));
   end;
   Inc(FOpened);
 end;
 
-procedure TDXAudioIn.CloseAudio;
+procedure TDXAudioIn.CloseAudio();
 begin
   if FOpened = 1 then
   begin
@@ -633,25 +641,24 @@ begin
   if FOpened > 0 then Dec(FOpened);
 end;
 
-procedure TDXAudioIn.Init;
+procedure TDXAudioIn.Init();
 begin
-  if Busy then
-    raise EAcsException.Create(strBusy);
+  inherited Init();
   if (FDeviceNumber >= DeviceCount) then
+  begin
+    inherited Done();
     raise EAcsException.Create(Format(strChannelnotavailable, [FDeviceNumber]));
+  end;
+
   if FRecTime > 0 then
   begin
     FSamplesToRead:=FRecTime*FSampleRate;
     FBytesToRead:=FRecTime*FSampleRate*FChan*(FBPS div 8);
   end;
-  BufEnd:=0;
-  BufStart:=1;
-  FPosition:=0;
-  FBusy:=True;
-  FSampleSize:=FChan*(FBPS div 8);
+  FSampleSize:=FChan * (FBPS div 8);
   //FSize:=FSamplesToRead*FSampleSize;
 
-  OpenAudio;
+  OpenAudio();
   DSW_StartInput(DSW);
 
   if FEchoRecording then
@@ -667,13 +674,13 @@ begin
   RecordingEchoed:=FEchoRecording;
 end;
 
-procedure TDXAudioIn.Flush;
+procedure TDXAudioIn.Done();
 begin
   DSW_StopInput(DSW);
   if RecordingEchoed then
     DSW_StopOutput(DSW);
   CloseAudio;
-  FBusy:=False;
+  inherited Done();
 end;
 
 function TDXAudioIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
@@ -698,7 +705,7 @@ begin
       Sleep(FPollingInterval);
       Res:=DSW_QueryInputFilled(DSW, BytesAllowed);
       if Res <> DS_OK then
-        raise EAcsException.Create(Format('Input failed: DirectSound error 0x%x', [Res]));
+        raise EAcsException.Create('Input failed: DirectSound error: '+DSErrToString(Res));
     end;
 
     if BytesAllowed > BufferSize then
@@ -711,7 +718,7 @@ begin
     //BytesAllowed:=BytesAllowed-(BytesAllowed mod 1024);
     Res:=DSW_ReadBlock(DSW, @FBuffer[0], BytesAllowed);
     if Res <> DS_OK then
-       raise EAcsException.Create(Format('Input failed: DirectSound error 0x%x', [Res]));
+       raise EAcsException.Create('Input failed: DirectSound: '+DSErrToString(Res));
 
     if RecordingEchoed then
     begin

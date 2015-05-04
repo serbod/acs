@@ -123,7 +123,7 @@ begin
     begin
       if FLoop then
       begin
-        Flush();
+        Done();
         Init();
         SMPEG_rewind(_M);
         SMPEG_play(_M);

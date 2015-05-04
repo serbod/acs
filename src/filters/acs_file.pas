@@ -137,7 +137,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Open();
-    procedure Flush(); override;
+    procedure Done(); override;
     procedure Init(); override;
     procedure Reset(); override;
     function Seek(SampleNum: Integer): Boolean; override;
@@ -232,13 +232,13 @@ begin
   FValid:=False;
 end;
 
-destructor TAcsFileIn.Destroy;
+destructor TAcsFileIn.Destroy();
 begin
   if Assigned(FInput) then FreeAndNil(FInput);
   inherited Destroy;
 end;
 
-procedure TAcsFileIn.Open;
+procedure TAcsFileIn.Open();
 var
   desc: string;
 begin
@@ -256,22 +256,20 @@ begin
   FDialog.Free;
 end;
 
-procedure TAcsFileIn.Flush;
+procedure TAcsFileIn.Done();
 begin
-  if Assigned(FInput) then FInput.Flush;
+  if Assigned(FInput) then FInput.Done();
 end;
 
-procedure TAcsFileIn.Init;
+procedure TAcsFileIn.Init();
 begin
-  if Assigned(FInput) then FInput.Init;
-    //raise EAcsException.Create(strNoFileOpened);
+  if Assigned(FInput) then FInput.Init();
 end;
 
 function TAcsFileIn.Seek(SampleNum: Integer): Boolean;
 begin
   Result:=False;
   if Assigned(FInput) then Result:=FInput.Seek(SampleNum);
-    //EAcsException.Create(strnoFileOpened);
 end;
 
 function TAcsFileIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;

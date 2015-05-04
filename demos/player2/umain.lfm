@@ -82,7 +82,6 @@ object fMain: TfMain
       Top = 53
       Width = 190
       Align = alBottom
-      Max = 1000
       Smooth = True
       TabOrder = 0
     end

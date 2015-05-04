@@ -152,7 +152,6 @@ end;
 function TDSIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
 var
   nDone: Integer;
-  nOffs: Integer;
 begin
   Result:=0;
   if not Busy then
