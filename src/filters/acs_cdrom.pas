@@ -22,7 +22,7 @@ uses
   {$IFDEF MSWINDOWS}
   ,Windows, MMSystem, akrip32
   {$ELSE}
-  ,baseunix,cd_rom
+  ,baseunix, cd_rom
   {$ENDIF}
   ;
 
@@ -96,10 +96,10 @@ type
     FRipStart: LongInt;
     FiBuffer: PTRACKBUF;
     {$ENDIF}
-    procedure OpenCD;
-    procedure CloseCD;
-    function GetStatus: TAcsCDStatus;
-    function GetNumTracks: Integer;
+    procedure OpenCD();
+    procedure CloseCD();
+    function GetStatus(): TAcsCDStatus;
+    function GetNumTracks(): Integer;
     function GetTrackInfo(const vIndex: Integer): TAcsCDTrackInfo;
     procedure SetST(Track: Integer);
     procedure SetET(Track: Integer);

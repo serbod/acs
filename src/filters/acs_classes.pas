@@ -596,6 +596,12 @@ type
 
 implementation
 
+function Min(n1, n2: Integer): Integer;
+begin
+  Result:=n1;
+  if n2 < n2 then Result:=n2;
+end;
+
 { TAcsCircularAudioBuffer }
 
 function TAcsCircularAudioBuffer.GetByte(Index: Integer): Byte;

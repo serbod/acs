@@ -18,6 +18,7 @@ type
   TMPEGIn = class(TAcsCustomFileIn)
   private
     _M: Pointer;
+    FTime: Integer;
   protected
     procedure OpenFile(); override;
     procedure CloseFile(); override;
@@ -48,12 +49,12 @@ begin
   SMPEG_play(_M);
 end;
 
-procedure TMPEGIn.OpenFile()
+procedure TMPEGIn.OpenFile();
 var
   info: SMPEG_info;
   spec: SDL_AudioSpec;
 begin
-  if FOpened = 0 then
+  if FOpened then
   begin
     (* the next call is needed just to make sure
       the SDL library is loaded *)
@@ -72,19 +73,19 @@ begin
     FBPS:=16;
     FChan:=spec.channels;
     FSize:=FTime * 2 * FChan * FSR;
+    FOpened:=True;
   end;
-  Inc(FOpened);
 end;
 
 procedure TMPEGIn.CloseFile();
 begin
-  if FOpened = 1 then
+  if FOpened then
   begin
     if SMPEG_status(_M) = SMPEG_PLAYING then
     SMPEG_stop(_M);
     SMPEG_delete(_M);
+    FOpened:=False;
   end;
-  if FOpened > 0 then Dec(FOpened);
 end;
 
 function TMPEGIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;

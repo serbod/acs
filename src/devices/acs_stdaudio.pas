@@ -18,7 +18,7 @@ uses
 {$IFDEF MSWINDOWS}
   , Windows, MMSystem
 {$ELSE}
-  , Soundcard
+  , baseunix, Soundcard
 {$ENDIF}
   ;
 
@@ -94,7 +94,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
-    function GetData(Buffer: Pointer; oBufferSize: Integer): Integer; override;
+    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
     procedure Init(); override;
     procedure Done(); override;
   end;

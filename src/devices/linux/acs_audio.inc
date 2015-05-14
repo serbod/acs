@@ -19,11 +19,11 @@ var
 (* We import libc functions directly to avoid Kylix
   Libc unit limitations *)
 
-function __write(fd: Integer; data: Pointer; size: Integer): Integer; cdecl; external libname;
-function __read(Handle: Integer; var Buffer; Count: Integer): Integer; cdecl; external libname;
-function ioctl(fd: Integer; command: Integer): Integer; varargs; cdecl; external libname;
-function open(PathName: PChar; Flags: Integer): Integer; varargs; cdecl; external libname;
-function __close(Handle: Integer): Integer; cdecl; external libname;
+//function __write(fd: Integer; data: Pointer; size: Integer): Integer; cdecl; external libname;
+//function __read(Handle: Integer; var Buffer; Count: Integer): Integer; cdecl; external libname;
+//function ioctl(fd: Integer; command: Integer): Integer; varargs; cdecl; external libname;
+//function open(PathName: PChar; Flags: Integer): Integer; varargs; cdecl; external libname;
+//function __close(Handle: Integer): Integer; cdecl; external libname;
 
 
 function GetAudioDeviceInfo(DevID: Integer; OutputDev: Boolean): TAcsDeviceInfo;
@@ -46,13 +46,13 @@ end;
 
 destructor TStdAudioOut.Destroy();
 begin
-  if _audio_fd > 0 then __close(_audio_fd);
+  if _audio_fd > 0 then fpclose(_audio_fd);
   inherited Destroy;
 end;
 
 procedure TStdAudioOut.SetDevice();
 begin
-  if Busy then
+  if Active then
     raise EACSException.Create(strBusy);
   if Ch < OutputChannelsCount then
     FBaseChannel:=Ch
@@ -70,17 +70,17 @@ begin
     8:  parm := AFMT_U8;
     16: parm := AFMT_S16_LE;
   end;
-  _audio_fd:=open(PChar(AudioChannels[FBaseChannel]), O_WRONLY);
-  ioctl(_audio_fd, SNDCTL_DSP_SETFMT, @parm);
+  _audio_fd:=fpopen(PChar(AudioChannels[FBaseChannel]), O_WRONLY);
+  fpioctl(_audio_fd, TIOCtlRequest(SNDCTL_DSP_SETFMT), @parm);
   parm:=FInput.Channels;
-  ioctl(_audio_fd, SNDCTL_DSP_CHANNELS, @parm);
+  fpioctl(_audio_fd, TIOCtlRequest(SNDCTL_DSP_CHANNELS), @parm);
   parm:=FInput.SampleRate;
-  ioctl(_audio_fd, SNDCTL_DSP_SPEED, @parm);
+  fpioctl(_audio_fd, TIOCtlRequest(SNDCTL_DSP_SPEED), @parm);
 end;
 
 procedure TStdAudioOut.Done();
 begin
-  __close(_audio_fd);
+  fpclose(_audio_fd);
   _audio_fd:=-1;
   inherited Done();
 end;
@@ -96,7 +96,7 @@ begin
   if not CanOutput then Exit;
   if Abort then
   begin
-    __close(_audio_fd);
+    fpclose(_audio_fd);
     Result:=False;
     Exit;
   end;
@@ -122,7 +122,7 @@ begin
         P8[i]:=P8[i] * VCoef;
       end;
     end;
-    __write(_audio_fd, P, Len);
+    fpwrite(_audio_fd, FBuffer.Memory, FBuffer.Size);
   except
   end;
   Result:=(Len > 0);
@@ -139,13 +139,13 @@ end;
 procedure TStdAudioIn.OpenAudio();
 begin
   if FOpened = 0 then
-    _audio_fd:=open(PChar(AudioChannels[FBaseChannel]), O_RDONLY);
+    _audio_fd:=fpopen(PChar(AudioChannels[FBaseChannel]), O_RDONLY);
   Inc(FOpened);
 end;
 
 procedure TStdAudioIn.CloseAudio();
 begin
-  if FOpened = 1 then __close(_audio_fd);
+  if FOpened = 1 then fpclose(_audio_fd);
   if FOpened > 0 then Dec(FOpened);
 end;
 
@@ -156,7 +156,7 @@ begin
   OpenAudio();
   BPS:=FBPS;
   if not (BPS in [8, 16]) then BPS:=16;
-  ioctl(_audio_fd, SNDCTL_DSP_SETFMT, @BPS);
+  fpioctl(_audio_fd, TIOCtlRequest(SNDCTL_DSP_SETFMT), @BPS);
   FBPS:=BPS;
   Result:=BPS;
   CloseAudio();
@@ -168,7 +168,7 @@ var
 begin
   OpenAudio();
   Ch:=FChan;
-  ioctl(_audio_fd, SNDCTL_DSP_CHANNELS, @Ch);
+  fpioctl(_audio_fd, TIOCtlRequest(SNDCTL_DSP_CHANNELS), @Ch);
   FChan:=Ch;
   Result:=Ch;
   CloseAudio();
@@ -180,7 +180,7 @@ var
 begin
   OpenAudio;
   SR:=FSampleRate;
-  ioctl(_audio_fd, SNDCTL_DSP_SPEED, @SR);
+  fpioctl(_audio_fd, TIOCtlRequest(SNDCTL_DSP_SPEED), @SR);
   FSampleRate:=SR;
   Result:=SR;
   CloseAudio();
@@ -191,7 +191,7 @@ begin
   inherited Init();
   BufferSize:=$8000;
   OpenAudio();
-  FRecBytes:=FRecTime * (GetBPS div 8) * GetCh * GetSR;
+  FRecBytes:=Round(FRecTime * (GetBPS div 8) * GetCh() * GetSR());
 end;
 
 procedure TStdAudioIn.Done();
@@ -222,7 +222,7 @@ begin
   if BufStart > BufEnd then
   begin
     BufStart:=1;
-    l:=__read(_audio_fd, FBuffer[BufStart], BufferSize);
+    l:=fpread(_audio_fd, FBuffer[BufStart], BufferSize);
     if l < 1 then
     begin
       Result:=0;
@@ -247,23 +247,23 @@ var
 begin
   OutputChannelsCount:=0;
   fname:='/dev/dsp0';
-  fd:=open(PChar(fname), O_RDONLY);
+  fd:=fpopen(PChar(fname), O_RDONLY);
   if fd < 0 then
   begin
     //  Under ALSA there is no /dev/dsp0 device
     fname:='/dev/dsp';
-    fd:=open(PChar(fname), O_RDONLY);
+    fd:=fpopen(PChar(fname), O_RDONLY);
     if fd < 0 then Exit;
   end;
   AudioChannels[OutputChannelsCount]:=fname;
-  __close(fd);
+  fpclose(fd);
   Inc(OutputChannelsCount);
   for i:=1 to MAX_CHANNELS-2 do
   begin
     fname:='/dev/dsp' + IntToStr(i);
-    fd:=open(PChar(fname), O_RDONLY);
+    fd:=fpopen(PChar(fname), O_RDONLY);
     if fd < 0 then Break;
-    __close(fd);
+    fpclose(fd);
     AudioChannels[OutputChannelsCount]:=fname;
     Inc(OutputChannelsCount);
   end;

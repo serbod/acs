@@ -10,7 +10,7 @@ Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 
 }
 
-function GetTocEntry(cd_fd, Track : Integer): TAcsCDTrackInfo;
+function GetTocEntry(cd_fd, Track: Integer): TAcsCDTrackInfo;
 var
   Entry : cdrom_tocentry;
   toc : cdrom_tochdr;
@@ -65,7 +65,7 @@ begin
   end;
 end;
 
-function GetCDInfo(cd_fd : Integer) : TAcsCDInfo;
+function GetCDInfo(cd_fd: Integer) : TAcsCDInfo;
 var
   res : Integer;
   Data: Integer;
@@ -87,7 +87,7 @@ begin
   end;
 end;
 
-procedure TAcsCDIn.OpenCD;
+procedure TAcsCDIn.OpenCD();
 begin
   if FCurrentDrive >= length(DrivesPaths) then
     exit;
@@ -101,13 +101,13 @@ begin
 end;
 
 
-procedure TAcsCDIn.CloseCD;
+procedure TAcsCDIn.CloseCD();
 begin
   if FOpened = 1 then fpclose(_cd_fd);
   if FOpened > 0 then Dec(FOpened);
 end;
 
-function TAcsCDIn.GetInfo;
+function TAcsCDIn.GetInfo(): TAcsCDInfo;
 begin
   if Busy then raise EACSException.Create(strBusy);
   OpenCD;
@@ -115,7 +115,7 @@ begin
   CloseCD;
 end;
 
-function TAcsCDIn.GetStatus;
+function TAcsCDIn.GetStatus(): TAcsCDStatus;
 begin
   if FCurrentDrive >= length(DrivesPaths) then
     exit;
@@ -132,7 +132,7 @@ begin
   CloseCD;
 end;
 
-function TAcsCDIn.GetNumTracks;
+function TAcsCDIn.GetNumTracks(): Integer;
 var
   toc : cdrom_tochdr;
 begin
@@ -146,7 +146,7 @@ begin
   CloseCD;
 end;
 
-function TAcsCDIn.GetTrackInfo;
+function TAcsCDIn.GetTrackInfo(const vIndex: Integer): TAcsCDTrackInfo;
 begin
   if Busy then raise EACSException.Create(strBusy);
   OpenCD;
@@ -186,7 +186,7 @@ begin
   Result := msf1;
 end;
 
-procedure TAcsCDIn.SetST;
+procedure TAcsCDIn.SetST(Track: Integer);
 begin
   if Self.Busy then raise EACSException.Create(strBusy);
   FStartTrack := Track;
@@ -194,7 +194,7 @@ begin
   FillChar(FStartPos.MSF, SizeOf(FStartPos.MSF), 0);
 end;
 
-procedure TAcsCDIn.SetET;
+procedure TAcsCDIn.SetET(Track: Integer);
 begin
   if Self.Busy then raise EACSException.Create(strBusy);
   FEndTrack := Track;
@@ -204,13 +204,13 @@ begin
   CloseCD;
 end;
 
-procedure TAcsCDIn.SetSP;
+procedure TAcsCDIn.SetSP(Pos: TAcsCDPosition);
 begin
   if Self.Busy then raise EACSException.Create(strBusy);
   Self.FStartPos := Pos;
 end;
 
-procedure TAcsCDIn.SetEP;
+procedure TAcsCDIn.SetEP(Pos: TAcsCDPosition);
 begin
   if Self.Busy then raise EACSException.Create(strBusy);
   Self.FEndPos := Pos;
@@ -222,7 +222,7 @@ begin
   FCurrentDrive := 0;
 end;
 
-function TAcsCDIn.GetSize();
+function TAcsCDIn.GetSize(): Integer;
 var
   msf1, msf2 : TAcsCDMSF;
 begin
@@ -255,7 +255,7 @@ begin
   inherited Done();
 end;
 
-function TAcsCDIn.GetData();
+function TAcsCDIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
 var
   StartFrame, EndFrame : Integer;
   cdaudio : cdrom_read_audio;

@@ -103,18 +103,18 @@ type
     FControls: array of TControlEntry;
     FMuteControls: array of TControlEntry;
     {$ENDIF}
-    FMixerName: String;
-    function GetRecSource: Integer;
-    function GetVolume(vChannel: integer): TAcsMixerLevel;
-    procedure SetVolume(vChannel: integer; vLevel: TAcsMixerLevel);
-    procedure SetRecSource(vChannel: integer);
+    FMixerName: string;
+    function GetRecSource(): Integer;
+    function GetVolume(vChannel: Integer): TAcsMixerLevel;
+    procedure SetVolume(vChannel: Integer; vLevel: TAcsMixerLevel);
+    procedure SetRecSource(vChannel: Integer);
     procedure SetDevNum(Num: Integer);
     function GetChannel(Num: Integer): TAcsMixerChannel;
     function GetDevCount: Integer;
     function GetChannelCount: Integer;
     function GetChannelName(vChannel: Integer): string;
-    function GetMute(vChannel: integer): Boolean;
-    procedure SetMute(vChannel: integer; Mute: Boolean);
+    function GetMute(vChannel: Integer): Boolean;
+    procedure SetMute(vChannel: Integer; Mute: Boolean);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -129,20 +129,20 @@ type
     property ChannelCount: Integer read GetChannelCount;
   published
     property DevNum: Integer read FDevNum write SetDevNum;
-    property MixerName: String read FMixerName;
+    property MixerName: string read FMixerName;
   end;
 
 var
   MixersCount: Byte;
 
-  function ChannelToStr(ch: TAcsMixerChannel): String;
-  function GetMixerName(DevNum: integer): String;
+  function ChannelToStr(ch: TAcsMixerChannel): string;
+  function GetMixerName(DevNum: integer): string;
 
 implementation
 
 {$I ACS_Mixer.inc}
 
-function ChannelToStr(ch: TAcsMixerChannel): String;
+function ChannelToStr(ch: TAcsMixerChannel): string;
 begin
   case ch of
     mcVolume:  Result:=strMixerVolume;
