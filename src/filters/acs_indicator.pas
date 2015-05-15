@@ -191,7 +191,7 @@ begin
   if Length(FBuffer)<>Result then SetLength(FBuffer, Result);
   if Result > 0 then Move(Buffer^, FBuffer[0], Result);
   FLocked:=False;
- end;
+end;
 
 procedure TAcsSoundIndicator.GetValues(var Values: array of Double);
 var

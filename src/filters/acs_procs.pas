@@ -58,32 +58,24 @@ implementation
 
 {$IFDEF LINUX}
 function FindLibs(const Pattern: String): String;
+
+function FindInPath(sPath: string): string;
 var
-  Path: String;
   SR: TSearchRec;
 begin
-  Path := '/usr/lib/';
-  if FindFirst(Path + Pattern, faAnyFile, SR) = 0 then
+  Result:='';
+  if FindFirst(sPath+Pattern, faAnyFile, SR) = 0 then
   begin
-    Result := Path+SR.Name;
+    Result := sPath+SR.Name;
     FindClose(SR);
-    Exit;
   end;
-  Path := '/usr/lib/x86_64-linux-gnu/';
-  if FindFirst(Path + Pattern, faAnyFile, SR) = 0 then
-  begin
-    Result := Path+SR.Name;
-    FindClose(SR);
-    Exit;
-  end;
-  Path := '/usr/local/lib/';
-  if FindFirst(Path + Pattern, faAnyFile, SR) = 0 then
-  begin
-    Result := Path+SR.Name;
-    FindClose(SR);
-    Exit;
-  end;
-  Result := '';
+end;
+
+begin
+  Result:=FindInPath('/usr/lib/');
+  if Result = '' then Result:=FindInPath('/usr/lib/i386-linux-gnu/');
+  if Result = '' then Result:=FindInPath('/usr/lib/x86_64-linux-gnu/');
+  if Result = '' then Result:=FindInPath('/usr/local/lib/');
 end;
 {$ENDIF}
 

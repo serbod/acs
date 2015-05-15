@@ -145,10 +145,6 @@ type
     function SetStartTime(Minutes, Seconds: Integer): Boolean;
     function SetEndTime(Minutes, Seconds: Integer): Boolean;
     procedure Jump(Offs: Real); override;
-    property TotalSamples: Integer read FTotalSamples;
-    property Valid: Boolean read GetValid;
-    property Size: Integer read GetSize;
-    property Position: Integer read GetPosition;
   published
     property FileName;
   end;

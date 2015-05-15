@@ -165,8 +165,10 @@ initialization
   InitializeCriticalSection(CrSecO);
   {$ENDIF}
   CountChannels();
-  RegisterAudioOut('Wavemapper', TStdAudioOut, LATENCY);
-  RegisterAudioIn('Wavemapper', TStdAudioIn, LATENCY);
+  if OutputChannelsCount > 0 then
+    RegisterAudioOut('Wavemapper', TStdAudioOut, LATENCY);
+  if InputChannelsCount > 0 then
+    RegisterAudioIn('Wavemapper', TStdAudioIn, LATENCY);
 
 finalization
   {$IFDEF MSWINDOWS}

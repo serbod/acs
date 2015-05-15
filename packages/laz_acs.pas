@@ -9,8 +9,8 @@ interface
 uses
   acs_reg, acs_audio, acs_audiomix, acs_cdrom, acs_classes, acs_converters, 
   acs_file, acs_filters, acs_indicator, acs_misc, acs_mixer, acs_multimix, 
-  acs_procs, acs_streams, acs_strings, acs_types, acs_properties, acs_wave, 
-  acs_allformats, acs_stdaudio, LazarusPackageIntf;
+  acs_procs, acs_streams, acs_strings, acs_types, acs_properties, acs_dsfiles, 
+  acs_wave, acs_allformats, acs_stdaudio, acs_alsaaudio, LazarusPackageIntf;
 
 implementation
 

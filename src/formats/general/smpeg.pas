@@ -11,18 +11,18 @@ This is the ACS for Linux and Windows version of the unit.
 {$weakpackageunit on}
 
 // Linux and Windows C-Compilers use different byte-allignment
-{$IFDEF Linux}
-  {$align 4} // linux uses dword alignment
-{$endif}
-{$ifdef win32}
-  {$ifdef ver140}
-    {$align 8} // windows uses quad-word alignment
-  {$endif}
-{$endif}
-
-{$IFDEF FPC}
+{$ifdef FPC}
   {$PACKRECORDS 4}
-{$ENDIF FPC}
+{$else}
+  {$IFDEF Linux}
+    {$align 4} // linux uses dword alignment
+  {$endif}
+  {$ifdef win32}
+    {$ifdef ver140}
+      {$align 8} // windows uses quad-word alignment
+    {$endif}
+  {$endif}
+ {$endif FPC}
 
 unit smpeg;
 
@@ -51,9 +51,36 @@ type
   TSMPEG = _SMPEG;
   PSMPEG = ^_SMPEG;
 
+const
+  { Audio Format Values }
+
+  { 8-bit support }
+  AUDIO_S8 = $8008; // signed 8-bit samples
+  AUDIO_U8 = $0008; // unsigned 8-bit samples
+  { 16-bit support }
+  AUDIO_S16LSB = $8010; // signed 16-bit samples in little-endian byte order
+  AUDIO_S16MSB = $9010; // signed 16-bit samples in big-endian byte order
+  //AUDIO_S16SYS  // signed 16-bit samples in native byte order
+  AUDIO_S16    = AUDIO_S16LSB;
+  AUDIO_U16LSB = $0010; // unsigned 16-bit samples in little-endian byte order
+  AUDIO_U16MSB = $1010; // unsigned 16-bit samples in big-endian byte order
+  //AUDIO_U16SYS  // unsigned 16-bit samples in native byte order
+  AUDIO_U16    = AUDIO_U16LSB;
+   { 32-bit support (new to SDL 2.0) }
+  AUDIO_S32LSB = $8020; // 32-bit integer samples in little-endian byte order
+  AUDIO_S32MSB = $9020; // 32-bit integer samples in big-endian byte order
+  //AUDIO_S32SYS  // 32-bit integer samples in native byte order
+  AUDIO_S32    = AUDIO_S32LSB;
+  { float support (new to SDL 2.0) }
+  AUDIO_F32LSB = $8120; // 32-bit floating point samples in little-endian byte order
+  AUDIO_F32MSB = $9120; // 32-bit floating point samples in big-endian byte order
+  //AUDIO_F32SYS //32-bit floating point samples in native byte order
+  AUDIO_F32    = AUDIO_F32LSB;
+
+type
   SDL_AudioSpec = record
-    freq: Integer;
-    format: Word;
+    freq: Integer;    // DSP frequency (samples per second);
+    format: Word;     // audio data format:
     channels: Byte;
     silence: Byte;
     samples: Word;
@@ -81,7 +108,7 @@ type
 const
 
   {$ifdef LINUX}
-  LibsmpegPath = 'libsmpeg*.so*';
+  LibSmpegPath = 'libsmpeg*.so*';
   LibSDLPath = 'libSDL-*.so*';
   {$ELSE}
   LibsmpegPath = 'smpeg.dll';
@@ -94,42 +121,50 @@ var
 type
 
   SMPEG_new_t = function(const filename: PChar; var info: SMPEG_Info; sdl_audio: Integer): PSMPEG; cdecl;
-
   SMPEG_delete_t = procedure(mpeg: Pointer); cdecl;
-
   SMPEG_wantedSpec_t = function(mpeg: Pointer; var spec: SDL_AudioSpec): Integer; cdecl;
-
   SMPEG_play_t = procedure(mpeg: Pointer); cdecl;
-
   SMPEG_status_t = function(mpeg: Pointer): Integer; cdecl;
-
+  SMPEG_pause_t = procedure(mpeg: Pointer); cdecl;
   SMPEG_stop_t = procedure(mpeg: Pointer); cdecl;
-
   SMPEG_playAudio_t = function(mpeg: Pointer; stream: Pointer; len: Integer): Integer; cdecl;
-
   SMPEG_skip_t = procedure(mpeg: Pointer; Pos: Single); cdecl;
-
   SMPEG_rewind_t = procedure(mpeg: Pointer); cdecl;
+  SMPEG_seek_t = procedure(mpeg: Pointer; bytes: Integer); cdecl;
 
 var
-
+  { Create a new SMPEG object from an MPEG file.
+   On return, if 'info' is not NULL, it will be filled with information
+   about the MPEG object.
+   This function returns a new SMPEG object.  Use SMPEG_error() to find out
+   whether or not there was a problem building the MPEG stream.
+   The sdl_audio parameter indicates if SMPEG should initialize the SDL audio
+   subsystem. If not, you will have to use the SMPEG_playaudio() function below
+   to extract the decoded data. }
   SMPEG_new: SMPEG_new_t;
-
+  { Delete an SMPEG object }
   SMPEG_delete: SMPEG_delete_t;
-
+  { Get the best SDL audio spec for the audio stream }
   SMPEG_wantedSpec: SMPEG_wantedSpec_t;
-
-  SMPEG_play: SMPEG_play_t;
-
+  { Get the current status of an SMPEG object }
   SMPEG_status: SMPEG_status_t;
-
+  { Play an SMPEG object }
+  SMPEG_play: SMPEG_play_t;
+  { Pause/Resume playback of an SMPEG object }
+  SMPEG_pause: SMPEG_pause_t;
+  { Stop playback of an SMPEG object }
   SMPEG_stop: SMPEG_stop_t;
-
+  { Exported callback function for audio playback.
+    The function takes a buffer and the amount of data to fill, and returns
+    the amount of data in bytes that was actually written.  This will be the
+    amount requested unless the MPEG audio has finished. }
   SMPEG_playAudio: SMPEG_playAudio_t;
-
+  { Skip 'seconds' seconds in the MPEG stream }
   SMPEG_skip: SMPEG_skip_t;
-
+  { Rewind the play position of an SMPEG object to the beginning of the MPEG }
   SMPEG_rewind: SMPEG_rewind_t;
+  { Seek 'bytes' bytes in the MPEG stream }
+  SMPEG_seek: SMPEG_seek_t;
 
   function LoadMPEGLibrary(): Boolean;
   procedure UnloadMPEGLibrary;
@@ -146,8 +181,8 @@ const
 
 var
   {$ifdef LINUX}
-  Libhandle: Pointer;
-  SDLhandle: Pointer;
+  Libhandle: TLibHandle;
+  SDLhandle: TLibHandle;
   {$else}
   Libhandle: Cardinal;
   SDLhandle: Cardinal;
@@ -161,41 +196,26 @@ var
   Path: string;
 begin
   Result:=False;
+
+  Path:=LibSDLPath;
   {$ifdef LINUX}
   Path:=FindLibs(LibSDLPath);
-  if Path <> '' then SDLhandle:=dlopen(@Path, RTLD_NOW or RTLD_GLOBAL);
-  if SDLhandle = nil then Exit;
-  SDL_Init:=dlsym(SDLhandle, 'SDL_Init');
-  SDL_Quit:=dlsym(SDLhandle, 'SDL_Quit');
-  SDL_Init(SDL_INIT_AUDIO);
-
-  Path:=FindLibs(LibsmpegPath);
-  if Path <> '' then Libhandle:=dlopen(@Path, RTLD_NOW or RTLD_GLOBAL);
-  if Libhandle = nil then Exit;
-  if Libhandle <> nil then
-  begin
-    LibsmpegLoaded:=True;
-    SMPEG_new:=dlsym(Libhandle, 'SMPEG_new');
-    SMPEG_delete:=dlsym(Libhandle, 'SMPEG_delete');
-    SMPEG_wantedSpec:=dlsym(Libhandle, 'SMPEG_wantedSpec');
-    SMPEG_play:=dlsym(Libhandle, 'SMPEG_play');
-    SMPEG_status:=dlsym(Libhandle, 'SMPEG_status');
-    SMPEG_stop:=dlsym(Libhandle, 'SMPEG_stop');
-    SMPEG_playAudio:=dlsym(Libhandle, 'SMPEG_playAudio');
-    SMPEG_skip:=dlsym(Libhandle, 'SMPEG_skip');
-    SMPEG_rewind:=dlsym(Libhandle, 'SMPEG_rewind');
-  end;
   {$ENDIF}
+  SDLhandle:=LoadLibrary(Path);
+  if SDLhandle <> NilHandle then
+  begin
+    SDL_Init:=GetProcAddress(SDLhandle, 'SDL_Init');
+    SDL_Quit:=GetProcAddress(SDLhandle, 'SDL_Quit');
+    SDL_Init(SDL_INIT_AUDIO);
+  end;
 
-  {$ifdef WINDOWS}
-  SDLhandle:=LoadLibrary(LibSDLPath);
-  if SDLhandle = 0 then exit;
-  SDL_Init:=GetProcAddress(SDLhandle, 'SDL_Init');
-  SDL_Quit:=GetProcAddress(SDLhandle, 'SDL_Quit');
-  SDL_Init(SDL_INIT_AUDIO);
-  Libhandle:=LoadLibrary(LibsmpegPath);
-  if Libhandle = 0 then exit;
-  if Libhandle <> 0 then
+  Path:=LibsmpegPath;
+  {$ifdef LINUX}
+  Path:=FindLibs(LibsmpegPath);
+  {$ENDIF}
+  Libhandle:=LoadLibrary(Path);
+  if Libhandle = NilHandle then exit;
+  if Libhandle <> NilHandle then
   begin
     LibsmpegLoaded:=True;
     SMPEG_new:=GetProcAddress(Libhandle, 'SMPEG_new');
@@ -208,22 +228,17 @@ begin
     SMPEG_skip:=GetProcAddress(Libhandle, 'SMPEG_skip');
     SMPEG_rewind:=GetProcAddress(Libhandle, 'SMPEG_rewind');
   end;
-  {$ENDIF}
   Result:=LibsmpegLoaded;
 end;
 
 procedure UnloadMPEGLibrary();
 begin
-  SDL_Quit;
-  {$ifdef LINUX}
-  if Libhandle <> nil then dlclose(Libhandle);
-  if SDLhandle <> nil then dlclose(SDLhandle);
-  {$endif}
-
-  {$ifdef WINDOWS}
-  if Libhandle <> 0 then FreeLibrary(Libhandle);
-  if SDLhandle <> 0 then FreeLibrary(SDLhandle);
-  {$endif}
+  if Libhandle <> NilHandle then FreeLibrary(Libhandle);
+  if SDLhandle <> NilHandle then
+  begin
+    SDL_Quit;
+    FreeLibrary(SDLhandle);
+  end;
   LibsmpegLoaded:=False;
 end;
 

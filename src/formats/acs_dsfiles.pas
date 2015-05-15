@@ -11,11 +11,12 @@ Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 
 unit acs_dsfiles;
 
+interface
+
+{$ifdef WINDOWS}
 {$ifdef linux}{$message error 'unit not supported'}{$endif linux}
 
 {$DEFINE DYNAMIC_LINK_ALL}
-
-interface
 
 uses
   ACS_File, ACS_Classes, DirectShow9, Classes, ActiveX, MMSystem, Windows;
@@ -65,7 +66,11 @@ const
 
 function ErrorCheck(FuncName: string; Value: HRESULT): HRESULT; { Check the result of a COM operation }
 
+{$endif WINDOWS}
+
 implementation
+
+{$ifdef WINDOWS}
 
 constructor TDSIn.Create(AOwner: TComponent);
 begin
@@ -308,6 +313,6 @@ initialization
   FileFormats.Add('mp2',  'DirectShow Mpeg Audio Layer II', TDSIn);
   FileFormats.Add('mpeg', 'DirectShow Mpeg Audio', TDSIn);
   FileFormats.Add('wma',  'DirectShow Windows Media Audio', TDSIn);
-
+  {$endif WINDOWS}
 end.
 

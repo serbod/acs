@@ -131,7 +131,6 @@ SOFTWARE."/>
       </Item17>
       <Item18>
         <Filename Value="..\src\formats\acs_dsfiles.pas"/>
-        <AddToUsesPkgSection Value="False"/>
         <UnitName Value="acs_dsfiles"/>
       </Item18>
       <Item19>
@@ -173,7 +172,6 @@ SOFTWARE."/>
       </Item26>
       <Item27>
         <Filename Value="..\src\devices\acs_alsaaudio.pas"/>
-        <AddToUsesPkgSection Value="False"/>
         <UnitName Value="acs_alsaaudio"/>
       </Item27>
       <Item28>

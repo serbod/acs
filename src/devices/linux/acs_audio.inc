@@ -11,7 +11,7 @@ const
   MAX_CHANNELS = 16; // Maximum number of audio channels/devices
   O_RDONLY = 0;
   O_WRONLY = 1;
-  libname = 'libc.so.6';
+  //libname = 'libc.so.6';
 
 var
   AudioChannels: array[0..MAX_CHANNELS-1] of String;

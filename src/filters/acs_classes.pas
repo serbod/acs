@@ -244,7 +244,7 @@ type
       Possible values are 1 (mono) and 2 (stereo). }
     property Channels: Integer read GetCh;
     { Current playing position in bytes }
-    property Position: Integer read FPosition;
+    property Position: Integer read GetPosition;
     { Current playing position in seconds }
     property PositionTime: Real read GetPositionTime;
     { This property sets the buffersize of the component }
@@ -479,7 +479,7 @@ type
     procedure Done(); override;
     procedure Init(); override;
     { Read Size to determine the size of the input stream in bytes. }
-    property Size: Integer read FSize;
+    property Size: Integer read GetSize;
     { Set current playing sample index from beginning of file }
     function Seek(SampleNum: Integer): Boolean; virtual; abstract;
     function SetStartTime(Minutes, Seconds: Integer): Boolean;
@@ -1108,7 +1108,8 @@ begin
   if not Assigned(FInput) then Exit;
   while InputLock do;
   InputLock:=True;
-  Result:=FInput.GetData(FBuffer);
+  //Result:=FInput.GetData(FBuffer);
+  Result:=FInput.GetData(FBuffer.Memory, FBuffer.Size);
   InputLock:=False;
 end;
 
@@ -1229,14 +1230,15 @@ end;
 procedure TAcsCustomFileIn.Init();
 begin
   inherited Init();
-  if FStreamDisabled then Exit;
-
-  if not Assigned(FStream) then
-    if FFileName = '' then
-    begin
-      inherited Done();
-      raise EAcsException.Create(strFilenamenotassigned);
-    end;
+  if not FStreamDisabled then
+  begin
+    if not Assigned(FStream) then
+      if FFileName = '' then
+      begin
+        inherited Done();
+        raise EAcsException.Create(strFilenamenotassigned);
+      end;
+  end;
 
   OpenFile();
   if StartSample <> 0 then Seek(StartSample);
@@ -1278,7 +1280,8 @@ function TAcsCustomFileIn.GetValid(): Boolean;
 var
   WasOpened: Boolean;
 begin
-  Result:=False;
+  Result:=FValid;
+  if Result then Exit;
   WasOpened:=FOpened;
   //if (not Assigned(FStream)) or (FileName = '') then
   if (FileName = '') then // some drivers don't use FStream
@@ -1291,13 +1294,13 @@ begin
     OpenFile();
     Result:=FValid;
     if not WasOpened then CloseFile();
-  end
-  else Result:=FValid;
+  end;
 end;
 
 procedure TAcsCustomFileIn.SetFileName(const AValue: TFileName);
 begin
   FFileName:=AValue;
+  FValid:=False;
 end;
 
 procedure TAcsCustomFileIn.OpenFile();

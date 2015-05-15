@@ -39,10 +39,9 @@ uses
 
 const
   asoundlib_path = 'libasound.so*';
-  asoundlib_path_ = 'libasound.so';
 
 var
-  AsoundlibLoaded: Boolean = False;
+  ASoundLibLoaded: Boolean = False;
 
 type
    Puchar_t = ^uchar_t;
@@ -519,7 +518,7 @@ type
   snd_pcm_hw_params_set_rate_max_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; val:PLongWord; dir:Plongint):longint;cdecl;
   snd_pcm_hw_params_set_rate_minmax_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; min:PLongWord; mindir:Plongint; max:PLongWord;
                maxdir:Plongint):longint;cdecl;
-  snd_pcm_hw_params_set_rate_near_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; val:LongWord; dir:Plongint):LongWord;cdecl;
+  snd_pcm_hw_params_set_rate_near_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; val:PLongWord; dir:Plongint):LongWord;cdecl;
   snd_pcm_hw_params_set_rate_first_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; dir:Plongint):LongWord;cdecl;
   snd_pcm_hw_params_set_rate_last_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; dir:Plongint):LongWord;cdecl;
   snd_pcm_hw_params_get_period_time_t = function(params:Psnd_pcm_hw_params_t; dir:Plongint):longint;cdecl;
@@ -534,7 +533,8 @@ type
   snd_pcm_hw_params_set_period_time_near_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; val:LongWord; dir:Plongint):LongWord;cdecl;
   snd_pcm_hw_params_set_period_time_first_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; dir:Plongint):LongWord;cdecl;
   snd_pcm_hw_params_set_period_time_last_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; dir:Plongint):LongWord;cdecl;
-  snd_pcm_hw_params_get_period_size_t = function(params:Psnd_pcm_hw_params_t; dir:Plongint):snd_pcm_sframes_t;cdecl;
+  //snd_pcm_hw_params_get_period_size_t = function(params: Psnd_pcm_hw_params_t; dir: Plongint): snd_pcm_sframes_t; cdecl;
+  snd_pcm_hw_params_get_period_size_t = function(params: Psnd_pcm_hw_params_t; val: Psnd_pcm_sframes_t; dir: Plongint): longint; cdecl;
   snd_pcm_hw_params_get_period_size_min_t = function(params:Psnd_pcm_hw_params_t; dir:Plongint):snd_pcm_uframes_t;cdecl;
   snd_pcm_hw_params_get_period_size_max_t = function(params:Psnd_pcm_hw_params_t; dir:Plongint):snd_pcm_uframes_t;cdecl;
   snd_pcm_hw_params_test_period_size_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; val:snd_pcm_uframes_t; dir:longint):longint;cdecl;
@@ -543,11 +543,12 @@ type
   snd_pcm_hw_params_set_period_size_max_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; val:Psnd_pcm_uframes_t; dir:Plongint):longint;cdecl;
   snd_pcm_hw_params_set_period_size_minmax_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; min:Psnd_pcm_uframes_t; mindir:Plongint; max:Psnd_pcm_uframes_t;
                maxdir:Plongint):longint;cdecl;
-  snd_pcm_hw_params_set_period_size_near_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; val:snd_pcm_uframes_t; dir:Plongint):snd_pcm_uframes_t;cdecl;
+  snd_pcm_hw_params_set_period_size_near_t = function(pcm: Psnd_pcm_t; params: Psnd_pcm_hw_params_t; val: Psnd_pcm_uframes_t; dir: Plongint): snd_pcm_uframes_t; cdecl;
   snd_pcm_hw_params_set_period_size_first_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; dir:Plongint):snd_pcm_uframes_t;cdecl;
   snd_pcm_hw_params_set_period_size_last_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; dir:Plongint):snd_pcm_uframes_t;cdecl;
   snd_pcm_hw_params_set_period_size_integer_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t):longint;cdecl;
-  snd_pcm_hw_params_get_periods_t = function(params:Psnd_pcm_hw_params_t; dir:Plongint):longint;cdecl;
+  //snd_pcm_hw_params_get_periods_t = function(params: Psnd_pcm_hw_params_t; dir: Plongint): longint; cdecl;
+  snd_pcm_hw_params_get_periods_t = function(params: Psnd_pcm_hw_params_t; val: PLongWord; dir: Plongint): longint; cdecl;
   snd_pcm_hw_params_get_periods_min_t = function(params:Psnd_pcm_hw_params_t; dir:Plongint):LongWord;cdecl;
   snd_pcm_hw_params_get_periods_max_t = function(params:Psnd_pcm_hw_params_t; dir:Plongint):LongWord;cdecl;
   snd_pcm_hw_params_test_periods_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; val:LongWord; dir:longint):longint;cdecl;
@@ -556,7 +557,7 @@ type
   snd_pcm_hw_params_set_periods_max_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; val:PLongWord; dir:Plongint):longint;cdecl;
   snd_pcm_hw_params_set_periods_minmax_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; min:PLongWord; mindir:Plongint; max:PLongWord;
                maxdir:Plongint):longint;cdecl;
-  snd_pcm_hw_params_set_periods_near_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; val:LongWord; dir:Plongint):LongWord;cdecl;
+  snd_pcm_hw_params_set_periods_near_t = function(pcm: Psnd_pcm_t; params: Psnd_pcm_hw_params_t; val: PLongWord; dir: Plongint): LongWord; cdecl;
   snd_pcm_hw_params_set_periods_first_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; dir:Plongint):LongWord;cdecl;
   snd_pcm_hw_params_set_periods_last_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; dir:Plongint):LongWord;cdecl;
   snd_pcm_hw_params_set_periods_integer_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t):longint;cdecl;
@@ -580,7 +581,7 @@ type
   snd_pcm_hw_params_set_buffer_size_min_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; val:Psnd_pcm_uframes_t):longint;cdecl;
   snd_pcm_hw_params_set_buffer_size_max_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; val:Psnd_pcm_uframes_t):longint;cdecl;
   snd_pcm_hw_params_set_buffer_size_minmax_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; min:Psnd_pcm_uframes_t; max:Psnd_pcm_uframes_t):longint;cdecl;
-  snd_pcm_hw_params_set_buffer_size_near_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; val:snd_pcm_uframes_t):snd_pcm_uframes_t;cdecl;
+  snd_pcm_hw_params_set_buffer_size_near_t = function(pcm:Psnd_pcm_t; params: Psnd_pcm_hw_params_t; val: Psnd_pcm_uframes_t): snd_pcm_uframes_t; cdecl;
   snd_pcm_hw_params_set_buffer_size_first_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t):snd_pcm_uframes_t;cdecl;
   snd_pcm_hw_params_set_buffer_size_last_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t):snd_pcm_uframes_t;cdecl;
   snd_pcm_hw_params_get_tick_time_t = function(params:Psnd_pcm_hw_params_t; dir:Plongint):longint;cdecl;
@@ -858,60 +859,65 @@ type
   snd_ctl_card_info_get_mixername_t = function(obj : psnd_ctl_card_info_t) : PChar; cdecl;
   snd_ctl_card_info_get_components_t = function(obj : psnd_ctl_card_info_t) : PChar; cdecl;
 
-
+function LoadAlsaLibrary(): boolean;
+procedure UnloadAlsaLibrary();
 
 implementation
 
 var
+  Libhandle: TLibHandle;
+
+
+function LoadAlsaLibrary(): boolean;
+var
   Path: string;
-  Libhandle: Pointer;
-
-initialization
-
+begin
   Path := FindLibs(asoundlib_path);
-  if Path <> '' then Libhandle := dlopen(@Path, RTLD_NOW or RTLD_GLOBAL);
-  if Libhandle=nil then
-    Libhandle := dlopen(asoundlib_path_, RTLD_NOW or RTLD_GLOBAL);
-  if Libhandle <> nil then
+  if Path <> '' then Libhandle:=LoadLibrary(Path);
+  if Libhandle <> NilHandle then
   begin
-    AsoundlibLoaded := True;
-    snd_pcm_close := dlsym(Libhandle, 'snd_pcm_close');
-    snd_pcm_drop := dlsym(Libhandle, 'snd_pcm_drop');
-    snd_pcm_drain := dlsym(Libhandle, 'snd_pcm_drain');
-    snd_pcm_hw_params_malloc := dlsym(Libhandle, 'snd_pcm_hw_params_malloc');
-    snd_pcm_hw_params_any := dlsym(Libhandle, 'snd_pcm_hw_params_any');
-    snd_pcm_hw_params_get_periods := dlsym(Libhandle, 'snd_pcm_hw_params_get_periods');
-    snd_pcm_hw_params_get_period_size := dlsym(Libhandle, 'snd_pcm_hw_params_get_period_size');
-    snd_pcm_hw_params_get_rate := dlsym(Libhandle, 'snd_pcm_hw_params_get_rate');
-    snd_pcm_hw_params_set_access := dlsym(Libhandle, 'snd_pcm_hw_params_set_access');
-    snd_pcm_hw_params_set_buffer_size := dlsym(Libhandle, 'snd_pcm_hw_params_set_buffer_size');
-    snd_pcm_hw_params_set_buffer_size_near := dlsym(Libhandle, 'snd_pcm_hw_params_set_buffer_size_near');
-    snd_pcm_hw_params_set_channels := dlsym(Libhandle, 'snd_pcm_hw_params_set_channels');
-    snd_pcm_hw_params_set_format := dlsym(Libhandle, 'snd_pcm_hw_params_set_format');
-    snd_pcm_hw_params_set_period_size_near := dlsym(Libhandle, 'snd_pcm_hw_params_set_period_size_near');
-    snd_pcm_hw_params_set_periods_near := dlsym(Libhandle, 'snd_pcm_hw_params_set_periods_near');
-    snd_pcm_hw_params_set_rate_near := dlsym(Libhandle, 'snd_pcm_hw_params_set_rate_near');
-    snd_pcm_hw_params := dlsym(Libhandle, 'snd_pcm_hw_params');
-    snd_pcm_hw_params_free := dlsym(Libhandle, 'snd_pcm_hw_params_free');
-    snd_pcm_info_get_device := dlsym(Libhandle, 'snd_pcm_info_get_device');
-    snd_pcm_info_get_name := dlsym(Libhandle, 'snd_pcm_info_get_name');
-    snd_pcm_info_set_device := dlsym(Libhandle, 'snd_pcm_info_set_device');
-    snd_pcm_mmap_readi := dlsym(Libhandle, 'snd_pcm_mmap_readi');
-    snd_pcm_mmap_writei := dlsym(Libhandle, 'snd_pcm_mmap_writei');
-    snd_pcm_open := dlsym(Libhandle, 'snd_pcm_open');
-    snd_pcm_pause := dlsym(Libhandle, 'snd_pcm_pause');
-    snd_pcm_prepare := dlsym(Libhandle, 'snd_pcm_prepare');
-    snd_pcm_readi := dlsym(Libhandle, 'snd_pcm_readi');
-    snd_pcm_reset := dlsym(Libhandle, 'snd_pcm_reset');
-    snd_pcm_resume := dlsym(Libhandle, 'snd_pcm_resume');
-    snd_pcm_state := dlsym(Libhandle, 'snd_pcm_state');
-    snd_pcm_stream := dlsym(Libhandle, 'snd_pcm_stream');
-    snd_pcm_writei := dlsym(Libhandle, 'snd_pcm_writei');
+    ASoundLibLoaded := True;
+    snd_pcm_close := GetProcAddress(Libhandle, 'snd_pcm_close');
+    snd_pcm_drop := GetProcAddress(Libhandle, 'snd_pcm_drop');
+    snd_pcm_drain := GetProcAddress(Libhandle, 'snd_pcm_drain');
+    snd_pcm_hw_params_malloc := GetProcAddress(Libhandle, 'snd_pcm_hw_params_malloc');
+    snd_pcm_hw_params_any := GetProcAddress(Libhandle, 'snd_pcm_hw_params_any');
+    snd_pcm_hw_params_get_periods := GetProcAddress(Libhandle, 'snd_pcm_hw_params_get_periods');
+    snd_pcm_hw_params_get_period_size := GetProcAddress(Libhandle, 'snd_pcm_hw_params_get_period_size');
+    snd_pcm_hw_params_get_rate := GetProcAddress(Libhandle, 'snd_pcm_hw_params_get_rate');
+    snd_pcm_hw_params_set_access := GetProcAddress(Libhandle, 'snd_pcm_hw_params_set_access');
+    snd_pcm_hw_params_set_buffer_size := GetProcAddress(Libhandle, 'snd_pcm_hw_params_set_buffer_size');
+    snd_pcm_hw_params_set_buffer_size_near := GetProcAddress(Libhandle, 'snd_pcm_hw_params_set_buffer_size_near');
+    snd_pcm_hw_params_set_channels := GetProcAddress(Libhandle, 'snd_pcm_hw_params_set_channels');
+    snd_pcm_hw_params_set_format := GetProcAddress(Libhandle, 'snd_pcm_hw_params_set_format');
+    snd_pcm_hw_params_set_period_size_near := GetProcAddress(Libhandle, 'snd_pcm_hw_params_set_period_size_near');
+    snd_pcm_hw_params_set_periods_near := GetProcAddress(Libhandle, 'snd_pcm_hw_params_set_periods_near');
+    snd_pcm_hw_params_set_rate_near := GetProcAddress(Libhandle, 'snd_pcm_hw_params_set_rate_near');
+    snd_pcm_hw_params := GetProcAddress(Libhandle, 'snd_pcm_hw_params');
+    snd_pcm_hw_params_free := GetProcAddress(Libhandle, 'snd_pcm_hw_params_free');
+    snd_pcm_info_get_device := GetProcAddress(Libhandle, 'snd_pcm_info_get_device');
+    snd_pcm_info_get_name := GetProcAddress(Libhandle, 'snd_pcm_info_get_name');
+    snd_pcm_info_set_device := GetProcAddress(Libhandle, 'snd_pcm_info_set_device');
+    snd_pcm_mmap_readi := GetProcAddress(Libhandle, 'snd_pcm_mmap_readi');
+    snd_pcm_mmap_writei := GetProcAddress(Libhandle, 'snd_pcm_mmap_writei');
+    snd_pcm_open := GetProcAddress(Libhandle, 'snd_pcm_open');
+    snd_pcm_pause := GetProcAddress(Libhandle, 'snd_pcm_pause');
+    snd_pcm_prepare := GetProcAddress(Libhandle, 'snd_pcm_prepare');
+    snd_pcm_readi := GetProcAddress(Libhandle, 'snd_pcm_readi');
+    snd_pcm_reset := GetProcAddress(Libhandle, 'snd_pcm_reset');
+    snd_pcm_resume := GetProcAddress(Libhandle, 'snd_pcm_resume');
+    snd_pcm_state := GetProcAddress(Libhandle, 'snd_pcm_state');
+    snd_pcm_stream := GetProcAddress(Libhandle, 'snd_pcm_stream');
+    snd_pcm_writei := GetProcAddress(Libhandle, 'snd_pcm_writei');
   end;
+  Result:=ASoundLibLoaded;
+end;
 
-finalization
-
-  if Libhandle <> nil then dlclose(Libhandle);
+procedure UnloadAlsaLibrary();
+begin
+  if Libhandle <> NilHandle then FreeLibrary(Libhandle);
+  ASoundLibLoaded:=False;
+end;
 
 
 end.
