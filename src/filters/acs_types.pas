@@ -16,24 +16,24 @@ interface
 type
 
   // 32 bit
-  TAcsBuffer32 = array[0..0] of Longint;
+  TAcsBuffer32 = array[0..0] of Int32;
   PAcsBuffer32 = ^TAcsBuffer32;
 
   TAcsStereoSample32 = packed record
-    Left: Longint;
-    Right: Longint;
+    Left: Int32;
+    Right: Int32;
   end;
 
   TAcsStereoBuffer32 = array[0..0] of TAcsStereoSample32;
   PAcsStereoBuffer32 = ^TAcsStereoBuffer32;
 
   // 16 bit
-  TAcsBuffer16 = array[0..0] of SmallInt;
+  TAcsBuffer16 = array[0..0] of Int16;
   PAcsBuffer16 = ^TAcsBuffer16;
 
   TAcsStereoSample16 = packed record
-    Left: SmallInt;
-    Right: SmallInt;
+    Left: Int16;
+    Right: Int16;
   end;
 
   TAcsStereoBuffer16 = array[0..0] of TAcsStereoSample16;

@@ -64,7 +64,6 @@ type
     EndOfInput2: Boolean;
     InBuf1: array[1..BUF_SIZE] of Byte;
     InBuf2: array[1..BUF_SIZE] of Byte;
-    Busy: Boolean;
     FMode: TAcsAudioMixerMode;
     FInput2Start: Cardinal;
     FLock: Boolean;
@@ -119,7 +118,6 @@ end;
 constructor TAcsAudioMixer.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  Busy:=False;
   FLock:=False;
   FVolume1:=127;
   FVolume2:=127;
@@ -218,7 +216,7 @@ var
   InSize: Integer;
 begin
   Result:=0;
-  if not Busy then
+  if not Active then
     raise EAcsException.Create(strStreamnotopen);
   if BufStart > BufEnd then
   begin
@@ -383,14 +381,14 @@ end;
 
 procedure TAcsAudioMixer.SetInput1(AInput: TAcsCustomInput);
 begin
-  if Busy then
+  if Active then
     raise EAcsException.Create(strBusy);
   FInput1:=AInput;
 end;
 
 procedure TAcsAudioMixer.SetInput2(AInput: TAcsCustomInput);
 begin
-  if not Busy then FInput2:=AInput
+  if not Active then FInput2:=AInput
   else
   begin
     if FMode = amRTMix then

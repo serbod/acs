@@ -484,7 +484,7 @@ function TFLACIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
 var
   dec_state, offs: Integer;
 begin
-  if not Busy then
+  if not Active then
     raise EAcsException.Create('The Stream is not opened');
   if BufStart >= BufEnd then
   begin

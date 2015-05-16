@@ -55,7 +55,7 @@ unit acs_converters;
 interface
 
 uses
-  Classes, SysUtils, ACS_Types, ACS_Procs, ACS_Classes, ACS_Strings, Math;
+  Classes, SysUtils, ACS_Types, ACS_Procs, ACS_Classes, ACS_Strings;
 
 const
   BUF_SIZE = $8000;
@@ -327,7 +327,7 @@ var
 begin
   P:=@InOutBuf[0];
   for i:=0 to (Insize shr 1) -1 do
-  InOutBuf[i]:=Hi(P[i]+$8000);
+  InOutBuf[i]:=Hi(SmallInt((P[i])+$8000));
 end;
 
 procedure Convert8To16(InOutBuf: PAcsBuffer8; InSize: Integer);
@@ -484,7 +484,7 @@ var
   InSize: Integer;
   P: PAcsBuffer8;
 begin
-  if not Busy then
+  if not Active then
     raise EAcsException.Create(strStreamnotopen);
   if BufStart > BufEnd then
   begin
@@ -583,7 +583,8 @@ var
   l: Integer;
   InSize: Integer;
 begin
-  if not Busy then  raise EAcsException.Create(strStreamnotopen);
+  if not Active then
+    raise EAcsException.Create(strStreamnotopen);
   if BufStart > BufEnd then
   begin
     if EndOfInput then
@@ -666,7 +667,8 @@ var
   l: Integer;
   InSize: Integer;
 begin
-  if not Busy then  raise EAcsException.Create(strStreamnotopen);
+  if not Active then
+    raise EAcsException.Create(strStreamnotopen);
   if BufStart > BufEnd then
   begin
     if EndOfInput then
@@ -716,12 +718,12 @@ end;
 
 procedure TAcsRateConverter.SetOutSampleRate(aSR: Integer);
 begin
-  if (aSR > 0) {and (not Busy)} then FOutSampleRate:=aSR;
+  if (aSR > 0) {and (not Active)} then FOutSampleRate:=aSR;
 end;
 
 procedure TAcsRateConverter.SetKernelWidth;
 begin
-  if (aKW > 1) and (not Busy) then FKernelWidth:=aKW;
+  if (aKW > 1) and (not Active) then FKernelWidth:=aKW;
 end;
 
 constructor TAcsStereoBalance.Create(AOwner: TComponent);
@@ -763,7 +765,8 @@ var
   P8: PAcsBuffer8;
   Diff: Double;
 begin
-  if not Busy then  raise EAcsException.Create(strStreamnotopen);
+  if not Active then
+    raise EAcsException.Create(strStreamnotopen);
   while InputLock do;
   InputLock:=True;
   if FInput.Channels = 2 then WantedSize:=BufferSize

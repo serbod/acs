@@ -18,7 +18,6 @@ type
   TMPEGIn = class(TAcsCustomFileIn)
   private
     _M: Pointer;
-    FTime: Integer;
   protected
     procedure OpenFile(); override;
     procedure CloseFile(); override;
@@ -95,7 +94,7 @@ var
   l, offs: Integer;
   tmp: Single;
 begin
-  if not Busy then
+  if not Active then
     raise EACSException.Create('The Stream is not opened');
   if not FOpened then
     raise EACSException.Create('The Stream is not opened');

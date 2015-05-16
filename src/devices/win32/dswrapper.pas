@@ -838,7 +838,7 @@ begin
   if Assigned(dsw.dsw_OutputBuffer) then
   begin
     Result:=dsw.dsw_OutputBuffer.SetVolume(Volume);
-    if Result = DSERR_CONTROLUNAVAIL then
+    if Result = HRESULT(DSERR_CONTROLUNAVAIL) then
       raise Exception.Create('Control not available');
   end
   else

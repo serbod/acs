@@ -319,7 +319,7 @@ begin
   DSW_Init(DSW);
   Res:=DSW_InitOutputDevice(DSW, @(Devices.dinfo[FDeviceNumber].guid));
   if Res <> 0 then
-    raise EAcsException.Create(strFailedtoCreateDSdev);
+    raise EAcsException.Create(strFailedtoCreateDSdev+': '+DSErrToString(Res));
   DSW_Initialized:=True;
 
   Wnd:=0;
@@ -367,7 +367,7 @@ begin
 
   Res:=DSW_InitOutputBufferEx(DSW, Wnd, FormatExt, FBuffer.Size);
   if Res <> 0 then
-    raise EAcsException.Create(strFailedtoCreateDSbuf+' '+IntToHex(Res, 8));
+    raise EAcsException.Create(strFailedtoCreateDSbuf+': '+DSErrToString(Res));
   StartInput:=True;
   EndOfInput:=False;
   _TmpUnderruns:=0;
@@ -431,7 +431,7 @@ begin
   Len := 0;
   while Len < lb do
   begin
-    if FInput.Busy then
+    if FInput.Active then
       begin
         try
           offs := Finput.GetData(@FBuffer^[Len], lb-Len);
@@ -499,14 +499,14 @@ begin
   Result:=True;
 end;
 
-procedure TDXAudioOut.Pause;
+procedure TDXAudioOut.Pause();
 begin
-  inherited Pause;
+  inherited Pause();
   if EndOfInput then Exit;
   DSW_StopOutput(DSW);
 end;
 
-procedure TDXAudioOut.Resume;
+procedure TDXAudioOut.Resume();
 begin
   if EndOfInput then Exit;
   DSW_RestartOutput(DSW);
@@ -537,7 +537,7 @@ begin
   FDeviceNumber:=i
 end;
 
-function TDXAudioOut.GetVolumeEx: Integer;
+function TDXAudioOut.GetVolumeEx(): Integer;
 begin
   DSW_GetVolume(DSW, Result);
   FVolumeEx:=Result; // DW
@@ -690,7 +690,7 @@ var
   Res: HRESULT;
 begin
   Result:=0;
-  if not Busy then
+  if not Active then
     raise EAcsException.Create(strStreamnotopen);
   //if (FSamplesToRead >=0) and (FPosition >= FSize) then
   if (FBytesToRead >=0) and (FPosition >= FBytesToRead) then
@@ -760,7 +760,7 @@ end;
 
 procedure TDXAudioIn.SetFramesInBuffer(Value: LongWord);
 begin
-  if not Busy then FFramesInBuffer:=Value;
+  if not Active then FFramesInBuffer:=Value;
 end;
 
 procedure TDXAudioIn.SetDevice(i: Integer);

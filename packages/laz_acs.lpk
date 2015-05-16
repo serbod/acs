@@ -135,22 +135,18 @@ SOFTWARE."/>
       </Item18>
       <Item19>
         <Filename Value="..\src\formats\acs_flac.pas"/>
-        <AddToUsesPkgSection Value="False"/>
         <UnitName Value="acs_flac"/>
       </Item19>
       <Item20>
         <Filename Value="..\src\formats\acs_lame.pas"/>
-        <AddToUsesPkgSection Value="False"/>
         <UnitName Value="acs_lame"/>
       </Item20>
       <Item21>
         <Filename Value="..\src\formats\acs_mac.pas"/>
-        <AddToUsesPkgSection Value="False"/>
         <UnitName Value="acs_mac"/>
       </Item21>
       <Item22>
         <Filename Value="..\src\formats\acs_vorbis.pas"/>
-        <AddToUsesPkgSection Value="False"/>
         <UnitName Value="acs_vorbis"/>
       </Item22>
       <Item23>
@@ -163,7 +159,6 @@ SOFTWARE."/>
       </Item24>
       <Item25>
         <Filename Value="..\src\devices\acs_dxaudio.pas"/>
-        <AddToUsesPkgSection Value="False"/>
         <UnitName Value="acs_dxaudio"/>
       </Item25>
       <Item26>
@@ -196,6 +191,7 @@ SOFTWARE."/>
     </UsageOptions>
     <PublishOptions>
       <Version Value="2"/>
+      <DestinationDirectory Value="$(TestDir)\publishedpackage\"/>
       <IgnoreBinaries Value="False"/>
     </PublishOptions>
     <CustomOptions Items="ExternHelp" Version="2">

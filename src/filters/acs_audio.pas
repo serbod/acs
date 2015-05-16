@@ -81,7 +81,7 @@ type
     procedure SetDelay(const AValue: Integer);
     function GetPriority: TThreadPriority;
     procedure SetPriority(const AValue: TThreadPriority);
-    function GetBusy: Boolean;
+    function GetActive: Boolean;
     //function GetProgress: real;
     function GetStatus: TAcsOutputStatus;
     function GetTE: Integer;
@@ -154,7 +154,7 @@ type
       with lowest latency is used for default }
     property Driver: string read FDriverName write SetDriver;
     { Use this property to set the output device }
-    property Busy: Boolean read GetBusy;
+    property Active: Boolean read GetActive;
     property Device: Integer read FBaseChannel write SetDevice;
     property Volume: Byte read FVolume write FVolume;
     property Input: TAcsCustomInput read FInput write SetInput;
@@ -420,7 +420,7 @@ begin
   if AValue>0 then FBufferSize:=AValue;
 end;
 
-function TAcsAudioOut.GetBusy(): Boolean;
+function TAcsAudioOut.GetActive(): Boolean;
 begin
   if Assigned(FOutputDriver) then
     Result:=FOutputDriver.Active

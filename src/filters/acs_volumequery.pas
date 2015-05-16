@@ -85,7 +85,7 @@ var
   LVol, RVol, LMax, RMax: Word;
   i, NumSamples: Integer;
 begin
-  if not Busy then  raise EACSException.Create(strStreamnotopen);
+  if not Active then  raise EACSException.Create(strStreamnotopen);
   //if FOrigBufferSize = -1 then FOrigBufferSize:=BufferSize
   if BufferSize > F50ms then BufferSize:=F50ms;
   while InputLock do;
@@ -156,7 +156,7 @@ end;
 function TAcsVolumeQuery.volLeft(): Word;
 begin
   Lock:=True;
-  if Busy then
+  if Active then
     Result:=FLeft[0]
   else
     Result:=0;
@@ -166,7 +166,7 @@ end;
 function TAcsVolumeQuery.volRight(): Word;
 begin
   Lock:=True;
-  if Busy then
+  if Active then
     Result:=FRight[0]
   else
     Result:=0;
@@ -176,7 +176,7 @@ end;
 function TAcsVolumeQuery.dbLeft(): Single;
 begin
   Lock:=True;
-  if Busy then
+  if Active then
     Result:=10 * Log10((FLeft[0]+1)/32768)
   else
     Result:=-96;
@@ -186,7 +186,7 @@ end;
 function TAcsVolumeQuery.dbRight(): Single;
 begin
   Lock:=True;
-  if Busy then
+  if Active then
     Result:=10 * Log10((FRight[0]+1)/32768)
   else
     Result:=-96;

@@ -311,7 +311,7 @@ end;
 
 procedure TStdAudioIn.SetDevice(Ch: Integer);
 begin
-  if Busy then
+  if Active then
     raise EAcsException.Create(strBusy);
   if Ch < InputChannelsCount then FBaseChannel:=Ch
   else
@@ -323,7 +323,7 @@ var
   Tmp: PWaveHdr;
 begin
   Result:=0;
-  if not Busy then
+  if not Active then
     raise EAcsException.Create(strStreamnotopen);
   if FRecBytes >= 0 then
     if (FPosition >= FRecBytes) then Exit;

@@ -39,7 +39,6 @@ type
     FBuffer: PAcsBuffer8;
     FDataSize: Integer;
     FOnBufferDone: TAcsOnBufferDone;
-    Busy: Boolean;
     BufStart: Integer;
     BufEnd: Integer;
     FBPS, FSR, FChan: Integer;
@@ -210,7 +209,7 @@ end;
 function TAcsMemoryIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
 begin
   Result:=0;
-  if not Busy then raise EAcsException.Create(strStreamnotopen);
+  if not Active then raise EAcsException.Create(strStreamnotopen);
   if not Assigned(FBuffer) then Exit;
   if BufStart > BufEnd then
   begin
@@ -344,9 +343,9 @@ begin
   begin
     if (AInput < 0) or (AInput >= FInputItems.Count) then
       raise EAcsException.Create(Format(strListIndexOOB,[AInput]));
-    if Busy then
+    if Active then
     begin
-      while Lock do;
+      while Lock do Sleep(1);
       Lock:=True;
       Item:=TAcsInputItem(InputItems.Items[FCurrentInput]);
       Item.Input.Done();
@@ -367,7 +366,7 @@ var
   Item: TAcsInputItem;
 begin
   Result:=0;
-  if Busy then
+  if Active then
   begin
     Item:=TAcsInputItem(InputItems.Items[FCurrentInput]);
     if Assigned(Item.Input) then Result:=Item.Input.BitsPerSample;
@@ -387,7 +386,7 @@ var
   Item: TAcsInputItem;
 begin
   Result:=0;
-  if Busy then
+  if Active then
   begin
     Item:=TAcsInputItem(InputItems.Items[FCurrentInput]);
     if Assigned(Item.Input) then Result:=Item.Input.Channels;
@@ -407,7 +406,7 @@ var
   Item: TAcsInputItem;
 begin
   Result:=0;
-  if Busy then
+  if Active then
   begin
     Item:=TAcsInputItem(InputItems.Items[FCurrentInput]);
     if Assigned(Item.Input) then Result:=Item.Input.SampleRate;
@@ -423,14 +422,14 @@ procedure TAcsInputList.Init();
 var
   Item: TAcsInputItem;
 begin
-  if Busy then
+  if Active then
     raise EAcsException.Create(strBusy);
   if InputItems.Count = 0 then
     raise EAcsException.Create(strNoInputItems);
   Item:=TAcsInputItem(InputItems.Items[FCurrentInput]);
   if not Assigned(Item.Input) then
     raise EAcsException.Create(Format(strNoInputAssigned, [FCurrentInput]));
-  FBusy:=True;
+  FActive:=True;
   Item.Input.Init();
   FPosition:=0;
 end;
@@ -443,7 +442,7 @@ begin
   if Assigned(Item.Input) then Item.Input.Done();
   FCurrentInput:=0;
   Lock:=False;
-  FBusy:=False;
+  FActive:=False;
 end;
 
 function TAcsInputList.GetData(Buffer: Pointer; BufferSize: Integer): Integer;

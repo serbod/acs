@@ -70,7 +70,7 @@ type
     procedure CallOnDone();
   public
     Parent: TComponent;
-    Stop: Boolean;
+    //Stop: Boolean;
     Delay: Integer;
     //CS: TRTLCriticalSection;
     constructor Create();
@@ -177,11 +177,13 @@ type
     function Write(const Buffer; Count: Longint): Longint; override;
     { If Origin = soCurrent, then changed ReadPosition, otherwise changed WritePosition }
     function Seek(const Offset: Int64; Origin: TSeekOrigin): Int64; override;
+    procedure SetSize(NewSize: PtrInt); override;
     { If True, then readed data extracted from buffer, and ReadPosition changed
       to new value. If False, then ReadPosition not changed after read and data
       can be read again from same position. }
     property ReadExtract: Boolean read FReadExtract write FReadExtract;
-
+    { Size of unread data. Increased when data written and decreased when data readed }
+    property DataSize: Int64 read FDataSize;
   end;
 
 
@@ -190,12 +192,12 @@ type
   TAcsCustomInput = class(TComponent)
   protected
     FPosition: Integer;
-    FBusy: Boolean;
+    FActive: Boolean;
     BufStart: Integer;
     BufEnd: Integer;
-    (* We don't declare the buffer size variable here
-     because different descendants may need different buffer sizes *)
     FBuffer: array of Byte;
+    FBufferSize: Integer;
+    FAudioBuffer: TAcsCircularAudioBuffer;
     function GetBPS(): Integer; virtual;
     function GetCh(): Integer; virtual;
     function GetSR(): Integer; virtual;
@@ -249,7 +251,7 @@ type
     property PositionTime: Real read GetPositionTime;
     { This property sets the buffersize of the component }
     property BufferSize: Integer read GetBufferSize write SetBufferSize;
-    property Busy: Boolean read FBusy;
+    property Active: Boolean read FActive;
   end;
 
 
@@ -475,9 +477,9 @@ type
     function GetProgress(): Real; virtual;
   public
     constructor Create(AOwner: TComponent); override;
-    procedure Reset(); override;
-    procedure Done(); override;
     procedure Init(); override;
+    procedure Done(); override;
+    procedure Reset(); override;
     { Read Size to determine the size of the input stream in bytes. }
     property Size: Integer read GetSize;
     { Set current playing sample index from beginning of file }
@@ -585,9 +587,9 @@ type
     function GetSR(): Integer; override;
   public
     procedure UnlockInput();
-    { Check Input and call Input.Init(), set Busy to True }
+    { Check Input and call Input.Init(), set Active to True }
     procedure Init(); override;
-    { Call Input.Done() and set Busy to False }
+    { Call Input.Done() and set Active to False }
     procedure Done(); override;
   published
     property Input: TAcsCustomInput read FInput write SetInput;
@@ -704,6 +706,13 @@ begin
     FReadPos:=FReadPos+Offset
   else
     FWritePos:=Offset;
+end;
+
+procedure TAcsCircularAudioBuffer.SetSize(NewSize: PtrInt);
+begin
+  inherited SetSize(NewSize);
+  if NewSize < FReadPos then FReadPos:=NewSize;
+  if NewSize < FWritePos then FWritePos:=NewSize;
 end;
 
 { TAcsAudioBuffer }
@@ -853,7 +862,7 @@ begin
   begin
     if Delay > 5 then Sleep(Delay);
     try
-      Res:=ParentComponent.DoOutput(Stop);
+      Res:=ParentComponent.DoOutput(False);
       if (not Res) then Terminate()
       else
         if Assigned(ParentComponent.OnProgress) then Synchronize(CallOnProgress);
@@ -895,12 +904,14 @@ end;
 constructor TAcsCustomInput.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FBusy:=False;
+  FActive:=False;
   FPosition:=0;
+  FAudioBuffer:=TAcsCircularAudioBuffer.Create();
 end;
 
 destructor TAcsCustomInput.Destroy();
 begin
+  FreeAndNil(FAudioBuffer);
   inherited Destroy;
 end;
 
@@ -945,7 +956,7 @@ end;
 
 procedure TAcsCustomInput.SetBufferSize(AValue: Integer);
 begin
-  //if Busy then
+  //if Active then
   //  raise EAcsException.Create(strBusy);
   if AValue >= 0 then SetLength(FBuffer, AValue);
 end;
@@ -961,22 +972,24 @@ begin
     Done();
   except
   end;
-  FBusy:=False;
+  FActive:=False;
 end;
 
 procedure TAcsCustomInput.Init();
 begin
-  if Busy then
+  if Active then
     raise EACSException.Create(strBusy);
-  FBusy:=True;
+  FActive:=True;
   FPosition:=0;
   BufStart:=1;
   BufEnd:=0;
+  FAudioBuffer.Size:=FBufferSize;
 end;
 
 procedure TAcsCustomInput.Done();
 begin
-  FBusy:=False;
+  FAudioBuffer.Size:=0;
+  FActive:=False;
 end;
 
 { TAcsCustomOutput }
@@ -1025,7 +1038,7 @@ begin
   //Thread.FOnDone:=Self.WhenDone;
   Thread.HandleException:=HandleThreadException;
   try
-    Thread.Stop:=False;
+    //Thread.Stop:=False;
     CanOutput:=True;
     Thread.Suspended:=False;
   except
@@ -1215,18 +1228,6 @@ begin
   FValid:=False;
 end;
 
-procedure TAcsCustomFileIn.Reset();
-begin
-  inherited Reset();
-  CloseFile();
-end;
-
-procedure TAcsCustomFileIn.Done();
-begin
-  CloseFile();
-  FBusy:=False;
-end;
-
 procedure TAcsCustomFileIn.Init();
 begin
   inherited Init();
@@ -1250,31 +1251,42 @@ begin
   end;
 end;
 
+procedure TAcsCustomFileIn.Reset();
+begin
+  inherited Reset();
+  CloseFile();
+end;
+
+procedure TAcsCustomFileIn.Done();
+begin
+  CloseFile();
+  inherited Done();
+end;
+
+
 function TAcsCustomFileIn.GetBPS(): Integer;
 begin
-  Result:=0;
-  if FValid then Result:=FBPS;
+  if FValid then
+    Result:=FBPS
+  else
+    Result:=inherited GetBPS();
 end;
 
 function TAcsCustomFileIn.GetCh(): Integer;
 begin
-  Result:=0;
-  if FValid then Result:=FChan;
+  if FValid then
+    Result:=FChan
+  else
+    Result:=inherited GetCh();
 end;
 
 function TAcsCustomFileIn.GetSR(): Integer;
 begin
-  Result:=0;
-  if FValid then Result:=FSR;
+  if FValid then
+    Result:=FSR
+  else
+    Result:=inherited GetSR();
 end;
-
-{
-function TAcsCustomFileIn.GetTime(): Integer;
-begin
-  Result:=0;
-  if FValid then Result:=FTime;
-end;
-}
 
 function TAcsCustomFileIn.GetValid(): Boolean;
 var
@@ -1430,7 +1442,7 @@ var
   OldInput, NewInput: TAcsCustomInput;
 begin
   if AInput = Self then Exit;
-  if Busy then
+  if Active then
   begin
     NewInput:=AInput;
     NewInput.Init();

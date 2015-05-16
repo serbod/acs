@@ -267,7 +267,7 @@ var
   InBufStereo: PAcsStereoBuffer16;
   arg, res: Double;
 begin
-  if not Busy then
+  if not Active then
     raise EAcsException.Create(strStreamnotopen);
   if BufStart > BufEnd then
   begin
@@ -438,19 +438,19 @@ end;
 procedure TAcsSincFilter.SetFilterType(AFT: TAcsFilterType);
 begin
   FFilterType:=AFT;
-  if Busy then CalculateFilter();
+  if Active then CalculateFilter();
 end;
 
 procedure TAcsSincFilter.SetKernelWidth(AKW: Integer);
 begin
   if AKW > 2 then
-    if not Busy then FKernelWidth:=AKW;
+    if not Active then FKernelWidth:=AKW;
 end;
 
 procedure TAcsSincFilter.SetWindowType(AWT: TAcsFilterWindowType);
 begin
   FWindowType:=AWT;
-  if Busy then CalculateFilter();
+  if Active then CalculateFilter();
 end;
 
 procedure TAcsSincFilter.SetHighFreq(AFreq: Integer);
@@ -462,7 +462,7 @@ begin
       FHighFreq:=FInput.SampleRate div 2;
   if FHighFreq < FLowFreq then
     FLowFreq:=FHighFreq;
-  if Busy then CalculateFilter();
+  if Active then CalculateFilter();
 end;
 
 procedure TAcsSincFilter.SetLowFreq(AFreq: Integer);
@@ -475,7 +475,7 @@ begin
       FLowFreq:=FInput.SampleRate div 2;
   if FHighFreq < FLowFreq then
     FHighFreq:=FLowFreq;
-  if Busy then CalculateFilter();
+  if Active then CalculateFilter();
 end;
 
 procedure TAcsSincFilter.Init();
@@ -512,7 +512,7 @@ var
   InBufMono: PAcsBuffer16;
   InBufStereo: PAcsStereoBuffer16;
 begin
-  if not Busy then
+  if not Active then
     raise EAcsException.Create(strStreamnotopen);
   if BufStart > BufEnd then
   begin
@@ -607,7 +607,7 @@ end;
 procedure TAcsConvolver.SetKernelWidth(AValue: Integer);
 begin
   if AValue > 2 then
-  if not Busy then FKernelWidth:=AValue;
+    if not Active then FKernelWidth:=AValue;
 end;
 
 procedure TAcsConvolver.Init();
@@ -644,7 +644,7 @@ var
   InBufMono: PAcsBuffer16;
   InBufStereo: PAcsStereoBuffer16;
 begin
-  if not Busy then  raise EAcsException.Create(strStreamNotopen);
+  if not Active then  raise EAcsException.Create(strStreamNotopen);
   if BufStart > BufEnd then
   begin
     while Lock do Sleep(1);

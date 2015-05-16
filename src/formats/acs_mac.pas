@@ -238,7 +238,8 @@ var
   l, csize, offs: Integer;
   blocks: Integer;
 begin
-  if not Busy then raise EAcsException.Create('The Stream is not opened');
+  if not Active then
+    raise EAcsException.Create('The Stream is not opened');
   if BufStart > BufEnd then
   begin
     if FOffset <> 0 then

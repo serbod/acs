@@ -8,7 +8,7 @@ interface
 
 uses
   {$IFDEF FPC}
-  LResources,
+  LResources, dbugintf,
   {$ENDIF}
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, Buttons,
   ACS_Audio, ACS_File, ACS_Classes, ACS_Allformats, ExtCtrls, StdCtrls,
@@ -83,22 +83,22 @@ implementation
 procedure TfMain.PlayClick(Sender: TObject);
 begin
   if FPaused then
-    begin
-      AudioOut1.Resume;
-      FPaused := False;
-    end
+  begin
+    AudioOut1.Resume();
+    FPaused := False;
+  end
   else
+  begin
+    if FileIn1.FileName = '' then
     begin
-      if FileIn1.FileName = '' then
-        begin
-          if fPlaylist.lbPlaylist.Items.Count = 0 then exit;
-          if fPlaylist.lbPlaylist.ItemIndex = -1 then
-            fPlayList.lbPlaylist.ItemIndex := 0;
-          FileIn1.FileName := fPlayList.lbPlaylist.Items[fPlayList.lbPlaylist.ItemIndex];
-          lFilename.Caption := Format('File:%s',[ExtractFileName(FileIn1.FileName)]);
-        end;
-      AudioOut1.Run;
+      if fPlaylist.lbPlaylist.Items.Count = 0 then exit;
+      if fPlaylist.lbPlaylist.ItemIndex = -1 then
+        fPlayList.lbPlaylist.ItemIndex := 0;
+      FileIn1.FileName := fPlayList.lbPlaylist.Items[fPlayList.lbPlaylist.ItemIndex];
+      lFilename.Caption := Format('File: %s',[ExtractFileName(FileIn1.FileName)]);
     end;
+    if FileIn1.Valid then AudioOut1.Run();
+  end;
   FStopped := False;
   PlayTimer.Enabled := not FStopped;
   UpdateButtons();
@@ -130,6 +130,7 @@ end;
 
 procedure TfMain.AudioOut1ThreadException(Sender: TComponent; E: Exception);
 begin
+  SendDebug(E.Message);
   ShowMessage(E.Message);
 end;
 
@@ -149,9 +150,8 @@ end;
 
 procedure TfMain.Pauseclick(Sender: TObject);
 begin
-  if FPaused then
-    exit;
-  AudioOut1.Pause;
+  if FPaused then Exit;
+  AudioOut1.Pause();
   FPaused := True;
   btPause.Enabled := False;
   btPlay.Enabled := True;
@@ -163,15 +163,21 @@ procedure TfMain.StopClick(Sender: TObject);
 begin
   FStopped := True;
   PlayTimer.Enabled := not FStopped;
-  AudioOut1.Stop;
+  AudioOut1.Stop();
   UpdateButtons();
 end;
 
 procedure TfMain.OpenClick(Sender: TObject);
 begin
-  FileIn1.Open;
-  btPlay.Enabled := True;
-  ResetDisplay;
+  FileIn1.Open();
+  if FileIn1.Valid then
+  begin
+    lFilename.Caption := Format('File: %s', [ExtractFileName(FileIn1.FileName)]);
+    btPlay.Enabled := True;
+    Timer1Timer(Self);
+  end
+  else
+    ResetDisplay();
 end;
 
 procedure TfMain.Timer1Timer(Sender: TObject);
@@ -248,7 +254,7 @@ end;
 
 procedure TfMain.resetDisplay;
 begin
-  lFilename.Caption := Format('File:%s',[ExtractFileName(FileIn1.FileName)]);
+  lFilename.Caption := Format('File: %s', [ExtractFileName(FileIn1.FileName)]);
   lTime.Caption := '00:00:00';
   lLeft.Caption := '00:00:00';
   case TimeFormat of

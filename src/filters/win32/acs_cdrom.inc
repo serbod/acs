@@ -29,7 +29,7 @@ end;
 
 destructor TAcsCDIn.Destroy();
 begin
-  if Busy then Done();
+  if Active then Done();
   CloseCD();
   UnloadCDRip();
   inherited Destroy;
@@ -126,17 +126,17 @@ begin
   CloseCD();
 end;
 
-FUNCTION TAcsCDIn.GetTrackInfo(const vIndex : Integer) : TAcsCDTrackInfo;
-VAR
+function TAcsCDIn.GetTrackInfo(const vIndex : Integer) : TAcsCDTrackInfo;
+var
   Frames: Integer;
-BEGIN
-  IF Busy THEN
-    RAISE EAcsException.Create(strBusy);
-  IF (vIndex IN [0..GetNumTracks-1]) = False THEN
-    RAISE EAcsException.Create(strTrackoutofrange);
-  IF (FToc.Tracks[vIndex].adr and $04) = 0 THEN
+begin
+  if Active then
+    raise EAcsException.Create(strBusy);
+  if (vIndex IN [0..GetNumTracks-1]) = False then
+    raise EAcsException.Create(strTrackoutofrange);
+  if (FToc.Tracks[vIndex].adr and $04) = 0 then
     Result.TrackType := ttAudio
-  ELSE
+  else
     Result.TrackType := ttData;
   Result.TrackStart.Minute := FToc.Tracks[vIndex].addr[1];
   Result.TrackStart.Second := FToc.Tracks[vIndex].addr[2];
@@ -147,7 +147,7 @@ end;
 
 procedure TAcsCDIn.SetST();
 begin
-  if Self.Busy then raise EAcsException.Create(strBusy);
+  if Self.Active then raise EAcsException.Create(strBusy);
   FStartTrack := Track;
   FStartPos.Track := FStartTrack;
   FillChar(FStartPos.MSF, SizeOf(FStartPos.MSF), 0);
@@ -155,7 +155,7 @@ end;
 
 procedure TAcsCDIn.SetET();
 begin
-  if Self.Busy then raise EAcsException.Create(strBusy);
+  if Self.Active then raise EAcsException.Create(strBusy);
   FEndTrack := Track;
   FEndPos.Track := FEndTrack+1;
   FillChar(FEndPos.MSF, SizeOf(FEndPos.MSF), 0);
@@ -163,13 +163,13 @@ end;
 
 procedure TAcsCDIn.SetSP();
 begin
-  if Self.Busy then raise EAcsException.Create(strBusy);
+  if Self.Active then raise EAcsException.Create(strBusy);
   FStartPos := Pos;
 end;
 
 procedure TAcsCDIn.SetEP();
 begin
-  if Self.Busy then raise EAcsException.Create(strBusy);
+  if Self.Active then raise EAcsException.Create(strBusy);
   FEndPos := Pos;
   if Pos.Track = EndOfDisc.Track then FEndPos.Track := TracksCount + 1;
 end;
@@ -178,7 +178,7 @@ function TAcsCDIn.GetSize(): Integer;
 var
   Sect1, Sect2: Integer;
 begin
-  if Busy then
+  if Active then
   begin
     Result := FRipEnd-FRipStart*CD_FRAMESIZE_RAW;
     Exit;
@@ -226,7 +226,7 @@ var
   Abort: LongBool;
   fnum: Integer;
 begin
-  if not Busy then
+  if not Active then
     raise EAcsException.Create(strStreamnotOpen);
   if BufStart > BufEnd then //Buffer clear try to fill it
   begin
@@ -280,7 +280,7 @@ end;
 
 procedure TAcsCDIn.Eject();
 begin
-  if Busy then
+  if Active then
     raise EAcsException.Create(strBusy);
 end;
 

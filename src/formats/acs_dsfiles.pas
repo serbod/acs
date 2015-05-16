@@ -60,10 +60,6 @@ type
     function Seek(SampleNum: Integer): Boolean; override;
   end;
 
-const
-  DSUSER_HRESULT = HResult($08000000);
-  DSUSER_INVALIDSIZE = DSUSER_HRESULT + 1;
-
 function ErrorCheck(FuncName: string; Value: HRESULT): HRESULT; { Check the result of a COM operation }
 
 {$endif WINDOWS}
@@ -76,7 +72,7 @@ constructor TDSIn.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FStreamDisabled:=True;
-  BufferSize:=$8000;
+  FBufferSize:=$8000;
 end;
 
 destructor TDSIn.Destroy();
@@ -150,17 +146,55 @@ begin
     FxAMMultiMediaStream := nil;
     CoUninitialize();
     FOpened:=False;
-    FValid:=False;
   end;
 end;
 
 function TDSIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
-var
-  nDone: Integer;
+//var
+//  nDone: Integer;
 begin
   Result:=0;
-  if not Busy then
+  if not Active then
     raise EAcsException.Create('The Stream is not opened');
+  { new }
+  // set file position with offset
+  if FAudioBuffer.DataSize = 0 then
+  begin
+    if FOffset <> 0 then
+    begin
+      FPosition:=FPosition+Round((FOffset/100)*FSize);
+      if FPosition < 0 then
+        FPosition:=0
+      else
+        if FPosition > FSize then
+          FPosition:=FSize;
+      SetPosition(Int64(FPosition)*FSeekScale);
+      FOffset:=0;
+    end;
+
+    // read chunk of samples into local audio buffer
+    Result:=Read(FAudioBuffer.Memory, FAudioBuffer.Size);
+    if Result = 0 then
+    begin
+      // nothing to read, end of file?
+      if FLoop then
+      begin
+        SetPosition(0); // just rewind
+        Result:=Read(FAudioBuffer.Memory, FAudioBuffer.Size);
+      end
+      else Exit;
+    end;
+  end;
+  // copy local buffer into given buffer
+  if BufferSize < Result then Result:=BufferSize;
+
+  Move(FAudioBuffer.Memory, Buffer^, Result);
+  //Inc(BufStart, Result);
+  Inc(FPosition, Result);
+  { new end }
+
+  { old }
+  {
   if BufStart > BufEnd then
   begin
     if FOffset <> 0 then
@@ -197,6 +231,8 @@ begin
   Move(FBuffer[BufStart-1], Buffer^, Result);
   Inc(BufStart, Result);
   Inc(FPosition, Result);
+  }
+  { end old }
 end;
 
 function TDSIn.Seek(SampleNum: Integer): Boolean;
@@ -211,7 +247,9 @@ var
   Tmp: STREAM_TIME;
 begin
   Result:=0;
-  if (xSize <= 0) then ErrorCheck('xSize', DSUSER_INVALIDSIZE);
+  if (xSize <= 0) then
+    raise EAcsException.Create('Invalid buffer size.');
+
   if (FxSelLength <> 0) and (FxPosition >= FxSelStart+FxSelLength) then Exit;
 
   if (Buffer <> FxBuffer) or (xSize <> FxBufferSize) then
@@ -269,7 +307,6 @@ begin
   if (Value <> S_OK) then
   begin
     case DWord(Value) of
-      DSUSER_INVALIDSIZE: s:='Invalid buffer size.';
       DWord(REGDB_E_CLASSNOTREG): s:='A specified class is not registered in the registration database.';
       DWord(CLASS_E_NOAGGREGATION): s:='This class cannot be created as part of an aggregate.';
       DWord(E_ABORT): s:='The update aborted.';

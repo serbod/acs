@@ -175,23 +175,23 @@ end;
 
 function TAcsSoundIndicator.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
 begin
-  if not Busy then
+  if not Active then
     raise EAcsException.Create(strStreamnotopen);
 
-  // copy input buffer to local buffer
+  // copy input buffer to param buffer
   while InputLock do Sleep(1);
   InputLock:=True;
   Result:=FInput.GetData(Buffer, BufferSize);
   FPosition:=FInput.Position;
   InputLock:=False;
 
-  // copy local buffer to param buffer
+  // copy param buffer to local buffer
   while FLocked do Sleep(1);
   FLocked:=True;
   if Length(FBuffer)<>Result then SetLength(FBuffer, Result);
   if Result > 0 then Move(Buffer^, FBuffer[0], Result);
   FLocked:=False;
-end;
+ end;
 
 procedure TAcsSoundIndicator.GetValues(var Values: array of Double);
 var

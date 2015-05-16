@@ -213,7 +213,8 @@ var
   Libhandle : Pointer;
 {$ENDIF}
 
-procedure VORBISLoadLibrary;
+function VorbisLoadLibrary(): Boolean;
+procedure VorbisUnloadLibrary();
 
 implementation
 
@@ -222,10 +223,9 @@ var
   Path : String;
 {$ENDIF}
 
-procedure VORBISLoadLibrary;
+function VorbisLoadLibrary(): Boolean;
 begin
-  if LibvorbisfileLoaded then
-    exit;
+  if LibvorbisfileLoaded then Exit;
 {$IFDEF MSWINDOWS}
   Libhandle := LoadLibraryEx(LibvorbisfilePath, 0, 0);
   if Libhandle <> 0 then
@@ -300,16 +300,19 @@ begin
     ov_read := dlsym(Libhandle, 'ov_read');
   end;
 {$ENDIF}
+  Result:=LibvorbisfileLoaded;
 end;
 
-initialization
-
-finalization
-
+procedure VorbisUnloadLibrary();
+begin
+  if not LibvorbisfileLoaded then Exit;
 {$IFDEF MSWINDOWS}
   if Libhandle <> 0 then FreeLibrary(Libhandle);
 {$ELSE}
   if libhandle <> nil then dlclose(Libhandle);
 {$ENDIF}
+  LibvorbisfileLoaded:=False;
+end;
+
 
 end.
