@@ -39,7 +39,7 @@ type
     function volRight(): Word;
     function dbLeft(): Single;
     function dbRight(): Single;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
     procedure Done(); override;
   published
@@ -80,17 +80,18 @@ begin
   Lock:=False;
 end;
 
-function TAcsVolumeQuery.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsVolumeQuery.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   LVol, RVol, LMax, RMax: Word;
   i, NumSamples: Integer;
 begin
-  if not Active then  raise EACSException.Create(strStreamnotopen);
-  //if FOrigBufferSize = -1 then FOrigBufferSize:=BufferSize
-  if BufferSize > F50ms then BufferSize:=F50ms;
+  if not Active then
+    raise EACSException.Create(strStreamnotopen);
+  //if FOrigBufferSize = -1 then FOrigBufferSize:=ABufferSize
+  if ABufferSize > F50ms then ABufferSize:=F50ms;
   while InputLock do;
   InputLock:=True;
-  Result:=FInput.GetData(Buffer, BufferSize);
+  Result:=FInput.GetData(ABuffer, ABufferSize);
   InputLock:=False;
   FPosition:=FInput.Position;
   if Result = 0 then Exit;
@@ -118,26 +119,26 @@ begin
     begin
       if FCh = 1 then
       begin
-        LVol:=ABS(PACSBuffer8(Buffer)[i]-127)*256;
+        LVol:=ABS(PACSBuffer8(ABuffer)[i]-127) * 256;
         RVol:=LVol;
       end
       else
       begin
-        LVol:=ABS(PACSStereoBuffer8(Buffer)[i].Left-127)*256;
-        RVol:=ABS(PACSStereoBuffer8(Buffer)[i].Right-127)*256;
+        LVol:=ABS(PACSStereoBuffer8(ABuffer)[i].Left-127) * 256;
+        RVol:=ABS(PACSStereoBuffer8(ABuffer)[i].Right-127) * 256;
       end;
     end
     else
     begin
       if FCh = 1 then
       begin
-        LVol:=ABS(PACSBuffer16(Buffer)[i]);
+        LVol:=ABS(PACSBuffer16(ABuffer)[i]);
         RVol:=LVol;
       end
       else
       begin
-        LVol:=ABS(PACSStereoBuffer16(Buffer)[i].Left);
-        RVol:=ABS(PACSStereoBuffer16(Buffer)[i].Right);
+        LVol:=ABS(PACSStereoBuffer16(ABuffer)[i].Left);
+        RVol:=ABS(PACSStereoBuffer16(ABuffer)[i].Right);
       end;
     end;
     if LVol > LMax then LMax:=LVol;
@@ -145,8 +146,8 @@ begin
   end;
   if FDelay > 0 then
   begin
-    Move(FLeft[1],FLeft[0],FDelay*Sizeof(Word));
-    Move(FRight[1],FRight[0],FDelay*Sizeof(Word));
+    Move(FLeft[1], FLeft[0], FDelay * Sizeof(Word));
+    Move(FRight[1], FRight[0], FDelay * Sizeof(Word));
   end;
   FLeft[FDelay]:=LMax;
   FRight[FDelay]:=RMax;

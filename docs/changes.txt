@@ -1,3 +1,11 @@
+2015-05-17  serbod
+* TAcsCustomInput.GetData() fixed for all descendants
+* TAcsAudioBuffer - separate positions for Read() and Write()
+* FLAC from NewAC
+
+2015-05-15  serbod
+* ALSA and SMPEG drivers fixes for Linux
+
 2015-05-04  serbod
 + TAcsCircularAudioBuffer
 * TAcsCustomInput.Flush() renamed to Done() and all descendents

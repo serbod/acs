@@ -52,7 +52,7 @@ type
                    \
     i = [0..DataSize-1]
   *)
-  procedure LgMagnitude(InData: PAcsComplex; OutData: PDouble; DataSize, Shift: Integer);
+  procedure LgMagnitude(InData: PAcsComplexArray; OutData: PAcsDoubleArray; DataSize, Shift: Integer);
 
 implementation
 
@@ -289,7 +289,8 @@ begin
 end;
 {$endif}
 
-procedure LgMagnitude(InData: PAcsComplex; OutData: PDouble; DataSize, Shift: Integer);
+procedure LgMagnitude(InData: PAcsComplexArray; OutData: PAcsDoubleArray;
+  DataSize, Shift: Integer);
 {$ifdef CPU386}
 var
   LogBase, num: Double;
@@ -297,23 +298,26 @@ var
   pOut: PDouble;
   i: integer;
 begin
-  pIn:=InData;
-  pOut:=OutData;
+  {$R-}
+  //pIn:=@InData[0];
+  //pOut:=@OutData[0];
   //LogBase:=1/log2(10); // 0.3010299956639812
   for i:=0 to DataSize-1 do
   begin
-    pOut^:=0;
-    num:=sqrt((pIn^.Re*2)+(pIn^.Im*2));
+    OutData[i]:=0;
+    num:=sqrt((InData[i].Re * 2) + (InData[i].Im * 2));
+    //num:=InData[i]^.Re;
     if num > 0 then
     begin
       num:=log10(num)+Shift;
-      if num >= 0 then pOut^:=num;
+      if num >= 0 then OutData[i]:=num;
     end;
     //num:=num*log2(LogBase)+Shift;
     //num:=LogBase*log2(num)+Shift;
-    Inc(pIn);
-    Inc(pOut);
+    //Inc(pIn);
+    //Inc(pOut);
   end;
+  {$R+}
 
 {$else}
 

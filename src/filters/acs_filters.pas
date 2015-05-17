@@ -45,7 +45,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
   published
     { Sometimes a filter output signal is just too weak. 1-same level, 2-double, etc.. }
@@ -89,7 +89,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
     procedure Done(); override;
     procedure GetKernel(var K: PAcsDoubleArray);
@@ -132,7 +132,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
     procedure Done(); override;
     { Use this procedure to set the convolution kernel for the convolver.
@@ -260,7 +260,7 @@ begin
   end;
 end;
 
-function TAcsBWFilter.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsBWFilter.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   i: Integer;
   InBufMono: PAcsBuffer16;
@@ -319,11 +319,11 @@ begin
       end;
     end;
   end;
-  if BufferSize < (BufEnd - BufStart + 1) then
-    Result:=BufferSize
+  if ABufferSize < (BufEnd - BufStart + 1) then
+    Result:=ABufferSize
   else
     Result:=BufEnd - BufStart + 1;
-  Move(InBuf[BufStart], Buffer^, Result);
+  Move(InBuf[BufStart], ABuffer^, Result);
   Inc(BufStart, Result);
   //FPosition:=Round(FInput.Position*(FSize/FInput.Size));
   Inc(FPosition, Result);
@@ -506,7 +506,7 @@ begin
   inherited Done();
 end;
 
-function TAcsSincFilter.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsSincFilter.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   i, j, NumSamples: Integer;
   InBufMono: PAcsBuffer16;
@@ -568,11 +568,11 @@ begin
     end;
     Lock:=False;
   end;
-  if BufferSize < (BufEnd - BufStart + 1) then
-    Result:=BufferSize
+  if ABufferSize < (BufEnd - BufStart + 1) then
+    Result:=ABufferSize
   else
     Result:=BufEnd - BufStart + 1;
-  Move(InBuf[BufStart], Buffer^, Result);
+  Move(InBuf[BufStart], ABuffer^, Result);
   Inc(BufStart, Result);
   Inc(FPosition, Result);
   //FPosition:=Round(FInput.Position*(FSize/FInput.Size));
@@ -638,7 +638,7 @@ begin
   inherited Done();
 end;
 
-function TAcsConvolver.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsConvolver.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   i, j, NumSamples: Integer;
   InBufMono: PAcsBuffer16;
@@ -703,11 +703,11 @@ begin
     end;
     Lock:=False;
   end;
-  if BufferSize < (BufEnd - BufStart + 1) then
-    Result:=BufferSize
+  if ABufferSize < (BufEnd - BufStart + 1) then
+    Result:=ABufferSize
   else
     Result:=BufEnd - BufStart + 1;
-  Move(InBuf[BufStart], Buffer^, Result);
+  Move(InBuf[BufStart], ABuffer^, Result);
   Inc(BufStart, Result);
   Inc(FPosition, Result);
   //FPosition:=Round(FInput.Position*(FSize/FInput.Size));

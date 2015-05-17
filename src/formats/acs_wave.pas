@@ -250,7 +250,7 @@ type
     property WavType: TWavType read GetWavType;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
-    function GetData(Buffer: Pointer; ABufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     function Seek(SampleNum: Integer): Boolean; override;
   end;
 
@@ -1157,7 +1157,7 @@ begin
   end;
 end;
 
-function TWaveIn.GetData(Buffer: Pointer; ABufferSize: Integer): Integer;
+function TWaveIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   l, csize: Integer;
   offs: Integer;
@@ -1355,7 +1355,7 @@ begin
   else
     Result:=BufEnd - BufStart + 1;
 
-  Move(buf[BufStart-1], Buffer^, Result);
+  Move(buf[BufStart-1], ABuffer^, Result);
   Inc(BufStart, Result);
   Inc(FPosition, Result);
 end;

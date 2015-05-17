@@ -208,7 +208,7 @@ begin
   FBaseChannel:=Ch;
 end;
 
-function TStdAudioIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TStdAudioIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   l: Integer;
 begin
@@ -222,7 +222,7 @@ begin
   if BufStart > BufEnd then
   begin
     BufStart:=1;
-    l:=fpread(_audio_fd, FBuffer[BufStart], BufferSize);
+    l:=fpread(_audio_fd, FBuffer[BufStart], ABufferSize);
     if l < 1 then
     begin
       Result:=0;
@@ -231,11 +231,11 @@ begin
     else
       BufEnd:=l;
   end;
-  if BufferSize < (BufEnd - BufStart + 1) then
-    Result:=BufferSize
+  if ABufferSize < (BufEnd - BufStart + 1) then
+    Result:=ABufferSize
   else
     Result:=BufEnd - BufStart + 1;
-  Move(FBuffer[BufStart], Buffer^, Result);
+  Move(FBuffer[BufStart], ABuffer^, Result);
   Inc(BufStart, Result);
   Inc(FPosition, Result);
 end;

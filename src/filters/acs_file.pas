@@ -141,7 +141,7 @@ type
     procedure Init(); override;
     procedure Reset(); override;
     function Seek(SampleNum: Integer): Boolean; override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     function SetStartTime(Minutes, Seconds: Integer): Boolean;
     function SetEndTime(Minutes, Seconds: Integer): Boolean;
     procedure Jump(Offs: Real); override;
@@ -268,10 +268,10 @@ begin
   if Assigned(FInput) then Result:=FInput.Seek(SampleNum);
 end;
 
-function TAcsFileIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsFileIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 begin
   Result:=0;
-  if Assigned(FInput) then Result:=FInput.GetData(Buffer, BufferSize);
+  if Assigned(FInput) then Result:=FInput.GetData(ABuffer, ABufferSize);
     //raise EAcsException.Create(strNoFileOpened);
 end;
 

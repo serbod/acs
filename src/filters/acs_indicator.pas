@@ -32,7 +32,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure GetValues(var Values: array of Double);
     procedure Init(); override;
     procedure Done(); override;
@@ -48,6 +48,7 @@ begin
   inherited Create(AOwner);
   FLocked:=False;
   FValuesCount:=32;
+  FBufferSize:=$1000;
   //HannWindow(@Window, Length(Window), True);
 end;
 
@@ -132,7 +133,7 @@ begin
   {$R+}
 
   ComplexFFT(pCA, SamplesCount, 1);
-  LgMagnitude(@pCA[0], @pSample[0], SamplesCount, 0);
+  LgMagnitude(pCA, pSample, SamplesCount, 0);
 
   // dispose ComplexArr
   Freemem(pCA);
@@ -173,23 +174,31 @@ begin
   FLocked:=False;
 end;
 
-function TAcsSoundIndicator.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsSoundIndicator.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
+var
+  n: Integer;
 begin
   if not Active then
     raise EAcsException.Create(strStreamnotopen);
 
-  // copy input buffer to param buffer
+  // copy input ABuffer to param ABuffer
   while InputLock do Sleep(1);
   InputLock:=True;
-  Result:=FInput.GetData(Buffer, BufferSize);
+  Result:=FInput.GetData(ABuffer, ABufferSize);
   FPosition:=FInput.Position;
   InputLock:=False;
 
-  // copy param buffer to local buffer
+  // copy param ABuffer to local ABuffer
   while FLocked do Sleep(1);
   FLocked:=True;
+  {
   if Length(FBuffer)<>Result then SetLength(FBuffer, Result);
-  if Result > 0 then Move(Buffer^, FBuffer[0], Result);
+  if Result > 0 then Move(ABuffer^, FBuffer[0], Result);
+  }
+  n:=Result;
+  if n > FAudioBuffer.Size then n:=FAudioBuffer.Size;
+  FAudioBuffer.Reset();
+  FAudioBuffer.Write(ABuffer^, n);
   FLocked:=False;
  end;
 
@@ -201,14 +210,12 @@ var
 begin
   if Length(Values)<>ValuesCount then Exit;
   //SetLength(Values, ValuesCount);
-  if BufferSize=0 then
-  begin
-    FillChar(Values[0], SizeOf(Double) * ValuesCount, 0);
-    Exit;
-  end;
+  //if BufferSize=0 then
+  FillChar(Values[0], SizeOf(Double) * ValuesCount, 0);
+  if FAudioBuffer.WritePosition = 0 then Exit;
 
   if (FInput.Channels = 0) or (FInput.BitsPerSample = 0) then Exit;
-  NumSamples:=((BufferSize div FInput.Channels) div (FInput.BitsPerSample div 8));
+  NumSamples:=FAudioBuffer.WritePosition div (FInput.Channels * (FInput.BitsPerSample div 8));
 
   while FLocked do Sleep(1);
   FLocked:=True;
@@ -217,7 +224,8 @@ begin
   pSample:=GetMem(i);
   // convert raw sample to mono sample array
   {$R-}
-  P:=@FBuffer[0];
+  //P:=@FBuffer[0];
+  P:=FAudioBuffer.Memory;
   if FInput.BitsPerSample=8 then
   begin
     if FInput.Channels=1 then

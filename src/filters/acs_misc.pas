@@ -51,7 +51,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
     procedure Done(); override;
     property DataBuffer: Pointer read GetBuffer write SetBuffer;
@@ -79,7 +79,7 @@ type
     function GetCh: Integer; override;
     function GetSR: Integer; override;
   public
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
     procedure Done(); override;
   published
@@ -129,7 +129,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
     procedure Done(); override;
     property CurrentInput: Integer read FCurrentInput write SetCurrentInput;
@@ -149,7 +149,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure GetValues(var Values: array of Double);
     procedure Init(); override;
     procedure Done(); override;
@@ -206,7 +206,7 @@ begin
   inherited Done();
 end;
 
-function TAcsMemoryIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsMemoryIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 begin
   Result:=0;
   if not Active then raise EAcsException.Create(strStreamnotopen);
@@ -221,11 +221,11 @@ begin
     BufEnd:=FDataSize;
     if FDataSize = 0 then Exit;
   end;
-  if BufferSize < (BufEnd-BufStart+1) then
-    Result:=BufferSize
+  if ABufferSize < (BufEnd-BufStart+1) then
+    Result:=ABufferSize
   else
     Result:=BufEnd-BufStart+1;
-  Move(FBuffer[BufStart-1], Buffer^, Result);
+  Move(FBuffer[BufStart-1], ABuffer^, Result);
   Inc(BufStart, Result);
   Inc(FPosition, Result);
   Dec(FDataSize, Result);
@@ -271,16 +271,16 @@ begin
     if Assigned(FInput) then Result:=FInput.Channels;
 end;
 
-function TAcsAudioProcessor.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsAudioProcessor.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 begin
   //if not Assigned(FInput) then raise EAcsException.Create(strInputnotAssigned);
   if Assigned(FOnGetData) then
   begin
-    Result:=BufferSize;
-    FOnGetData(Self, Buffer, Result);
+    Result:=ABufferSize;
+    FOnGetData(Self, ABuffer, Result);
   end
   else
-    if Assigned(FInput) then Result:=FInput.GetData(Buffer, BufferSize);
+    if Assigned(FInput) then Result:=FInput.GetData(ABuffer, ABufferSize);
   Inc(FPosition, Result);
 //  if Result=0 then Result:=(Result shl 1);
 end;
@@ -445,7 +445,7 @@ begin
   FActive:=False;
 end;
 
-function TAcsInputList.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsInputList.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   Item: TAcsInputItem;
   IsContinue: Boolean;
@@ -454,7 +454,7 @@ begin
   while Lock do Sleep(1);
   Lock:=True;
   Item:=TAcsInputItem(InputItems.Items[FCurrentInput]);
-  if Assigned(Item.Input) then Result:=Item.Input.GetData(Buffer, BufferSize);
+  if Assigned(Item.Input) then Result:=Item.Input.GetData(ABuffer, ABufferSize);
   while Result=0 do
   begin
     if FCurrentInput < InputItems.Count-1 then
@@ -474,7 +474,7 @@ begin
           FSize:=Item.Input.Size
         else FSize:=-1;  }
         FPosition:=0;
-        Result:=Item.Input.GetData(Buffer, BufferSize);
+        Result:=Item.Input.GetData(ABuffer, ABufferSize);
       end
       else Break;
     end

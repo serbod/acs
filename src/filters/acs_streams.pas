@@ -46,7 +46,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
     procedure Done(); override;
   published
@@ -124,9 +124,9 @@ begin
   inherited Done();
 end;
 
-function TAcsStreamIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsStreamIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 begin
-  Result:=FStream.Read(Buffer^, BufferSize);
+  Result:=FStream.Read(ABuffer^, ABufferSize);
   FPosition:=FStream.Position;
   //  Inc(FPosition, Result);
   //if FPosition >= FSize then Result:=0;

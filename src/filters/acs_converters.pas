@@ -97,7 +97,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
     procedure Done(); override;
   published
@@ -118,7 +118,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
   published
     property Mode: TAcsMSConverterMode read FMode write FMode;
@@ -134,7 +134,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
   end;
 
@@ -147,7 +147,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
   published
     property Balance: Single read FBalance write SetBalance;
@@ -478,7 +478,7 @@ begin
   inherited Done();
 end;
 
-function TAcsRateConverter.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsRateConverter.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   l: Integer;
   InSize: Integer;
@@ -518,7 +518,7 @@ begin
     begin
       EndOfInput:=True;
       if InSize < FKernelWidth*2 then
-      begin // stop buffer corruption?
+      begin // stop ABuffer corruption?
         Result:=0;
         Exit;
       end;
@@ -531,12 +531,12 @@ begin
       BufEnd:=ConvertFreqs16Stereo(InSize);
     end;
   end;
-  if BufferSize < (BufEnd - BufStart + 1)
-  then Result:=BufferSize
+  if ABufferSize < (BufEnd - BufStart + 1)
+  then Result:=ABufferSize
   else Result:=BufEnd - BufStart + 1;
   if FInput.Channels = 1 then P:=Pointer(OutBufM)
   else P:=Pointer(OutBufS);
-  Move(P[BufStart-1], Buffer^, Result);
+  Move(P[BufStart-1], ABuffer^, Result);
   Inc(BufStart, Result);
   //FPosition:=Round(FInput.Position*(FSize/FInput.Size));
   Inc(FPosition, Result);
@@ -578,7 +578,7 @@ begin
   else FSize:=FInput.Size shl 1;  }
 end;
 
-function TAcsMSConverter.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsMSConverter.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   l: Integer;
   InSize: Integer;
@@ -622,10 +622,10 @@ begin
       BufEnd:=InSize shl 1;
     end;
   end;
-  if BufferSize < (BufEnd - BufStart + 1)
-  then Result:=BufferSize
+  if ABufferSize < (BufEnd - BufStart + 1)
+  then Result:=ABufferSize
   else Result:=BufEnd - BufStart + 1;
-  Move(InOutBuf[BufStart], Buffer^, Result);
+  Move(InOutBuf[BufStart], ABuffer^, Result);
   Inc(BufStart, Result);
 //    FPosition:=Round(FInput.Position*(FSize/FInput.Size));
   Inc(FPosition, Result);
@@ -662,7 +662,7 @@ begin
   else FSize:=FInput.Size shl 1;  }
 end;
 
-function TAcsSampleConverter.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsSampleConverter.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   l: Integer;
   InSize: Integer;
@@ -706,11 +706,11 @@ begin
       BufEnd:=InSize div 2;
     end;
   end;
-  if BufferSize < (BufEnd - BufStart + 1) then
-    Result:=BufferSize
+  if ABufferSize < (BufEnd - BufStart + 1) then
+    Result:=ABufferSize
   else
     Result:=BufEnd - BufStart + 1;
-  Move(InOutBuf[BufStart], Buffer^, Result);
+  Move(InOutBuf[BufStart], ABuffer^, Result);
   Inc(BufStart, Result);
   //FPosition:=Round(FInput.Position*(FSize/FInput.Size));
   Inc(FPosition, Result);
@@ -758,7 +758,7 @@ begin
     FSize:=FInput.Size*2;  }
 end;
 
-function TAcsStereoBalance.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsStereoBalance.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   WantedSize, i: Integer;
   P16: PAcsBuffer16;
@@ -769,20 +769,20 @@ begin
     raise EAcsException.Create(strStreamnotopen);
   while InputLock do;
   InputLock:=True;
-  if FInput.Channels = 2 then WantedSize:=BufferSize
-  else WantedSize:=BufferSize shr 1;
-  Result:=Finput.GetData(Buffer, WantedSize);
+  if FInput.Channels = 2 then WantedSize:=ABufferSize
+  else WantedSize:=ABufferSize shr 1;
+  Result:=Finput.GetData(ABuffer, WantedSize);
   InputLock:=False;
   if Result = 0 then Exit;
   if FInput.Channels = 1 then
   begin
     if FInput.BitsPerSample = 8 then
     begin
-      P8:=Buffer;
+      P8:=ABuffer;
       for i:=Result*2-1 downto 1 do P8[i]:=P8[i shr 1];
     end else
     begin
-      P16:=Buffer;
+      P16:=ABuffer;
       for i:=Result-1 downto 1 do
       P16[i]:=P16[i shr 1];
     end;
@@ -790,7 +790,7 @@ begin
   end;
   if FInput.BitsPerSample = 8 then
   begin
-    P8:=Buffer;
+    P8:=ABuffer;
     if FBalance > 0.5 then
     begin
       Diff:=1-Balance;
@@ -803,7 +803,7 @@ begin
     end;
   end else
   begin
-    P16:=Buffer;
+    P16:=ABuffer;
     if FBalance > 0.5 then
     begin
       Diff:=1-Balance;

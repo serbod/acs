@@ -221,14 +221,14 @@ begin
   inherited Done();
 end;
 
-function TAcsCDIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsCDIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   Abort: LongBool;
   fnum: Integer;
 begin
   if not Active then
     raise EAcsException.Create(strStreamnotOpen);
-  if BufStart > BufEnd then //Buffer clear try to fill it
+  if BufStart > BufEnd then //ABuffer clear try to fill it
   begin
     BufStart := 1;
     Abort := False;
@@ -248,11 +248,11 @@ begin
         BufEnd := FiBuffer^.len;
       end;
   end;
-  if BufferSize < (BufEnd - BufStart + 1) then
-    Result := BufferSize
+  if ABufferSize < (BufEnd - BufStart + 1) then
+    Result := ABufferSize
   else
     Result := BufEnd - BufStart + 1;
-  Move(FiBuffer^.buf[BufStart-1],Buffer^, Result);
+  Move(FiBuffer^.buf[BufStart-1],ABuffer^, Result);
   Inc(BufStart, Result);
   Inc(FPosition, Result);
 end;

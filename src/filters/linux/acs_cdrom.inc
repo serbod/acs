@@ -256,7 +256,7 @@ begin
   inherited Done();
 end;
 
-function TAcsCDIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsCDIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   StartFrame, EndFrame: Integer;
   cdaudio: cdrom_read_audio;
@@ -284,10 +284,10 @@ begin
     StartFrame:=MSF2Frames(FCurPos) + cdaudio.nframes;
     Frames2MSF(StartFrame, FCurPos);
   end;
-  if BufferSize < (BufEnd - BufStart + 1)
-  then Result:=BufferSize
+  if ABufferSize < (BufEnd - BufStart + 1)
+  then Result:=ABufferSize
   else Result:=BufEnd - BufStart + 1;
-  Move(FBuffer[BufStart], Buffer^, Result);
+  Move(FBuffer[BufStart], ABuffer^, Result);
   Inc(BufStart, Result);
   Inc(FPosition, Result);
 end;

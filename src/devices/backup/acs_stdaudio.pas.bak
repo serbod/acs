@@ -18,7 +18,7 @@ uses
 {$IFDEF MSWINDOWS}
   , Windows, MMSystem
 {$ELSE}
-  , Soundcard
+  , baseunix, Soundcard
 {$ENDIF}
   ;
 
@@ -94,9 +94,9 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
-    function GetData(Buffer: Pointer; oBufferSize: Integer): Integer; override;
+    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
     procedure Init(); override;
-    procedure Flush(); override;
+    procedure Done(); override;
   end;
 
 var
@@ -165,8 +165,10 @@ initialization
   InitializeCriticalSection(CrSecO);
   {$ENDIF}
   CountChannels();
-  RegisterAudioOut('Wavemapper', TStdAudioOut, LATENCY);
-  RegisterAudioIn('Wavemapper', TStdAudioIn, LATENCY);
+  if OutputChannelsCount > 0 then
+    RegisterAudioOut('Wavemapper', TStdAudioOut, LATENCY);
+  if InputChannelsCount > 0 then
+    RegisterAudioIn('Wavemapper', TStdAudioIn, LATENCY);
 
 finalization
   {$IFDEF MSWINDOWS}

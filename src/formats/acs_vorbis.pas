@@ -95,7 +95,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     function Seek(SampleNum: Integer): Boolean; override;
     property BitStreams: Integer read GetBitStreams;
     property Comments: TStringList read GetComments;
@@ -440,7 +440,7 @@ begin
   end;
 end;
 
-function TVorbisIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TVorbisIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   l, offs: Integer;
 begin
@@ -464,11 +464,11 @@ begin
     if not EndOfStream then
     begin
       (* The ov_read function can return data in quite small chunks
-        (of about 512 bytes). We keep reading data until the buffer is filled
+        (of about 512 bytes). We keep reading data until the ABuffer is filled
         or there is no more data to read. *)
-      while BufEnd < BufferSize do
+      while BufEnd < ABufferSize do
       begin
-        l:=ov_read(VFile, @FBuffer[BufEnd + 1], BufferSize - BufEnd, 0, 2, 1, @cursec);
+        l:=ov_read(VFile, @FBuffer[BufEnd + 1], ABufferSize - BufEnd, 0, 2, 1, @cursec);
         if l <= 0 then
         begin
           EndOfStream:=True;
@@ -488,9 +488,9 @@ begin
       Done();
       Init();
       EndOfStream:=False;
-      while BufEnd < BufferSize do
+      while BufEnd < ABufferSize do
       begin
-        l:=ov_read(VFile, @FBuffer[BufEnd + 1], BufferSize - BufEnd, 0, 2, 1, @cursec);
+        l:=ov_read(VFile, @FBuffer[BufEnd + 1], ABufferSize - BufEnd, 0, 2, 1, @cursec);
         if l <= 0 then
         begin
           EndOfStream:=True;
@@ -500,11 +500,11 @@ begin
       end;
     end;
   end;
-  if BufferSize < (BufEnd - BufStart + 1) then
-    Result:=BufferSize
+  if ABufferSize < (BufEnd - BufStart + 1) then
+    Result:=ABufferSize
   else
     Result:=BufEnd - BufStart + 1;
-  Move(FBuffer[BufStart], Buffer^, Result);
+  Move(FBuffer[BufStart], ABuffer^, Result);
   Inc(BufStart, Result);
   Inc(FPosition, Result);
 end;

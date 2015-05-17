@@ -78,7 +78,7 @@ type
     function GetSR(): Integer; override;
     procedure Init(); override;
     procedure Done(); override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     property Channel[Index: Integer]: TAcsChannel read GetChannel; default;
   published
     property TotalChannels: Integer read FTotalChannels write SetTotalChannels;
@@ -217,7 +217,7 @@ begin
   Buisy:=False;
 end;
 
-function TAcsMultiMixer.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsMultiMixer.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   i, chan, ReadSize, BufSize: Integer;
   InBuf16, OutBuf16: PAcsBuffer16;
@@ -227,20 +227,20 @@ begin
   while Flock do sleep(0);
   Flock:=True;
   BufSize:=0;
-  if BufferSize > BUF_SIZE then BufferSize:=BUF_SIZE;
+  if ABufferSize > BUF_SIZE then ABufferSize:=BUF_SIZE;
   for chan:=0 to FTotalChannels-1 do
   begin
     with FChannel[chan] do
     begin
       if not EndOfInput then
       begin
-        ReadSize:=FInput.GetData(@InBuf[1], BufferSize);
-        while (ReadSize < BufferSize) and (ReadSize <> 0) do
+        ReadSize:=FInput.GetData(@InBuf[1], ABufferSize);
+        while (ReadSize < ABufferSize) and (ReadSize <> 0) do
         begin
-          Result:=FInput.GetData(@InBuf[ReadSize+1], BufferSize-ReadSize);
+          Result:=FInput.GetData(@InBuf[ReadSize+1], ABufferSize-ReadSize);
           Inc(ReadSize, Result);
         end;
-        FillChar(InBuf[ReadSize+1], BufferSize-ReadSize, 0); // zero rest of buffer
+        FillChar(InBuf[ReadSize+1], ABufferSize-ReadSize, 0); // zero rest of ABuffer
         if ReadSize = 0 then
           EndOfInput:=True
         else
@@ -256,7 +256,7 @@ begin
   end;
 
   // mix
-  FillChar(OutBuf[1], BufferSize, 0);
+  FillChar(OutBuf[1], ABufferSize, 0);
   OutBuf16:=@OutBuf;
   for chan:=0 to FTotalChannels-1 do
   begin
@@ -273,7 +273,7 @@ begin
   Flock:=False;
 
   Result:=BufSize;
-  Move(OutBuf[1], Buffer^, Result);
+  Move(OutBuf[1], ABuffer^, Result);
   Inc(FPosition, Result);
 end;
 

@@ -54,7 +54,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     (* As the actual input process begins, ALSAAudioIn may return a bit different
        value of the samplerate that is actually set by the ALSA drivers.*)
     procedure Init(); override;
@@ -215,7 +215,7 @@ begin
   inherited Done();
 end;
 
-function TALSAAudioIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TALSAAudioIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   l: Integer;
 begin
@@ -245,11 +245,11 @@ begin
     else
       BufEnd:=l * FChan * (FBPS div 8);
   end;
-  if BufferSize < (BufEnd - BufStart + 1) then
-    Result:=BufferSize
+  if ABufferSize < (BufEnd - BufStart + 1) then
+    Result:=ABufferSize
   else
     Result:=BufEnd - BufStart + 1;
-  Move(FBuffer[BufStart-1], Buffer^, Result);
+  Move(FBuffer[BufStart-1], ABuffer^, Result);
   Inc(BufStart, Result);
   Inc(FPosition, Result);
 end;

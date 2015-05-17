@@ -62,7 +62,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
 
     function Seek(Sample: Integer): Boolean; override;
 
@@ -233,7 +233,7 @@ begin
   end;
 end;
 
-function TMACIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TMACIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   l, csize, offs: Integer;
   blocks: Integer;
@@ -255,10 +255,10 @@ begin
     BufEnd:=0;
     if not EndOfStream then
     begin
-      while BufEnd < BufferSize do
+      while BufEnd < ABufferSize do
       begin
         //l:=ov_read(VFile, @buf[BufEnd + 1], BUF_SIZE - BufEnd, 0, 2, 1, @cursec);
-        blocks:=(BufferSize - BufEnd) div 4;
+        blocks:=(ABufferSize - BufEnd) div 4;
         APEDecompress.GetData(@FBuffer[BufEnd], blocks, l);
         l:=l * 4;
         if l <= 0 then
@@ -288,10 +288,10 @@ begin
       Done();
       Init();
       EndOfStream:=False;
-      while BufEnd < BufferSize do
+      while BufEnd < ABufferSize do
       begin
         //l:=ov_read(VFile, @buf[BufEnd + 1], BUF_SIZE - BufEnd, 0, 2, 1, @cursec);
-        blocks:=(BufferSize - BufEnd) div 4;
+        blocks:=(ABufferSize - BufEnd) div 4;
         APEDecompress.GetData(@FBuffer[BufEnd], blocks, l);
         l:=l * 4;
         if l <= 0 then
@@ -303,11 +303,11 @@ begin
       end;
     end;
   end;
-  if BufferSize < (BufEnd - BufStart + 1) then
-    Result:=BufferSize
+  if ABufferSize < (BufEnd - BufStart + 1) then
+    Result:=ABufferSize
   else
     Result:=BufEnd - BufStart + 1;
-  Move(FBuffer[BufStart - 1], Buffer^, Result);
+  Move(FBuffer[BufStart - 1], ABuffer^, Result);
   Inc(BufStart, Result);
   Inc(FPosition, Result);
 end;

@@ -24,7 +24,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
   end;
 
 
@@ -89,7 +89,7 @@ begin
   end;
 end;
 
-function TMPEGIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TMPEGIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   l, offs: Integer;
   tmp: Single;
@@ -124,7 +124,7 @@ begin
     //FillChar(Self.FBuffer, Self.BufferSize, 0);
 
     l:=Self.BufferSize;
-    //l:=SMPEG_playAudio(_M, @FBuffer[BufEnd+1], BufferSize - BufEnd);
+    //l:=SMPEG_playAudio(_M, @FBuffer[BufEnd+1], ABufferSize - BufEnd);
     l:=SMPEG_playAudio(_M, @Self.FBuffer[1], Self.BufferSize);
     if l = 0 then
     begin
@@ -135,7 +135,7 @@ begin
         SMPEG_rewind(_M);
         SMPEG_play(_M);
         FPosition:=0;
-        //l:=SMPEG_playAudio(_M, @FBuffer[BufEnd+1], BufferSize - BufEnd);
+        //l:=SMPEG_playAudio(_M, @FBuffer[BufEnd+1], ABufferSize - BufEnd);
         l:=SMPEG_playAudio(_M, @Self.FBuffer[0], Self.BufferSize);
       end
       else
@@ -147,11 +147,11 @@ begin
     BufEnd:=l;
   end;
 
-  if BufferSize < (BufEnd - BufStart + 1) then
-    Result:=BufferSize
+  if ABufferSize < (BufEnd - BufStart + 1) then
+    Result:=ABufferSize
   else
     Result:=BufEnd - BufStart + 1;
-  Move(FBuffer[BufStart], Buffer^, Result);
+  Move(FBuffer[BufStart], ABuffer^, Result);
   Inc(BufStart, Result);
   Inc(FPosition, Result);
 end;

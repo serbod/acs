@@ -77,7 +77,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
     procedure Done(); override;
     property FgPlaying: Boolean read FFgPlaying;
@@ -210,7 +210,7 @@ begin
   inherited Done();
 end;
 
-function TAcsAudioMixer.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsAudioMixer.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   l1, l2: Integer;
   InSize: Integer;
@@ -370,11 +370,11 @@ begin
     end;  // case end.
   end;  // endif.
 
-  if BufferSize < (BufEnd-BufStart+1) then
-    Result:=BufferSize
+  if ABufferSize < (BufEnd-BufStart+1) then
+    Result:=ABufferSize
   else
     Result:=BufEnd-BufStart+1;
-  Move(InBuf2[BufStart], Buffer^, Result);
+  Move(InBuf2[BufStart], ABuffer^, Result);
   Inc(BufStart, Result);
   Inc(FPosition, Result);
 end;

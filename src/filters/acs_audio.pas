@@ -196,7 +196,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
     procedure Done(); override;
     { Returns the total count of avalible devices from current Driver }
@@ -757,10 +757,10 @@ begin
   inherited Destroy;
 end;
 
-function TAcsAudioIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsAudioIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 begin
   Result:=0;
-  if Assigned(FInput) then Result:=FInput.GetData(Buffer,BufferSize);
+  if Assigned(FInput) then Result:=FInput.GetData(ABuffer,ABufferSize);
     //raise EAcsException.Create(strNoDriverselected);
 end;
 

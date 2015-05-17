@@ -11,11 +11,14 @@ Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 
 unit acs_flac;
 
+(* Title: ACS_FLAC
+    NewAC interface to libFLAC.dll *)
+
 interface
 
 uses
 
- ACS_File, Classes, SysUtils, ACS_Types, ACS_Classes, FLAC,
+ Classes, SysUtils, {FastMove,} ACS_Types, ACS_Classes, ACS_Tags, flac,
 {$IFDEF LINUX}
   baseunix;
 {$ENDIF}
@@ -26,9 +29,17 @@ uses
 
 type
 
+(* Class: TFLACOut
+    FLAC encoder component.
+    Descends from <TAcsCustomFileOut>.
+    Requires libFLAC.dll
+    More information about FLAC can be found at http://flac.sourceforge.com. *)
+
   TFLACOut = class(TAcsCustomFileOut)
   private
-    _encoder: PFLAC__SeekableStreamEncoder;
+    Buffer: PAcsBuffer8;
+    FBufSize: Integer;
+    _encoder: P_FLAC__StreamEncoder;
     FVerify: Boolean;
     FBlockSize: Word;
     FBestModelSearch: Boolean;
@@ -40,17 +51,32 @@ type
     FQLPCoeffPrecisionSearch: Boolean;
     FMaxResidualPartitionOrder: Word;
     FMinResidualPartitionOrder: Word;
+    FCompressionLevel: Integer;
+    BolckInserted: Boolean;
+    FTags: TVorbisTags;
     procedure SetEnableLooseMidSideStereo(val: Boolean);
     procedure SetBestModelSearch(val: Boolean);
+    procedure SetCompressionLevel(val: Integer);
+    procedure SetTags(AValue: TVorbisTags);
+  protected
+    procedure Done; override;
+    function DoOutput(Abort: Boolean): Boolean; override;
+    procedure Prepare; override;
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy(); override;
-    procedure Prepare(); override;
-    procedure Done(); override;
-    function DoOutput(Abort: Boolean):Boolean; override;
+    destructor Destroy; override;
   published
+  (* Property: BestModelSearch
+      Similar to America's Next Top Model, except for algorithms. *)
     property BestModelSearch: Boolean read FBestModelSearch write SetBestModelSearch;
+  (* Property: Blocksize
+      The size you want some blocks to be. Has nothing to do with <BestModelSearch> *)
     property BlockSize: Word read FBlockSize write FBlockSize;
+  (* Property: CompressionLevel
+      What level you want your compression at. *)
+    property CompressionLevel: Integer read FCompressionLevel write SetCompressionLevel;
+  (* Property: EnableMidSideStereo
+      Set this property to True to get a bit more compression. *)
     property EnableMidSideStereo: Boolean read FEnableMidSideStereo write FEnableMidSideStereo;
     property EnableLooseMidSideStereo: Boolean read FEnableLooseMidSideStereo write SetEnableLooseMidSideStereo;
     property MaxLPCOrder: Word read FMaxLPCOrder write FMaxLPCOrder;
@@ -58,501 +84,941 @@ type
     property MinResidualPartitionOrder: Word read FMinResidualPartitionOrder write FMinResidualPartitionOrder;
     property QLPCoeffPrecision: Word read FQLPCoeffPrecision write FQLPCoeffPrecision;
     property QLPCoeffPrecisionSearch: Boolean read FQLPCoeffPrecisionSearch write FQLPCoeffPrecisionSearch;
+  (* Property: Tags
+      Use this property to add a set of Vorbis-style comments (artist, title, etc.) to the output file. *)
+    property Tags: TVorbisTags read FTags write SetTags;
+  (* Property: Verify
+      Setting Verify to True forces the FLAC encoder to verify its own output. It slows down encoding process and usually unnecessary. *)
     property Verify: Boolean read FVerify write FVerify;
   end;
 
+
+(* Class: TFLACIn
+    FLAC decoder component.
+    Descends from <TAuFileIn>.
+    Requires libFLAC.dll
+    More information about FLAC can be found at http://flac.sourceforge.com. *)
+
+  { TFLACIn }
+
   TFLACIn = class(TAcsCustomFileIn)
   private
+    EndOfMetadata: Boolean;
+    FComments: TVorbisTags;
+    Residue: Integer;
     Buff: PAcsBuffer8;
-    _decoder: PFLAC__SeekableStreamDecoder;
-    FBlockSize: Integer;
-    BytesPerBlock: Integer;
-    EndOfStream: Boolean;
-    MinFrameSize: Integer;
+    BuffSize: LongWord;
+    _decoder: P_FLAC__StreamDecoder;
+    FBlockSize: LongWord;
+    BytesPerBlock: LongWord;
+    MinFrameSize: LongWord;
+    FCheckMD5Signature: Boolean;
+    FSignatureValid: Boolean;
+    FSampleSize: Integer;
+    function GetComments: TVorbisTags;
   protected
     procedure OpenFile; override;
     procedure CloseFile; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
+    function Seek(SampleNum: Integer): Boolean; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
-    function Seek(SampleNum: Integer): Boolean; override;
+  (* Property: IsMD5SignatureValid
+      If MD5 signature checking is turned on, this property returns True if the signature is correct (i.e. file contents is not broken).
+      This property value becomes meaningful only after the file has finished playing.
+      Note that if FLAC codec cannot check the signature for some internal reason, this property still returns True.*)
+    property IsMD5SignatureValid: Boolean read FSignatureValid;
+  (* Property: VorbisComments
+      Read this property to get tags (artist, title, etc.) that may be attached to the file.*)
+    property VorbisComments: TVorbisTags read GetComments;
+  published
+  (* Property:  CheckMD5Signature
+      This property specifies whether the input file's MD5 signature should be checked.
+      The MD5 signature checking should be turned on before the file starts playing.
+      If you set this property to True, you can use <IsMD5SignatureValid> value to check the signature after file has finished playing.
+      Note, that seeking in the input file turns the signature checking off (the value of CheckMD5Signature becomes False).
+      In this case <IsMD5SignatureValid> will aalways return True.*)
+    property CheckMD5Signature: Boolean read FCheckMD5Signature write FCheckMD5Signature;
+    property EndSample;
+    property StartSample;
   end;
 
 
 implementation
 
-const
-  DEFAULT_BUFFER_SIZE = $6000;
-
 type
 
   FLACBuf = array[0..0] of FLAC__int32;
   PFLACBuf = ^FLACBuf;
+  FLACUBuf = array[0..0] of FLAC__uint32;
+  PFLACUBuf = ^FLACBuf;
 
-function EncWriteCBFunc(encoder: PFLAC__SeekableStreamEncoder;
-                        buffer: PFLAC__byte;
-                        bytes, samples, current_frame: LongWord;
-                        client_data: Pointer): Integer; cdecl;
+  type
+  TBlockInfo = record
+   BlockType: Word;
+   BlockLength: LongWord;
+   HasNext: Boolean;
+  end;
+
+  TVComments = record
+    Vendor: Utf8String;
+    Title: Utf8String;
+    Artist: Utf8String;
+    Album: Utf8String;
+    Date: Utf8String;
+    Genre: Utf8String;
+    Track: Utf8String;
+    Disc: Utf8String;
+    Reference: Utf8String;
+    TrackGain: Utf8String;
+    TrackPeak: Utf8String;
+    AlbumGain: Utf8String;
+    AlbumPeak: Utf8String;
+  end;
+
+function BuildCommentsBlock(var Comments: TVComments; var Block: Pointer; HasNext: Boolean): Integer;
+var
+  BS: Integer;
+  Header: array[0..4] of Byte;
+  t: byte;
+  P: PAnsiChar;
+  i, StrCount: Integer;
+  procedure AddString(const Str: Utf8String);
+  var
+    l: Integer;
+  begin
+    l:= Length(Str);
+    Move(l, P[i], 4);
+    Inc(i, 4);
+    Move(Str[1], P[i], l);
+    Inc(i, l);
+  end;
+begin
+  BS:= 4;
+  StrCount:= 0;
+  Comments.Vendor:= Utf8Encode('VENDOR=Hacked');
+  Inc(BS, Length(Comments.Vendor) + 4);
+  if Comments.Title <> '' then
+  begin
+    Inc(StrCount);
+    Inc(BS, Length(Comments.Title) + 4);
+  end;
+  if Comments.Artist <> '' then
+  begin
+    Inc(StrCount);
+    Inc(BS, Length(Comments.Artist) + 4);
+  end;
+  if Comments.Album <> '' then
+  begin
+    Inc(StrCount);
+    Inc(BS, Length(Comments.Album) + 4);
+  end;
+  if Comments.Date <> '' then
+  begin
+    Inc(StrCount);
+    Inc(BS, Length(Comments.Date) + 4);
+  end;
+  if Comments.Genre <> '' then
+  begin
+    Inc(StrCount);
+    Inc(BS, Length(Comments.Genre) + 4);
+  end;
+  if Comments.Track <> '' then
+  begin
+    Inc(StrCount);
+    Inc(BS, Length(Comments.Track) + 4);
+  end;
+  if Comments.Disc <> '' then
+  begin
+    Inc(StrCount);
+    Inc(BS, Length(Comments.Disc) + 4);
+  end;
+  if Comments.Reference <> '' then
+  begin
+    Inc(StrCount);
+    Inc(BS, Length(Comments.Reference) + 4);
+  end;
+  if Comments.TrackGain <> '' then
+  begin
+    Inc(StrCount);
+    Inc(BS, Length(Comments.TrackGain) + 4);
+  end;
+  if Comments.TrackPeak <> '' then
+  begin
+    Inc(StrCount);
+    Inc(BS, Length(Comments.TrackPeak) + 4);
+  end;
+  if Comments.AlbumGain <> '' then
+  begin
+    Inc(StrCount);
+    Inc(BS, Length(Comments.AlbumGain) + 4);
+  end;
+  if Comments.AlbumPeak <> '' then
+  begin
+    Inc(StrCount);
+    Inc(BS, Length(Comments.AlbumPeak) + 4);
+  end;
+  Header[0]:= FLAC__METADATA_TYPE_VORBIS_COMMENT;
+  if not HasNext then
+    Inc(Header[0], 128);
+  Move(BS, Header[1], 3);
+  t:= Header[3];
+  Header[3]:= Header[1];
+  Header[1]:= t;
+  Result:= BS + 4;
+  GetMem(Block, Result);
+  P:= PAnsiChar(Block);
+  Move(Header[0], P[0], 4);
+  i:= 4;
+  AddString(Comments.Vendor);
+  Move(StrCount, P[i], 4);
+  Inc(i, 4);
+  if Comments.Title <> '' then
+    AddString(Comments.Title);
+  if Comments.Artist <> '' then
+    AddString(Comments.Artist);
+  if Comments.Album <> '' then
+    AddString(Comments.Album);
+  if Comments.Date <> '' then
+    AddString(Comments.Date);
+  if Comments.Genre <> '' then
+    AddString(Comments.Genre);
+  if Comments.Track <> '' then
+    AddString(Comments.Track);
+  if Comments.Disc <> '' then
+    AddString(Comments.Disc);
+  if Comments.Reference <> '' then
+    AddString(Comments.Reference);
+  if Comments.TrackGain <> '' then
+    AddString(Comments.TrackGain);
+  if Comments.TrackPeak <> '' then
+    AddString(Comments.TrackPeak);
+  if Comments.AlbumGain <> '' then
+    AddString(Comments.AlbumGain);
+  if Comments.AlbumPeak <> '' then
+    AddString(Comments.AlbumPeak);
+end;
+
+function EncWriteCBFunc(encoder: P_FLAC__StreamEncoder;
+                              buffer: PFLAC__byte;
+                              bytes, samples, current_frame: LongWord;
+                              client_data: Pointer): Integer; cdecl;
 var
   FLACOut: TFLACOut;
+  BI: TBlockInfo;
+  Header: array[0..3] of Byte;
+  Comm: TVComments;
+  Block: Pointer;
+  bresult: LongInt;
 begin
-  FLACOut:=TFLACOut(client_data);
-  Result:=FLAC__SEEKABLE_STREAM_ENCODER_OK;
+  FLACOut:= TFLACOut(client_data);
+  Result:= FLAC__STREAM_ENCODER_WRITE_STATUS_OK;
   try
-    FLACOut.FStream.Write(buffer^, bytes);
+    if not FLACOut.BolckInserted then
+    begin
+      Move(buffer^, Header, 4);
+      BI.HasNext:= (Header[0] shr 7) = 0;
+      BI.BlockType:= Header[0] mod 128;
+      if (BI.BlockType = FLAC__METADATA_TYPE_VORBIS_COMMENT) then
+      begin
+        FLACOut.BolckInserted:= True;
+        if FlacOut.FTags.Artist <> '' then
+          Comm.Artist:= Utf8Encode(WideString(_vorbis_Artist + '=') + FlacOut.FTags.Artist);
+        if FlacOut.FTags.Album <> '' then
+          Comm.Album:= Utf8Encode(WideString(_vorbis_Album + '=') + FlacOut.FTags.Album);
+        if FlacOut.FTags.Title <> '' then
+          Comm.Title:= Utf8Encode(WideString(_vorbis_Title + '=') + FlacOut.FTags.Title);
+        if FlacOut.FTags.Date <> '' then
+          Comm.Date:= Utf8Encode(WideString(_vorbis_Date + '=') + FlacOut.FTags.Date);
+        if FlacOut.FTags.Genre <> '' then
+          Comm.Genre:= Utf8Encode(WideString(_vorbis_Genre + '=') + FlacOut.FTags.Genre);
+        if FlacOut.FTags.Track <> '' then
+          Comm.Track:= Utf8Encode(WideString(_vorbis_Track + '=') + FlacOut.FTags.Track);
+        if FlacOut.FTags.Disc <> '' then
+          Comm.Disc:= Utf8Encode(WideString(_vorbis_Disc + '=') + FlacOut.FTags.Disc);
+        if FlacOut.FTags.Reference <> '' then
+          Comm.Reference:= Utf8Encode(WideString(_vorbis_Reference + '=') + FlacOut.FTags.Reference);
+        if FlacOut.FTags.TrackGain <> '' then
+          Comm.TrackGain:= Utf8Encode(WideString(_vorbis_TrackGain + '=') + FlacOut.FTags.TrackGain);
+        if FlacOut.FTags.TrackPeak <> '' then
+          Comm.TrackPeak:= Utf8Encode(WideString(_vorbis_TrackPeak + '=') + FlacOut.FTags.TrackPeak);
+        if FlacOut.FTags.AlbumGain <> '' then
+          Comm.AlbumGain:= Utf8Encode(WideString(_vorbis_AlbumGain + '=') + FlacOut.FTags.AlbumGain);
+        if FlacOut.FTags.AlbumPeak <> '' then
+          Comm.AlbumPeak:= Utf8Encode(WideString(_vorbis_AlbumPeak + '=') + FlacOut.FTags.AlbumPeak);
+        bytes:= BuildCommentsBlock(Comm, Block, BI.HasNext);
+        bresult:= FLACOut.FStream.Write(Block^, bytes);
+        FreeMem(Block);
+      end else
+      bresult:= FLACOut.FStream.Write(buffer^, bytes);
+    end else
+    bresult:= FLACOut.FStream.Write(buffer^, bytes);
+    if bresult <> Integer(bytes) then
+      Result:= FLAC__STREAM_ENCODER_WRITE_STATUS_FATAL_ERROR;
   except
-    Result:=FLAC__SEEKABLE_STREAM_ENCODER_WRITE_ERROR;
+    Result:= FLAC__STREAM_ENCODER_WRITE_STATUS_FATAL_ERROR;
   end;
 end;
 
-function EncSeekCBFunc(encoder: PFLAC__SeekableStreamEncoder;
-                       absolute_byte_offset: FLAC__uint64;
-                       client_data: Pointer): Integer; cdecl;
+function EncSeekCBFunc(encoder: P_FLAC__StreamEncoder;
+                    absolute_byte_offset: FLAC__uint64;
+                    client_data: Pointer): Integer; cdecl;
 var
   FLACOut: TFLACOut;
 begin
-  FLACOut:=TFLACOut(client_data);
-  Result:=FLAC__SEEKABLE_STREAM_ENCODER_SEEK_STATUS_OK;
+  FLACOut:= TFLACOut(client_data);
+  Result:= FLAC__STREAM_ENCODER_SEEK_STATUS_OK;
   try
     FLACOut.FStream.Seek(absolute_byte_offset, soFromBeginning);
   except
-    Result:=FLAC__SEEKABLE_STREAM_ENCODER_SEEK_ERROR;
+    Result:= FLAC__STREAM_ENCODER_SEEK_STATUS_ERROR;
   end;
 end;
 
-function DecReadCBFunc(decoder: PFLAC__SeekableStreamDecoder;
+function EncTellCBFunc(decoder: P_FLAC__StreamDecoder;
+                       var absolute_byte_offset: FLAC__uint64;
+                       client_data: Pointer): Integer; cdecl;
+
+var
+  FLACOut: TFLACOut;
+begin
+  FLACOut:= TFLACOut(client_data);
+  absolute_byte_offset:= FLACOut.Stream.Position;
+  Result:= FLAC__STREAM_ENCODER_TELL_STATUS_OK;
+end;
+
+
+procedure EncMetadataCBFunc(decoder: P_FLAC__StreamDecoder;
+                                      metadata: Pointer;
+                                      client_data: Pointer); cdecl;
+begin
+  // Nothing to do here
+end;
+
+
+function DecReadCBFunc(decoder: P_FLAC__StreamDecoder;
                        buffer: PFLAC__byte;
                        var bytes: LongWord;
                        client_data: Pointer): Integer; cdecl;
 var
   FLACIn: TFLACIn;
 begin
-  FLACIn:=TFLACIn(client_data);
-  Result:=FLAC__SEEKABLE_STREAM_DECODER_READ_STATUS_OK;
+  FLACIn:= TFLACIn(client_data);
+  Result:= FLAC__STREAM_DECODER_READ_STATUS_CONTINUE;
   if FLACIn.FStream.Position >= FLACIn.FStream.Size then
   begin
-    Result:=FLAC__SEEKABLE_STREAM_DECODER_END_OF_STREAM;
+    Result:= FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM;
     Exit;
   end;
   try
-    bytes:=FLACIn.FStream.Read(buffer^, bytes);
-  except
-    Result:=FLAC__SEEKABLE_STREAM_DECODER_READ_ERROR;
+    bytes:= FLACIn.FStream.Read(buffer^, bytes);
+    if bytes = 0 then
+      Result:= FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM;
+    except
+    Result:= FLAC__STREAM_DECODER_READ_STATUS_ABORT;
   end;
 end;
 
-function DecSeekCBFunc(decoder: PFLAC__SeekableStreamDecoder;
+function DecSeekCBFunc(decoder: P_FLAC__StreamDecoder;
                        absolute_byte_offset: FLAC__uint64;
                        client_data: Pointer): Integer; cdecl;
 var
   FLACIn: TFLACIn;
 begin
-  FLACIn:=TFLACIn(client_data);
-  Result:=FLAC__SEEKABLE_STREAM_DECODER_SEEK_STATUS_OK;
+  FLACIn:= TFLACIn(client_data);
+  if not FLACIn.FSeekable then
+  begin
+    Result:= FLAC__STREAM_DECODER_SEEK_STATUS_UNSUPPORTED;
+    Exit;
+  end;
+  Result:= FLAC__STREAM_DECODER_SEEK_STATUS_OK;
   try
     FLACIn.FStream.Seek(absolute_byte_offset, soFromBeginning);
+    if absolute_byte_offset > FlacIn.FSize then
+      Result:= FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM;
   except
-    Result:=FLAC__SEEKABLE_STREAM_DECODER_SEEK_STATUS_ERROR;
+    Result:= FLAC__STREAM_DECODER_SEEK_STATUS_ERROR;
   end;
 end;
 
-function DecTellCBFunc(decoder: PFLAC__SeekableStreamDecoder;
+function DecTellCBFunc(decoder: P_FLAC__StreamDecoder;
                        var absolute_byte_offset: FLAC__uint64;
                        client_data: Pointer): Integer; cdecl;
 var
   FLACIn: TFLACIn;
 begin
-  FLACIn:=TFLACIn(client_data);
-  Result:=FLAC__SEEKABLE_STREAM_DECODER_TELL_STATUS_OK;
+  FLACIn:= TFLACIn(client_data);
+  if FLACIn.FSize = 0 then
+  begin
+    Result:= FLAC__STREAM_DECODER_TELL_STATUS_UNSUPPORTED;
+    Exit;
+  end;
+  Result:= FLAC__STREAM_DECODER_TELL_STATUS_OK;
   try
-    absolute_byte_offset:=FLACIn.FStream.Position;
+    absolute_byte_offset:= FLACIn.FStream.Position;
   except
-    Result:=FLAC__SEEKABLE_STREAM_DECODER_TELL_STATUS_ERROR;
+    Result:= FLAC__STREAM_DECODER_TELL_STATUS_ERROR;
   end;
 end;
 
-function DecLengthCBFunc(decoder: PFLAC__SeekableStreamDecoder;
+function DecLengthCBFunc(decoder: P_FLAC__StreamDecoder;
                          var stream_length: FLAC__uint64;
                          client_data: Pointer): Integer; cdecl;
 var
   FLACIn: TFLACIn;
 begin
-  FLACIn:=TFLACIn(client_data);
-  Result:=FLAC__SEEKABLE_STREAM_DECODER_LENGTH_STATUS_OK;
+  FLACIn:= TFLACIn(client_data);
+  Result:= FLAC__STREAM_DECODER_LENGTH_STATUS_OK;
   try
-    stream_length:=FLACIn.FStream.Size;
+    stream_length:= FLACIn.FStream.Size;
   except
-    Result:=FLAC__SEEKABLE_STREAM_DECODER_LENGTH_STATUS_ERROR;
+    Result:= FLAC__STREAM_DECODER_LENGTH_STATUS_ERROR;
   end;
 end;
 
-function DecEOFCBFunc(decoder: PFLAC__SeekableStreamDecoder;
-                      client_data: Pointer): Boolean; cdecl;
+function DecEOFCBFunc(decoder: P_FLAC__StreamDecoder;
+                      client_data: Pointer): LongBool; cdecl;
 var
   FLACIn: TFLACIn;
 begin
-  FLACIn:=TFLACIn(client_data);
-  Result:=(FLACIn.FStream.Position >= FLACIn.FStream.Size);
+  FLACIn:= TFLACIn(client_data);
+  if FLACIn.FStream.Position >= FLACIn.FStream.Size then Result:= True
+  else Result:= False;
 end;
 
-function DecWriteCBFunc(decoder: PFLAC__SeekableStreamDecoder;
+function DecWriteCBFunc(decoder: P_FLAC__StreamDecoder;
                         frame: PFLAC__Frame;
-                        buffer: PFLACChannels;
+                        buffer: PFLACInt32BufArray;
                         client_data: Pointer): Integer; cdecl;
 var
   FLACIn: TFLACIn;
   Header: PFLAC__FrameHeader;
-  buffer1: PFLACIntBuf;
-  buffer2: PFLACIntBuf;
+  buffer1: PFLACInt32Buf;
+  buffer2: PFLACInt32Buf;
   B16: PAcsBuffer16;
-  i: Integer;
+  B32: PAcsBuffer32;
+  i, j: LongWord;
+  ch: LongWord;
 begin
-  FLACIn:=TFLACIn(client_data);
-  Header:=PFLAC__FrameHeader(frame);
-  FLACIn.FBlockSize:=Header.blocksize;
-  FLACIn.BytesPerBlock:=FLACIn.FBlockSize * (FLACIn.FBPS shr 3) * FLACIn.FChan;
-  GetMem(FLACIn.Buff, FLACIn.BytesPerBlock);
-//  FillChar(FLACIn.Buff[0], FLACIn.BytesPerBlock, 255);
+  FLACIn:= TFLACIn(client_data);
+  Header:= PFLAC__FrameHeader(frame);
+  FLACIn.FBlockSize:= Header.blocksize;
+  FLACIn.BytesPerBlock:= FLACIn.FBlockSize*(FLACIn.FBPS shr 3)*FLACIn.FChan;
+  ch:= FLACIn.FChan;
+  if FLACIn.BytesPerBlock > FLACIn.BuffSize then
+  begin
+    FreeMem(FLACIn.Buff, FLACIn.BuffSize);
+    FLACIn.BuffSize:= FLACIn.BytesPerBlock;
+    GetMem(FLACIn.Buff, FLACIn.BuffSize);
+  end;
   if FLACIn.FBPS = 16 then
   begin
-    B16:=PAcsBuffer16(FLACIn.Buff);
-    if FLACIn.FChan = 1 then
+    B16:= PAcsBuffer16(FLACIn.Buff);
+    for i:= 0 to FLACIn.FBlockSize -1 do
     begin
-     buffer1:=buffer[0];
-     for i:=0 to FLACIn.FBlockSize-1 do
-       B16[i]:=buffer1[i];
-    end
-    else
-    begin
-      buffer1:=buffer[0];
-      buffer2:=buffer[1];
-      for i:=0 to FLACIn.FBlockSize-1 do
-      begin
-        B16[i shl 1]:=buffer1[i];
-        B16[(i shl 1)+1]:=buffer2[i];
-      end;
+      for j:= 0 to ch - 1 do
+        B16[i*ch + j]:= buffer[j][i];
     end;
   end
   else
-  begin
-    if FLACIn.FChan = 1 then
+    if FLACIn.FBPS = 8 then
     begin
-      buffer1:=buffer[0];
-      for i:=0 to FLACIn.FBlockSize-1 do
-        FLACIn.Buff[i]:=buffer1[i];
+      if FLACIn.FChan = 1 then
+      begin
+        buffer1:= buffer[0];
+        for i:= 0 to FLACIn.FBlockSize-1 do FLACIn.Buff[i]:= buffer1[i];
+      end
+      else
+      begin
+        buffer1:= buffer[0];
+        buffer2:= buffer[1];
+        for i:= 0 to FLACIn.FBlockSize-1 do
+        begin
+          FLACIn.Buff[i shl 1]:= buffer1[i];
+          FLACIn.Buff[(i shl 1)+1]:= buffer2[i];
+        end;
+      end;
     end
     else
-    begin
-      buffer1:=buffer[0];
-      buffer2:=buffer[1];
-      for i:=0 to FLACIn.FBlockSize-1 do
+      if FLacIn.FBPS = 24 then
       begin
-        FLACIn.Buff[i shl 1]:=buffer1[i];
-        FLACIn.Buff[(i shl 1)+1]:=buffer2[i];
-      end;
-    end;
-  end;
-  Result:=FLAC__SEEKABLE_STREAM_ENCODER_OK;
+        for i:= 0 to FLACIn.FBlockSize -1 do
+        begin
+          for j:= 0 to ch - 1 do
+          begin
+            FLACIn.Buff[(i*ch + j)*3]:= (LongWord(buffer[j][i]) and $000000FF);
+            FLACIn.Buff[(i*ch + j)*3 + 1]:= (LongWord(buffer[j][i]) and $0000FF00) div $100;
+            FLACIn.Buff[(i*ch + j)*3 + 2]:= (LongWord(buffer[j][i]) and $00FF0000) div $10000;
+          end;
+        end;
+      end
+      else
+        if FLacIn.FBPS = 32 then
+        begin
+          B32:= PAcsBuffer32(FLACIn.Buff);
+          for i:= 0 to FLACIn.FBlockSize -1 do
+          begin
+            for j:= 0 to ch - 1 do
+              B32[i*ch + j]:= buffer[j][i];
+          end;
+        end;
+
+
+      (* if FLACIn.FChan = 1 then
+      begin
+        buffer1:= buffer[0];
+        for i:= 0 to FLACIn.FBlockSize-1 do
+        begin
+          FLACIn.Buff[i*3]:= (LongWord(buffer1[i]) and $000000FF);
+          FLACIn.Buff[i*3 + 1]:= (LongWord(buffer1[i]) and $0000FF00) div $100;
+          FLACIn.Buff[i*3 + 2]:= (LongWord(buffer1[i]) and $00FF0000) div $10000;
+        end;
+      end else
+      begin
+        buffer1:= buffer[0];
+        buffer2:= buffer[1];
+        for i:= 0 to FLACIn.FBlockSize-1 do
+        begin
+          FLACIn.Buff[i*6]:= (LongWord(buffer1[i]) and $000000FF);
+          FLACIn.Buff[i*6 + 1]:= (LongWord(buffer1[i]) and $0000FF00) div $100;
+          FLACIn.Buff[i*6 + 2]:= (LongWord(buffer1[i]) and $00FF0000) div $10000;
+          FLACIn.Buff[i*6 + 3]:= (LongWord(buffer2[i]) and $000000FF);
+          FLACIn.Buff[i*6 + 4]:= (LongWord(buffer2[i]) and $0000FF00) div $100;
+          FLACIn.Buff[i*6 + 5]:= (LongWord(buffer2[i]) and $00FF0000) div $10000;
+        end;
+      end; *)
+  Result:= FLAC__STREAM_ENCODER_OK;
 end;
 
-procedure DecMetadataCBProc(decoder: PFLAC__SeekableStreamDecoder;
+function Utf8ToWideStr(s: AnsiString): WideString;
+begin
+{$ifdef FPC}
+  Result:=UTF8Decode(s);
+{$else}
+  {$WARNINGS OFF}
+  {$IF CompilerVersion < 20}
+  Result:=Utf8Decode(s);
+  {$IFEND}
+  {$IF CompilerVersion >= 20}
+  Result:=Utf8ToString(s);
+  {$IFEND}
+  {$WARNINGS ON}
+{$endif FPC}
+end;
+
+procedure DecMetadataCBProc(decoder: P_FLAC__StreamDecoder;
                             metadata: PFLAC__StreamMetadata;
                             client_data: Pointer); cdecl;
 var
   FLACIn: TFLACIn;
-  P: Pointer;
-  FI: PFLACInfo;
+  FI: FLAC__StreamMetadata_StreamInfo;
+  i: Integer;
+  S: AnsiString;
+  Entry: PFLAC__StreamMetadata_VorbisComment_Entry;
+  SL: TStringList;
 begin
-  if LongWord(metadata^) <> 0 then Exit;
-  P:=metadata;
-  (*
-   STREAMINFO block format differs in different
-   FLAC codec versions, so we are trying to be flexible here.
-  *)
-  while LongWord(P^) = 0 do Inc(P, 4);
-  Inc(P, 4);
-  if LongWord(P^) = 0 then Inc(P, 4);
-  FI:=PFLACInfo(P);
-  FLACIn:=TFLACIn(client_data);
-  FLACIn.FSR:=FI.sample_rate;
-  FLACIn.FChan:=FI.channels;
-  if FLACIn.FChan > 2 then FLACIn.FValid:=False;
-  FLACIn.FBPS:=FI.bits_per_sample;
-  if FLACIn.FChan > 16 then FLACIn.FValid:=False;
-  FLACIn.FTotalSamples:=FI.total_samples1;
-  if FLACIn.FTotalSamples = 0 then
-    FLACIn.FTotalSamples:=FI.total_samples2;
-  FLACIn.FSize:=FLACIn.FTotalSamples * (FLACIn.FBPS div 8) * FLACIn.FChan;
-  FLACIn.MinFrameSize:=FI.min_framesize;
+  FLACIn:= TFLACIn(client_data);
+  if metadata._type = FLAC__METADATA_TYPE_STREAMINFO then
+  begin
+    //LongWord(metadata):= LongWord(metadata) + 4;
+    FI:= metadata.stream_info;
+    FLACIn.FSR:= FI.sample_rate;
+    FLACIn.FChan:= FI.channels;
+    //if FLACIn.FChan > 2 then FLACIn.FValid:= False;
+    FLACIn.FBPS:= FI.bits_per_sample;
+    FLACIn.FTotalSamples:= FI.total_samples;
+    FLACIn.FSize:= FLACIn.FTotalSamples*(FLACIn.FBPS shr 3)*FLACIn.FChan;
+    FLACIn.MinFrameSize:= FI.min_framesize;
+  end;
+  if metadata._type = FLAC__METADATA_TYPE_VORBIS_COMMENT then
+  begin
+    SL:= TStringList.Create();
+    Entry:= metadata.vorbis_comment.comments;
+    for i:= 0 to  metadata.vorbis_comment.num_comments - 1 do
+    begin
+      SetLength(S, Entry.length);
+      Move(Entry.entry^, S[1], Length(S));
+      SL.Add(String(S));
+      Inc(LongWord(Entry), SizeOf(FLAC__StreamMetadata_VorbisComment_Entry));
+    end;
+
+    FLACIn.FComments.Title:=Utf8ToWideStr(SL.Values[AnsiUpperCase(_vorbis_Title)]);
+    FLACIn.FComments.Artist:=Utf8ToWideStr(SL.Values[AnsiUpperCase(_vorbis_Artist)]);
+    FLACIn.FComments.Album:=Utf8ToWideStr(SL.Values[AnsiUpperCase(_vorbis_Album)]);
+    FLACIn.FComments.Date:=Utf8ToWideStr(SL.Values[AnsiUpperCase(_vorbis_Date)]);
+    FLACIn.FComments.Genre:=Utf8ToWideStr(SL.Values[AnsiUpperCase(_vorbis_Genre)]);
+    FLACIn.FComments.Track:=Utf8ToWideStr(SL.Values[AnsiUpperCase(_vorbis_Track)]);
+    FLACIn.FComments.Disc:=Utf8ToWideStr(SL.Values[AnsiUpperCase(_vorbis_Disc)]);
+    FLACIn.FComments.Reference:=Utf8ToWideStr(SL.Values[AnsiUpperCase(_vorbis_Reference)]);
+    FLACIn.FComments.TrackGain:=Utf8ToWideStr(SL.Values[AnsiUpperCase(_vorbis_TrackGain)]);
+    FLACIn.FComments.TrackPeak:=Utf8ToWideStr(SL.Values[AnsiUpperCase(_vorbis_TrackPeak)]);
+    FLACIn.FComments.AlbumGain:=Utf8ToWideStr(SL.Values[AnsiUpperCase(_vorbis_AlbumGain)]);
+    FLACIn.FComments.AlbumPeak:=Utf8ToWideStr(SL.Values[AnsiUpperCase(_vorbis_AlbumPeak)]);
+    FLACIn.FComments.Artist:=Utf8ToWideStr(SL.Values[AnsiUpperCase(_vorbis_Title)]);
+
+    SL.Free;
+  end;
+  FLacIn.EndOfMetadata:= metadata.is_last;
 end;
 
-procedure DecErrorCBProc(decoder: PFLAC__SeekableStreamDecoder;
+procedure DecErrorCBProc(decoder: P_FLAC__StreamDecoder;
                          status: Integer;
                          client_data: Pointer); cdecl;
 var
   FLACIn: TFLACIn;
 begin
-  FLACIn:=TFLACIn(client_data);
-  FLACIn.FValid:=False;
+  FLACIn:= TFLACIn(client_data);
+  FLACIn.FValid:= False;
 end;
 
-constructor TFLACOut.Create();
+constructor TFLACOut.Create;
 begin
   inherited Create(AOwner);
-  FVerify:=False;
-  FBufferSize:=DEFAULT_BUFFER_SIZE; // default buffer size
-  FBlockSize:=4608;
-  FBestModelSearch:=False;
-  FEnableMidSideStereo:=True;
-  if not (csDesigning in ComponentState) then
-    if not LibFLACLoaded then
-      raise EAcsException.Create(LibFLACPath + ' library could not be loaded.');
+  FVerify:= False;
+  FBlockSize:= 4608;
+  FBestModelSearch:= False;
+  FEnableMidSideStereo:= True;
+  FCompressionLevel:= -1;
+  FTags:= TVorbisTags.Create;
 end;
 
 destructor TFLACOut.Destroy();
 begin
-  inherited Destroy();
+  FTags.Free;
+  //UnloadFLACLib;
+  inherited Destroy;
 end;
 
 procedure TFLACOut.Prepare();
 begin
-  // TODO: Recreate this stuff with buffersize more equal to default
-  FBufferSize:=DEFAULT_BUFFER_SIZE div FBlockSize;
-  FBufferSize:=FBufferSize * (FInput.BitsPerSample div 8) * FInput.Channels;
-  inherited Prepare();
-
-  EndOfInput:=False;
-  _encoder:=FLAC__seekable_stream_encoder_new;
-  if _encoder = nil then
+  LoadFLACLib;
+  if not LibFLACLoaded then
+    raise EAcsException.Create(LibFLACPath + ' library could not be loaded.');
+  if not Assigned(FStream) then
+  begin
+    if FFileName = '' then
+      raise EAcsException.Create('File name is not assigned.');
+    if (not FileExists(FFileName)) or (FFileMode = foRewrite) then
+      FStream:= TFileStream.Create(FFileName, fmCreate, FAccessMask)
+    else
+      FStream:= TFileStream.Create(FFileName, fmOpenReadWrite, FAccessMask);
+  end;
+  EndOfInput:= False;
+  BolckInserted:= False;
+  _encoder:= FLAC__stream_encoder_new();
+  if not Assigned(_encoder) then
     raise EAcsException.Create('Failed to initialize FLAC encoder.');
-  FLAC__seekable_stream_encoder_set_verify(_encoder, FVerify);
-  FLAC__seekable_stream_encoder_set_channels(_encoder, FInput.Channels);
-  FLAC__seekable_stream_encoder_set_bits_per_sample(_encoder, FInput.BitsPerSample);
-  FLAC__seekable_stream_encoder_set_sample_rate(_encoder, FInput.SampleRate);
+  FInput.Init();
+  FLAC__stream_encoder_set_verify(_encoder, FVerify);
+  FLAC__stream_encoder_set_channels(_encoder, FInput.Channels);
+  FLAC__stream_encoder_set_bits_per_sample(_encoder, FInput.BitsPerSample);
+  FLAC__stream_encoder_set_sample_rate(_encoder, FInput.SampleRate);
   if FInput.Channels = 2 then
   begin
-    FLAC__seekable_stream_encoder_set_do_mid_side_stereo(_encoder, FEnableMidSideStereo);
-    FLAC__seekable_stream_encoder_set_loose_mid_side_stereo(_encoder, FEnableLooseMidSideStereo);
+    FLAC__stream_encoder_set_do_mid_side_stereo(_encoder, FEnableMidSideStereo);
+    FLAC__stream_encoder_set_loose_mid_side_stereo(_encoder, FEnableLooseMidSideStereo);
   end;
-  FLAC__seekable_stream_encoder_set_blocksize(_encoder, FBlockSize);
-  FLAC__seekable_stream_encoder_set_max_lpc_order(_encoder, FMaxLPCOrder);
-  if FQLPCoeffPrecision + FInput.BitsPerSample > 31 then
-    FQLPCoeffPrecision:=31 - FInput.BitsPerSample;
-  FLAC__seekable_stream_encoder_set_qlp_coeff_precision(_encoder, FQLPCoeffPrecision);
-  FLAC__seekable_stream_encoder_set_do_qlp_coeff_prec_search(_encoder, FQLPCoeffPrecisionSearch);
-  FLAC__seekable_stream_encoder_set_min_residual_partition_order(_encoder, FMinResidualPartitionOrder);
-  FLAC__seekable_stream_encoder_set_max_residual_partition_order(_encoder, FMaxResidualPartitionOrder);
-  FLAC__seekable_stream_encoder_set_do_exhaustive_model_search(_encoder, FBestModelSearch);
-  {if FInput.Size > 0 then
-    FLAC__seekable_stream_encoder_set_total_samples_estimate(_encoder, Round(FInput.Size / (FInput.BitsPerSample div 8) / FInput.Channels)); }
-  FLAC__seekable_stream_encoder_set_seek_callback(_encoder, EncSeekCBFunc);
-  FLAC__seekable_stream_encoder_set_write_callback(_encoder, EncWriteCBFunc);
-  FLAC__seekable_stream_encoder_set_client_data(_encoder, Self);
-  if FLAC__seekable_stream_encoder_init(_encoder) <> FLAC__SEEKABLE_STREAM_ENCODER_OK then
+  FLAC__stream_encoder_set_blocksize(_encoder, FBlockSize);
+  if FCompressionLevel >= 0 then
+    FLAC__stream_encoder_set_compression_level(_encoder, FCompressionLevel)
+  else
+  begin
+    FLAC__stream_encoder_set_max_lpc_order(_encoder, FMaxLPCOrder);
+    if FQLPCoeffPrecision + FInput.BitsPerSample > 31 then FQLPCoeffPrecision:= 31 - FInput.BitsPerSample;
+    FLAC__stream_encoder_set_qlp_coeff_precision(_encoder, FQLPCoeffPrecision);
+    FLAC__stream_encoder_set_do_qlp_coeff_prec_search(_encoder, FQLPCoeffPrecisionSearch);
+    FLAC__stream_encoder_set_min_residual_partition_order(_encoder, FMinResidualPartitionOrder);
+    FLAC__stream_encoder_set_max_residual_partition_order(_encoder, FMaxResidualPartitionOrder);
+    FLAC__stream_encoder_set_do_exhaustive_model_search(_encoder, FBestModelSearch);
+  end;
+  //if FInput.Size > 0 then
+  //  FLAC__stream_encoder_set_total_samples_estimate(_encoder, Round(FInput.Size/(FInput.BitsPerSample shr 3)/FInput.Channels));
+  //FLAC__stream_encoder_set_seek_callback(_encoder, EncSeekCBFunc);
+  //FLAC__stream_encoder_set_write_callback(_encoder, EncWriteCBFunc);
+  //FLAC__seekable_stream_encoder_set_client_data(_encoder, Self);
+  if FLAC__stream_encoder_init_stream(_encoder, EncWriteCBFunc, EncSeekCBFunc,
+        EncTellCBFunc, EncMetadataCBFunc, Self) <> FLAC__STREAM_ENCODER_OK then
   begin
     FInput.Done();
     raise EAcsException.Create('Failed to initialize FLAC encoder.');
   end;
+  FBufSize:= FBlockSize * (FInput.BitsPerSample shr 3) * FInput.Channels;
+  GetMem(Buffer, FBufSize);
 end;
 
 procedure TFLACOut.Done();
 begin
   if Assigned(FStream) then
-    FLAC__seekable_stream_encoder_finish(_encoder);
-  FLAC__seekable_stream_encoder_delete(_encoder);
-  inherited Done();
+    FLAC__stream_encoder_finish(_encoder);
+  FLAC__stream_encoder_delete(_encoder);
+  if Buffer <> nil then
+  FreeMem(Buffer);
+  Buffer:= nil;
+  FreeAndNil(FStream);
+  FInput.Done();
 end;
 
-function TFLACOut.DoOutput(Abort: Boolean):Boolean;
+function TFLACOut.DoOutput(Abort: Boolean): Boolean;
 var
-  Len, i, samples: Integer;
+  Len, i, samples: LongWord;
   FB: PFLACBuf;
+  FBU: PFLACUBuf;
   B16: PAcsBuffer16;
+  B32: PAcsBuffer32;
 begin
-  Result:=False;
+  Result:= True;
   if not CanOutput then Exit;
-  if Abort or EndOfInput then Exit;
-
-  // get samples from input
-  Len:=FillBufferFromInput(EndOfInput);
-  if Len = 0 then Exit;
-
-  samples:=(Len shl 3) div FInput.BitsPerSample;
-  GetMem(FB, samples * SizeOF(FLAC__int32));
-  try
-    if FInput.BitsPerSample = 16 then
-    begin
-      //B16:=@FBuffer[0];
-      B16:=FBuffer.Memory;
-      for i:=0 to samples-1 do FB[i]:=B16[i];
-    end;
-    //else
-      //for i:=0 to samples-1 do FB[i]:=FBuffer[i];
-    FBuffer.Position:=0;
-    FBuffer.Read(FB, samples);
-    if not FLAC__seekable_stream_encoder_process_interleaved(_encoder, @FB[0], samples div FInput.Channels) then
-      raise EAcsException.Create('Failed to encode data.');
-    Result:=True;
-  finally
-    FreeMem(FB);
+  if Abort or EndOfInput then
+  begin
+    Result:= False;
+    Exit;
   end;
+  //Len:= FInput.FillBuffer(Buffer, FBufSize, EndOfInput);
+  Len:= Self.FillBufferFromInput(EndOfInput);
+  (*while Len < FBufSize do
+  begin
+    l:= Finput.CopyData(@Buffer[Len], FBufSize-Len);
+    Inc(Len, l);
+    if l = 0 then
+    begin
+      EndOfInput:= True;
+      Break;
+    end;
+  end; *)
+  if Len = 0 then
+  begin
+    Result:= False;
+    Exit;
+  end;
+  samples:= (Len shl 3) div Finput.BitsPerSample;
+  GetMem(FB, samples * SizeOF(FLAC__int32));
+  if FInput.BitsPerSample = 16 then
+  begin
+    B16:= @Buffer[0];
+    for i:= 0 to samples - 1 do FB[i]:= B16[i];
+  end else
+    if FInput.BitsPerSample = 8 then
+    begin
+      for i:= 0 to samples - 1 do FB[i]:= Buffer[i]
+    end else
+      if FInput.BitsPerSample = 24 then
+      begin
+        FBU:= PFLACUBuf(FB);
+        for i:= 0 to samples - 1 do FBU[i]:= (ShortInt(Buffer[i*3 + 2]) shl 16) + (Buffer[i*3 + 1] shl 8) + (Buffer[i*3]);
+      end else
+        if FInput.BitsPerSample = 32 then
+        begin
+          B32:= @Buffer[0];
+          for i:= 0 to samples - 1 do FB[i]:= B32[i];
+        end;
+  if not FLAC__stream_encoder_process_interleaved(_encoder, @FB[0], samples div FInput.Channels) then
+  raise EAcsException.Create('Failed to encode data.');
+  FreeMem(FB);
 end;
 
-procedure TFLACOut.SetEnableLooseMidSideStereo();
+procedure TFLACOut.SetEnableLooseMidSideStereo;
 begin
-  if Val then FEnableMidSideStereo:=True;
-  FEnableLooseMidSideStereo:=Val;
+  if Val then FEnableMidSideStereo:= True;
+  FEnableLooseMidSideStereo:= Val;
 end;
 
-procedure TFLACOut.SetBestModelSearch();
+procedure TFLACOut.SetBestModelSearch;
 begin
   if Val then
   begin
-    FEnableMidSideStereo:=True;
-    FEnableLooseMidSideStereo:=False;
+    FEnableMidSideStereo:= True;
+    FEnableLooseMidSideStereo:= False;
   end;
-  FBestModelSearch:=Val;
+  FBestModelSearch:= Val;
 end;
 
-{ TFLACIn }
-
-constructor TFLACIn.Create();
+constructor TFLACIn.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  if not (csDesigning	in ComponentState) then
-  if not LibFLACLoaded then
-  raise EAcsException.Create(LibFLACPath + ' library could not be loaded.');
+  FComments:= TVorbisTags.Create;
 end;
 
-destructor TFLACIn.Destroy();
+destructor TFLACIn.Destroy;
 begin
-  CloseFile();
+  CloseFile;
+  FComments.Free;
+//    UnloadFLACLib;
   inherited Destroy;
 end;
 
-procedure TFLACIn.OpenFile();
+procedure TFLACIn.OpenFile;
 begin
-  if not FOpened then
-  begin
-    if (FFileName = '') then
-      raise EAcsException.Create('File name is not assigned');
-    if not Assigned(FStream) then FStream:=TFileStream.Create(FFileName, fmOpenRead, fmShareDenyNone);
-    FValid:=True;
-    _decoder:=FLAC__seekable_stream_decoder_new;
-    if _decoder = nil then
-      raise EAcsException.Create('Failed to initialize FLAC decoder.');
-    //FLAC__seekable_stream_decoder_set_metadata_ignore_all(_decoder);
-    FLAC__seekable_stream_decoder_set_read_callback(_decoder, DecReadCBFunc);
-    FLAC__seekable_stream_decoder_set_seek_callback(_decoder, DecSeekCBFunc);
-    FLAC__seekable_stream_decoder_set_tell_callback(_decoder, DecTellCBFunc);
-    FLAC__seekable_stream_decoder_set_length_callback(_decoder, DecLengthCBFunc);
-    FLAC__seekable_stream_decoder_set_eof_callback(_decoder, DecEOFCBFunc);
-    FLAC__seekable_stream_decoder_set_write_callback(_decoder, DecWriteCBFunc);
-    FLAC__seekable_stream_decoder_set_metadata_callback(_decoder, DecMetadataCBProc);
-    FLAC__seekable_stream_decoder_set_error_callback(_decoder, DecErrorCBProc);
-    FLAC__seekable_stream_decoder_set_client_data(_decoder, Self);
-    if FLAC__seekable_stream_decoder_init(_decoder) <> FLAC__SEEKABLE_STREAM_DECODER_OK then
-      raise EAcsException.Create('Failed to initialize FLAC decoder.');
-    if not FLAC__seekable_stream_decoder_process_until_end_of_metadata(_decoder) then
-      FValid:=False;
-    EndOfStream:=False;
-    FOpened:=True;
+  LoadFLACLib;
+  if not LibFLACLoaded then
+    raise EAcsException.Create(LibFLACPath + ' library could not be loaded.');
+  try
+    if not FOpened then
+    begin
+      Residue:= 0;
+      if (not Assigned(FStream)) and (FFileName = '') then
+        raise EAcsException.Create('File name is not assigned');
+      if not Assigned(FStream) then
+        FStream:= TFileStream.Create(FFileName, fmOpenRead or fmShareDenyWrite);
+      FValid:= True;
+      _decoder:= FLAC__stream_decoder_new();
+      if not Assigned(_decoder) then
+        raise EAcsException.Create('Failed to initialize the FLAC decoder.');
+      if not FLAC__stream_decoder_set_md5_checking(_decoder, LongBool(FCheckMD5Signature)) then
+        raise EAcsException.Create('Internal error 113, please report to NewAC developers');
+      FLAC__stream_decoder_set_metadata_respond_all(_decoder);
+      if FLAC__stream_decoder_init_stream(_decoder, DecReadCBFunc, DecSeekCBFunc,
+                                       DecTellCBFunc, DecLengthCBFunc, DecEOFCBFunc,
+                                       DecWriteCBFunc, DecMetadataCBProc,
+                                       DecErrorCBProc, Self) <> FLAC__STREAM_DECODER_INIT_STATUS_OK then
+      raise EAcsException.Create('Failed to set up the FLAC decoder.');
+      FComments.Clear;
+      EndOfMetadata:= False;
+      while (not EndOfMetadata) and (FValid) do
+      begin
+        if not FLAC__stream_decoder_process_single(_decoder) then
+        begin
+          FValid:= False;
+          Break;
+        end;
+      end;
+      BuffSize:= 0;
+      Buff:= nil;
+      FOpened:=True;
+      if not FValid then
+        Exit;
+    end;
+    //_CommonTags.Clear();
+    //_CommonTags.Artist:= FComments.Artist;
+    //_CommonTags.Album:= FComments.Album;
+    //_CommonTags.Title:= FComments.Title;
+    ////{$WARNINGS OFF}
+    //_CommonTags.Year:= FComments.Date;
+    //_CommonTags.Track:= FComments.Track;
+    ////{$WARNINGS ON}
+    //_CommonTags.Genre:= FComments.Genre;
+  finally
   end;
 end;
 
-procedure TFlacIn.CloseFile();
+procedure TFLACIn.CloseFile();
 begin
   if FOpened then
   begin
-    if _decoder <> nil then
+    if Assigned(_decoder) then
     begin
-      FLAC__seekable_stream_decoder_flush(_decoder);
-      FLAC__seekable_stream_decoder_finish(_decoder);
-      FLAC__seekable_stream_decoder_delete(_decoder);
-      _decoder:=nil;
+      FSignatureValid:= FLAC__stream_decoder_finish(_decoder);
+      FLAC__stream_decoder_delete(_decoder);
+      _decoder:= nil;
     end;
     if Buff <> nil then FreeMem(Buff);
-    Buff:=nil;
-    if not FStreamAssigned then FStream.Free
-    else FStream.Seek(0, soFromBeginning);
-    FOpened:=False;
+    Buff:= nil;
+    if not Assigned(FStream) then
+      FStream.Free
+    else
+      FStream.Seek(0, soFromBeginning);
+    FOpened:= False;
   end;
 end;
 
-function TFLACIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TFLACIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
-  dec_state, offs: Integer;
+  dec_state: Integer;
 begin
+  Result:=0;
   if not Active then
     raise EAcsException.Create('The Stream is not opened');
+
   if BufStart >= BufEnd then
   begin
-    if FOffset <> 0 then
+    BufStart:= 0;
+    BufEnd:= 0;
+    if not FLAC__stream_decoder_process_single(_decoder) then
     begin
-      offs:=Round((FOffset / 100) * Self.FTotalSamples);
-      FPosition:=FPosition + offs * (FBPS div 8) * FChan;
-      if FPosition < 0 then FPosition:=0
-      else if FPosition > FSize then FPosition:=FSize;
-      Seek((FPosition div (FBPS div 8)) div FChan);
-      FOffset:=0;
-    end;
-    BufStart:=0;
-    BufEnd:=0;
-    if FPosition+MinFrameSize > FSize then EndOfStream:=True;
-    if EndOfStream then
-    begin
-      if FLoop then
+      dec_state:= FLAC__stream_decoder_get_state(_decoder);
+      if (dec_state = FLAC__STREAM_DECODER_END_OF_STREAM) or (not FValid) then
       begin
-        Done();
-        Init();
-      end
-      else
-      begin
-        Result:=0;
-        Exit;
-      end;
-    end;
-    if Buff <> nil then FreeMem(Buff);
-    Buff:=nil;
-    if not FLAC__seekable_stream_decoder_process_single(_decoder) then
-    begin
-      dec_state:=FLAC__seekable_stream_decoder_get_state(_decoder);
-      if dec_state = FLAC__SEEKABLE_STREAM_DECODER_END_OF_STREAM then
-      begin
-        EndOfStream:=True;
-        Result:=0;
         Exit;
       end
       else
         raise EAcsException.Create('Error reading FLAC file');
     end
     else
-      BufEnd:=Self.BytesPerBlock;
+      BufEnd:= Self.BytesPerBlock;
+    if Buff = nil then
+    begin
+      if FStream.Position < FStream.Size then
+        raise EAcsException.Create('Sinc lost or corrupt data');
+    end;
   end;
-  if BufferSize < (BufEnd - BufStart) then
-    Result:=BufferSize
-  else
+  //FSampleSize:=Input.
+  if Residue <> 0 then
+  begin
+    BufStart:= (Residue - 1) * FSampleSize;
+    if BufStart >= BufEnd then
+      raise EAcsException.Create('Seek failed');
+    Residue:= 0;
+    Inc(FPosition, BufStart - FSampleSize);
+  end;
+  Result:= ABufferSize - (ABufferSize mod FSampleSize);
+  if Result > (BufEnd - BufStart) then
     Result:=BufEnd - BufStart;
-  Move(Buff[BufStart], Buffer^, Result);
+  ABuffer:= @Buff[BufStart];
   Inc(BufStart, Result);
-  Inc(FPosition, Result);
 end;
 
 function TFLACIn.Seek(SampleNum: Integer): Boolean;
+var
+  Aligned: Int64;
 begin
-  Result:=FLAC__seekable_stream_decoder_seek_absolute(_decoder, Samplenum);
+  FCheckMD5Signature:= False;
+  if FBlockSize <> 0 then
+  begin
+    Residue:= SampleNum mod FBlockSize;
+    Aligned:= SampleNum - Residue;
+  end
+  else
+    Aligned:= SampleNum;
+  Result:= FLAC__stream_decoder_seek_absolute(_decoder, Aligned);
+  if not Result then FLAC__stream_decoder_reset(_decoder);
+  SampleNum:= Aligned;
+  BufStart:= 0;
+  BufEnd:= 0;
 end;
 
-initialization
-  if LoadFlacLibrary() then
-  begin
-    FileFormats.Add('flac', 'Free Lossless Audio Codec', TFLACIn);
-    FileFormats.Add('flac', 'Free Lossless Audio Codec', TFLACOut);
-  end;
+procedure TFlacOut.SetCompressionLevel;
+begin
+  if Val > 8 then
+    FCompressionLevel:= 8
+  else FCompressionLevel:= Val;
+end;
 
-finalization
-  UnloadFlacLibrary();
+procedure TFLACOut.SetTags(AValue: TVorbisTags);
+begin
+  FTags.Assign(AValue);
+end;
+
+
+procedure GetBlockInfo(FS: TStream; var BI: TBlockInfo);
+var
+  Header : array [0..3] of Byte;
+  t: Byte;
+begin
+  FS.Read(Header, 4);
+  BI.HasNext:= (Header[0] shr 7) = 0;
+  BI.BlockType:= Header[0] mod 128;
+  BI.BlockLength:= 0;
+  t:= Header[1];
+  Header[1]:= Header[3];
+  Header[3]:= t;
+  Move(Header[1], BI.BlockLength, 3);
+end;
+
+function TFLACIn.GetComments(): TVorbisTags;
+begin
+  OpenFile();
+  Result:= FComments;
+end;
 
 
 end.

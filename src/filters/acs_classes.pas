@@ -121,15 +121,24 @@ type
   end;
 
   { TAcsAudioBuffer }
-  { Audio sample buffer - store raw audio data }
+  { Audio sample buffer - store raw audio data.
+    It remembers positions for Read() and Write() separately }
   TAcsAudioBuffer = class(TMemoryStream)
   protected
     FLock: TMultiReadExclusiveWriteSynchronizer;
+    { Read() position }
+    FReadPos: Int64;
+    { Write() position }
+    FWritePos: Int64;
+    { Size of unread data. Increased when data written and decreased when data readed }
+    FUnreadSize: Int64;
+    FReadExtract: Boolean;
     function GetSamplesCount(): Integer; virtual;
     procedure SetSamplesCount(AValue: Integer); virtual;
     function GetByte(Index: Integer): Byte; virtual;
     procedure SetByte(Index: Integer; AValue: Byte); virtual;
     function GetSamplePtr(Index: Integer): Pointer; virtual;
+    procedure SetWritePos(AValue: Int64);
   public
     { 1-mono, 2-stereo, etc.. }
     ChannelsCount: Integer;
@@ -149,25 +158,29 @@ type
     function Write(const Buffer; Count: Longint): Longint; override;
     { Size of sound sample in bytes }
     function BytesPerSample(): Integer;
+    { Reset WritePosition and ReadPosition to 0 }
+    procedure Reset();
     { Size of buffer in sound samples }
     property SamplesCount: Integer read GetSamplesCount write SetSamplesCount;
     { Access to bytes. Inline code from GetByte or SetByte for optimization. }
     property Bytes[Index: Integer]: Byte read GetByte write SetByte;
     { Access to samples. Inline code from GetSamplePtr for optimization. }
     property Samples[Index: Integer]: Pointer read GetSamplePtr;
+    { If True, then readed data extracted from buffer
+      If False, then ReadPosition not changed after read and data
+      can be read again from same position. }
+    property ReadExtract: Boolean read FReadExtract write FReadExtract;
+    { Position of last and next Read() operation, increased after reading }
+    property ReadPosition: Int64 read FReadPos;
+    { Position of last and next Write() operation, increased after writing }
+    property WritePosition: Int64 read FWritePos write SetWritePos;
+    { Size of unread data. Increased when data written and decreased when data readed }
+    property UnreadSize: Int64 read FUnreadSize;
   end;
 
   { TAcsCircularAudioBuffer }
 
   TAcsCircularAudioBuffer = class(TAcsAudioBuffer)
-  private
-    { Read() position }
-    FReadPos: Int64;
-    { Write() position }
-    FWritePos: Int64;
-    { Size of unread data. Increased when data written and decreased when data readed }
-    FDataSize: Int64;
-    FReadExtract: Boolean;
   protected
     function GetByte(Index: Integer): Byte; override;
     procedure SetByte(Index: Integer; AValue: Byte); override;
@@ -178,12 +191,6 @@ type
     { If Origin = soCurrent, then changed ReadPosition, otherwise changed WritePosition }
     function Seek(const Offset: Int64; Origin: TSeekOrigin): Int64; override;
     procedure SetSize(NewSize: PtrInt); override;
-    { If True, then readed data extracted from buffer, and ReadPosition changed
-      to new value. If False, then ReadPosition not changed after read and data
-      can be read again from same position. }
-    property ReadExtract: Boolean read FReadExtract write FReadExtract;
-    { Size of unread data. Increased when data written and decreased when data readed }
-    property DataSize: Int64 read FDataSize;
   end;
 
 
@@ -197,7 +204,7 @@ type
     BufEnd: Integer;
     FBuffer: array of Byte;
     FBufferSize: Integer;
-    FAudioBuffer: TAcsCircularAudioBuffer;
+    FAudioBuffer: TAcsAudioBuffer;
     function GetBPS(): Integer; virtual;
     function GetCh(): Integer; virtual;
     function GetSR(): Integer; virtual;
@@ -224,7 +231,7 @@ type
       
       InputComponent.Done();
     }
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; virtual; overload;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; virtual; overload;
     function GetData(AStream: TStream): Integer; virtual; overload;
     { This function is called from output component when the buffer must be filled. }
     procedure Reset(); virtual;
@@ -645,7 +652,7 @@ begin
     if FReadExtract then
     begin
       Inc(FReadPos, Result);
-      Dec(FDataSize, Result);
+      Dec(FUnreadSize, Result);
     end;
   end
   else
@@ -663,7 +670,7 @@ begin
     if FReadExtract then
     begin
       FReadPos:=SizeFromBegin;
-      Dec(FDataSize, Result);
+      Dec(FUnreadSize, Result);
     end;
   end;
 end;
@@ -678,7 +685,7 @@ begin
     Position:=FWritePos;
     Result:=inherited Write(Buffer, Count);
     Inc(FWritePos, Result);
-    Inc(FDataSize, Result);
+    Inc(FUnreadSize, Result);
   end
   else
   begin
@@ -693,7 +700,7 @@ begin
     Move((@Buffer+SizeToEnd)^, Self.Memory^, SizeFromBegin);
     FLock.Endwrite();
     FWritePos:=SizeFromBegin;
-    Inc(FDataSize, Result);
+    Inc(FUnreadSize, Result);
   end;
 end;
 
@@ -721,6 +728,8 @@ constructor TAcsAudioBuffer.Create();
 begin
   inherited Create;
   FLock:=TMultiReadExclusiveWriteSynchronizer.Create();
+  FReadExtract:=False;
+  Reset();
 end;
 
 destructor TAcsAudioBuffer.Destroy();
@@ -768,10 +777,40 @@ begin
     Result:=nil;
 end;
 
+procedure TAcsAudioBuffer.SetWritePos(AValue: Int64);
+var
+  Delta: Int64;
+begin
+  Delta:=AValue-FWritePos;
+  FWritePos:=AValue;
+  FUnreadSize:=FUnreadSize+Delta;
+end;
+
 function TAcsAudioBuffer.Read(var Buffer; Count: Longint): Longint;
+var
+  s: AnsiString;
 begin
   FLock.BeginRead();
+  Position:=FReadPos;
   Result:=inherited Read(Buffer, Count);
+  if ReadExtract then
+  begin
+    // remove readed data from buffer
+    if (Size-Position) > 0 then
+    begin
+      // copy rest of buffer to string
+      SetLength(s, Size-Position);
+      Move((Self.Memory+Position)^, Pointer(s)^, Length(s));
+      // copy string to FReadPos
+      Move(Pointer(s)^, (Self.Memory+FReadPos)^, Length(s));
+      Dec(FWritePos, Result);
+    end;
+  end
+  else
+  begin
+    Inc(FReadPos, Result);
+  end;
+  Dec(FUnreadSize, Result);
   FLock.EndRead();
 end;
 
@@ -779,7 +818,10 @@ function TAcsAudioBuffer.Write(const Buffer; Count: Longint): Longint;
 begin
   if FLock.BeginWrite() then
   begin
+    Position:=FWritePos;
     Result:=inherited Write(Buffer, Count);
+    Inc(FWritePos, Result);
+    Inc(FUnreadSize, Result);
     FLock.EndWrite();
   end
   else Result:=0;
@@ -788,6 +830,13 @@ end;
 function TAcsAudioBuffer.BytesPerSample(): Integer;
 begin
   Result:=SampleRate * (BitDepth div 8) * ChannelsCount;
+end;
+
+procedure TAcsAudioBuffer.Reset();
+begin
+  FWritePos:=0;
+  FReadPos:=0;
+  FUnreadSize:=0;
 end;
 
 { TAcsVerySmallThread }
@@ -906,7 +955,7 @@ begin
   inherited Create(AOwner);
   FActive:=False;
   FPosition:=0;
-  FAudioBuffer:=TAcsCircularAudioBuffer.Create();
+  FAudioBuffer:=TAcsAudioBuffer.Create();
 end;
 
 destructor TAcsCustomInput.Destroy();
@@ -915,10 +964,10 @@ begin
   inherited Destroy;
 end;
 
-function TAcsCustomInput.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
+function TAcsCustomInput.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 begin
-  Result:=Min(Self.BufferSize, BufferSize);
-  Move(Buffer, FBuffer, Result);
+  Result:=Min(Self.BufferSize, ABufferSize);
+  Move(ABuffer, FBuffer, Result);
 end;
 
 function TAcsCustomInput.GetData(AStream: TStream): Integer;

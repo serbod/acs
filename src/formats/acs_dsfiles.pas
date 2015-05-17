@@ -56,7 +56,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     function Seek(SampleNum: Integer): Boolean; override;
   end;
 
@@ -149,17 +149,15 @@ begin
   end;
 end;
 
-function TDSIn.GetData(Buffer: Pointer; BufferSize: Integer): Integer;
-//var
-//  nDone: Integer;
+function TDSIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 begin
   Result:=0;
   if not Active then
     raise EAcsException.Create('The Stream is not opened');
-  { new }
-  // set file position with offset
-  if FAudioBuffer.DataSize = 0 then
+
+  if FAudioBuffer.UnreadSize = 0 then
   begin
+    // set file position with offset
     if FOffset <> 0 then
     begin
       FPosition:=FPosition+Round((FOffset/100)*FSize);
@@ -172,67 +170,32 @@ begin
       FOffset:=0;
     end;
 
-    // read chunk of samples into local audio buffer
+    // read chunk of samples into local audio ABuffer, direct into memory
+    FAudioBuffer.Reset();
     Result:=Read(FAudioBuffer.Memory, FAudioBuffer.Size);
+    // set WritePosition to readed size
+    FAudioBuffer.WritePosition:=Result;
     if Result = 0 then
     begin
       // nothing to read, end of file?
       if FLoop then
       begin
         SetPosition(0); // just rewind
+        FPosition:=0;
+        FAudioBuffer.Reset();
         Result:=Read(FAudioBuffer.Memory, FAudioBuffer.Size);
+        FAudioBuffer.WritePosition:=Result;
       end
       else Exit;
     end;
   end;
-  // copy local buffer into given buffer
-  if BufferSize < Result then Result:=BufferSize;
+  Result:=FAudioBuffer.UnreadSize;
 
-  Move(FAudioBuffer.Memory, Buffer^, Result);
-  //Inc(BufStart, Result);
+  // copy local AudioBuffer into given ABuffer
+  if ABufferSize < Result then Result:=ABufferSize;
+  FAudioBuffer.Read(ABuffer^, Result);
   Inc(FPosition, Result);
-  { new end }
 
-  { old }
-  {
-  if BufStart > BufEnd then
-  begin
-    if FOffset <> 0 then
-    begin
-      FPosition:=FPosition+Round((FOffset/100)*FSize);
-      if FPosition < 0 then
-        FPosition:=0
-      else
-        if FPosition > FSize then
-          FPosition:=FSize;
-      SetPosition(Int64(FPosition)*FSeekScale);
-      FOffset:=0;
-    end;
-
-    BufStart:=1;
-    nDone:=Read(FBuffer, BufferSize);
-    if nDone = 0 then
-    begin
-      if FLoop then
-      begin
-        SetPosition(0); // just rewind
-        nDone:=Read(FBuffer, BufferSize);
-      end
-      else Exit;
-    end;
-    BufEnd:=nDone;
-  end;
-
-  if BufferSize < (BufEnd-BufStart+1) then
-    Result:=BufferSize
-  else
-    Result:=BufEnd-BufStart+1;
-
-  Move(FBuffer[BufStart-1], Buffer^, Result);
-  Inc(BufStart, Result);
-  Inc(FPosition, Result);
-  }
-  { end old }
 end;
 
 function TDSIn.Seek(SampleNum: Integer): Boolean;

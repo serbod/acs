@@ -134,7 +134,7 @@ begin
   WF.wf.nAvgBytesPerSec:=WF.wf.nSamplesPerSec*(WF.wBitsPerSample div 8);
   WF.wf.nBlockAlign:=WF.wf.nChannels*(WF.wBitsPerSample div 8);
 
-  waveOutOpen(@_audio_fd, FBaseChannel, @WF, DWORD(@WaveOutProc), DWORD(Self), CALLBACK_FUNCTION or WAVE_MAPPED);
+  waveOutOpen(@_audio_fd, FBaseChannel, @WF, PtrUInt(@WaveOutProc), DWORD(Self), CALLBACK_FUNCTION or WAVE_MAPPED);
   aBlock:=0;
   //FBuffer:=AllocMem(FBufferSize);
   EOC:=@BlockChain;
@@ -247,7 +247,7 @@ begin
   WF.wf.nBlockAlign:=WF.wf.nChannels*(WF.wBitsPerSample div 8);
   if FOpened = 0 then
   begin
-    waveInOpen(@_audio_fd, FBaseChannel, @WF, DWORD(@WaveInProc), DWORD(Self), CALLBACK_FUNCTION or WAVE_MAPPED);
+    waveInOpen(@_audio_fd, FBaseChannel, @WF, PtrUInt(@WaveInProc), DWORD(Self), CALLBACK_FUNCTION or WAVE_MAPPED);
   end;
   Inc(FOpened);
 end;
@@ -318,7 +318,7 @@ begin
     raise EAcsException.Create(Format(strChannelnotavailable, [Ch]));
 end;
 
-function TStdAudioIn.GetData(Buffer: Pointer; oBufferSize: Integer): Integer;
+function TStdAudioIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   Tmp: PWaveHdr;
 begin
@@ -342,11 +342,11 @@ begin
     FreeMem(Tmp.lpData);
     Dispose(Tmp);
   end;
-  if BufferSize < (BufEnd-BufStart+1) then
-    Result:=BufferSize
+  if ABufferSize < (BufEnd-BufStart+1) then
+    Result:=ABufferSize
   else
     Result:=BufEnd-BufStart+1;
-  Move(FBuffer[BufStart], Buffer^, Result);
+  Move(FBuffer[BufStart], ABuffer^, Result);
   Inc(BufStart, Result);
   Inc(FPosition, Result);
 end;
