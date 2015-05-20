@@ -68,7 +68,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
-    procedure Prepare(); override;
+    procedure Init(); override;
     procedure Done(); override;
     function DoOutput(Abort: Boolean): Boolean; override;
   published
@@ -129,11 +129,11 @@ begin
   inherited Destroy();
 end;
 
-procedure TMP3Out.Prepare();
+procedure TMP3Out.Init();
 var
   samples, br, tbr, sr, ql, FBufferSize: Integer;
 begin
-  inherited Prepare();
+  inherited Init();
   _plgf:=lame_init;
   {if FInput.Size > 0 then
     samples:=FInput.Size div ((FInput.BitsPerSample shr 3) * FInput.Channels); }

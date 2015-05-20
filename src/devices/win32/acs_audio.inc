@@ -120,11 +120,11 @@ begin
       raise EAcsException.Create(Format(strChannelnotavailable, [Ch]));
 end;
 
-procedure TStdAudioOut.Prepare();
+procedure TStdAudioOut.Init();
 var
   WF: TPCMWaveFormat;
 begin
-  inherited Prepare();
+  inherited Init();
   // No exceptions here!
 
   WF.wf.wFormatTag:=WAVE_FORMAT_PCM;

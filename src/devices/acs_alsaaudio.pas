@@ -86,7 +86,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
-    procedure Prepare(); override;
+    procedure Init(); override;
     function DoOutput(Abort: Boolean):Boolean; override;
     procedure Done(); override;
     property DriverState: Integer read GetDriverState;
@@ -287,11 +287,11 @@ begin
 end;
 
 
-procedure TALSAAudioOut.Prepare();
+procedure TALSAAudioOut.Init();
 var
   Res, iBufSize, iVal, iNearDir: Integer;
 begin
-  inherited Prepare();
+  inherited Init();
 
   iNearDir:=0; // target/chosen exact value is <,=,> val following dir (-1,0,1)
   Res:=snd_pcm_open(_audio_handle, PChar(FDeviceName), SND_PCM_STREAM_PLAYBACK, 0);

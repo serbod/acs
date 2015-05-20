@@ -60,7 +60,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
-    procedure Prepare(); override;
+    procedure Init(); override;
     function DoOutput(Abort: Boolean): Boolean; override;
     procedure Done(); override;
   end;

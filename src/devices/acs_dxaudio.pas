@@ -9,10 +9,17 @@ Copyright (c) 2005-2006  Christian Ulrich, mail@z0m3ie.de
 Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 *)
 
-{$ifdef linux}{$message error 'unit not supported'}{$endif linux}
-{$DEFINE USE_EXTENDED_SPEC_FOR_24_BPS }
+{
+Status:
+TDXAudioOut - AcsBuffer, fetch, test OK
+TDXAudioIn - old buffer
+}
 
 unit acs_dxaudio;
+
+{$ifdef WINDOWS}
+{$ifdef linux}{$message error 'unit not supported'}{$endif linux}
+{$DEFINE USE_EXTENDED_SPEC_FOR_24_BPS }
 
 interface
 
@@ -22,23 +29,25 @@ uses
 
 const
   LATENCY = 25;
-  DS_POLLING_INTERVAL = 400; // milliseconds
 
 type
 
   { TDXAudioOut }
   (* Class: TDXAudioOut
     Performs audio playback using the DirectX API.
-    Descends from <TAcsAudioOutDriver>.
-    TDXAudioOut component buffers its output in order to make it more smooth. This buffering introduces some delay at the beginning of the audio playback with TDXAudioOut.
-    You can decrease the delay by decreasing the size of the TDXAudioOut buffer. The size of this buffer is set up by the DS_BUFFER_SIZE constant in the ACS_DxAudio.pas file.
-    If you decrease the buffer size you may also want to decrease the DS_POLLING_INTERVAL value which determines how often the component requests data from its input. *)
+    TDXAudioOut component buffers its output in order to make it more smooth.
+    This buffering introduces some delay at the beginning of the audio playback with TDXAudioOut.
+    You can decrease the delay by decreasing the size of the TDXAudioOut buffer.
+    The size of this buffer is set up by the DS_BUFFER_SIZE constant in the ACS_DxAudio.pas file.
+    If you decrease the buffer size you may also want to decrease the
+    DS_POLLING_INTERVAL value which determines how often the component requests
+    data from its input. *)
   TDXAudioOut = class(TAcsAudioOutDriver)
   private
     DSW_Initialized: Boolean;
     FLatency: LongWord;
     FFramesInBuffer: LongWord;
-    FPollingInterval: LongWord;
+    //FPollingInterval: LongWord;
     DSW: DSoundWrapper;
     Devices: DSW_Devices;
     Chan, SR, BPS: LongWord;
@@ -50,9 +59,7 @@ type
     FUnderruns, _TmpUnderruns: LongWord;
     FOnUnderrun: TNotifyEvent;
     FVolumeEx: longint; // DW - for more reliable volume control
-    FPrefetchData: Boolean;
     FSpeedFactor: Single;
-    procedure Usleep(Interval: Word; Prefetch: Boolean);
   protected
     procedure SetDeviceNumber(i: Integer);
     function GetVolumeEx(): Integer;
@@ -64,7 +71,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
     { Called from Thread }
-    procedure Prepare(); override;
+    procedure Init(); override;
     function DoOutput(Abort: Boolean): Boolean; override;
     procedure Done(); override;
     procedure Pause(); override;
@@ -96,25 +103,22 @@ type
          1. *)
     property DeviceNumber: Integer read FDeviceNumber write SetDeviceNumber;
     (* Property: Latency
-         This property sets the audio latency (the delay between the moment the audio data is passed to the component and the moment it is played.
+         This property sets the audio latency (the delay between the moment the
+         audio data is passed to the component and the moment it is played.
          The latency is set in milliseconds.
-         This is a convenience property that overrides the <FramesInBuffer> and the <PollingInterval>. If the Latency is greater than zero these properties are ignored.
-         The reasonable values for this property lie in the range between 50 (0.05 second) and 250 (0.25 second). *)
+         This is a convenience property that overrides the <FramesInBuffer> and
+         the <PollingInterval>. If the Latency is greater than zero these
+         properties are ignored.
+         The reasonable values for this property lie in the range
+         between 50 (0.05 second) and 250 (0.25 second). *)
     property Latency: LongWord read FLatency write FLatency;
-    (* Property: PrefetchData
-       This property tells the component whenever the audio data should be prefetched while playing. Prefetching data makes it run more smoothly and allows lower buffer sizes (see <FramesInBuffer>). *)
-    property PrefetchData: Boolean read FPrefetchData write FPrefetchData;
-     (* Property: PollingInterval
-         This property sets the audio output device polling interval in milliseconds. The smaller <FramesInBuffer> value is the smaller this polling interval should be.
-         The condition for appropriate values for the polling interval is: PollingInterval < (FramesInBuffer/SampleRate)*1000
-         Otherwise many underruns will occur. *)
-    property PollingInterval: LongWord read FPollingInterval write FPollingInterval;
     (* Property: FramesInBuffer
          Use this property to set the length of the internal playback buffer.
-         The duration of the buffer depends on this value and the sample rate. For example
-         if FramesInBuffer's value is 12000 and the sample rate is 44100, the buffer duration is
-         12000/44100=0.272 sec.
-         Smaller values result in lower latency and (possibly) more underruns. See also <PollingInterval>. *)
+         The duration of the buffer depends on this value and the sample rate.
+         For example, if FramesInBuffer's value is 12000 and the sample rate is
+         44100, the buffer duration is 12000/44100=0.272 sec.
+         Smaller values result in lower latency and (possibly) more underruns.
+         See also <PollingInterval>. *)
     property FramesInBuffer: LongWord read FFramesInBuffer write SetFramesInBuffer;
     (* Property: OnUnderrun
          OnUnderrun event is raised when the component has run out of data.
@@ -140,8 +144,8 @@ type
     FLatency: LongWord;
     Devices: DSW_Devices;
     FFramesInBuffer: LongWord;
-    FPollingInterval: LongWord;
     FDeviceNumber: Integer;
+    FPollingInterval: Integer;
     //FDeviceCount: Integer;
     FOpened: Integer;
     FSamplesToRead: Int64;
@@ -215,10 +219,6 @@ type
          12000/44100=0.272 sec.
          Smaller values result in lower latency and (possibly) more overruns. See also <PollingInterval>. *)
     property FramesInBuffer: LongWord read FFramesInBuffer write SetFramesInBuffer;
-    (* Property: PollingInterval
-         This property sets the audio input DeviceNumber polling interval in milliseconds. The less <FramesInBuffer> value is the less this polling interval should be.
-         Otherwise many overruns will occur. *)
-    property  PollingInterval: LongWord read FPollingInterval write FPollingInterval;
     (* Property: OnOverrun
          OnOverrun event is raised when this component provides data faster
          than the rest of audio-processing chain can consume. It indicates
@@ -229,7 +229,11 @@ type
 
   end;
 
+{$endif WINDOWS}
+
 implementation
+
+{$ifdef WINDOWS}
 
 function DSErrToString(Res: HRESULT): string;
 begin
@@ -252,6 +256,8 @@ begin
   if Res = HRESULT(DSERR_UNSUPPORTED) then Result:='The function called is not supported at this time.';
 end;
 
+{ TDXAudioOut }
+
 constructor TDXAudioOut.Create(AOwner: TComponent);
 var
   i: Integer;
@@ -259,10 +265,10 @@ begin
   inherited Create(AOwner);
   FSpeedFactor:=1;
   FFramesInBuffer:=$6000;
-  FPollingInterval:=100;
+  FFetchDelay:=10;
   FLatency:=100;
   FVolumeEx:=0; //DW
-  FPrefetchData:=True;
+  FPrefetchMode:=pmAuto;
   //FDeviceCount:=0;
   FBufferSize:=$40000; // default buffer size
 
@@ -290,30 +296,30 @@ begin
   inherited Destroy();
 end;
 
-procedure TDXAudioOut.Prepare();
+procedure TDXAudioOut.Init();
 var
   Res: HResult;
   Wnd: HWND;
   FormatExt: TWaveFormatExtensible;
 begin
-  if (FDeviceNumber >= DeviceCount) then
+  if (FDeviceNumber >= DeviceCount) or (FDeviceNumber < 0) then
   begin
     raise EAcsException.Create(Format(strChannelnotavailable, [FDeviceNumber]));
   end;
 
-  inherited Prepare();
+  inherited Init();
 
   Chan:=FInput.Channels;
   SR:=FInput.SampleRate;
   if FSpeedFactor <> 1 then
-    SR:=Round(SR*FSpeedFactor);
+    SR:=Round(SR * FSpeedFactor);
   BPS:=FInput.BitsPerSample;
+  FSampleSize:=Chan * (BPS div 8);
 
   if FLatency > 0 then
   begin
-    if FLatency < 10 then Flatency:=10;
-    FFramesInBuffer:=(FLatency*SR div 1000);
-    FPollingInterval:=(FLatency div 3);
+    if FLatency < 10 then FLatency:=10;
+    FFramesInBuffer:=(FLatency * SR div 1000);
   end;
 
   DSW_Init(DSW);
@@ -325,7 +331,9 @@ begin
   Wnd:=0;
   if (Owner is TForm) then Wnd:=(Owner as TForm).Handle;
 
-  Self.SetBufferSize(FFramesInBuffer * (BPS div 8) * Chan);
+  // align buffer size to sample size
+  Self.SetBufferSize(FBufferSize - (FBufferSize mod FSampleSize));
+  //Self.SetBufferSize(FFramesInBuffer * (BPS div 8) * Chan);
 
   if BPS <> 8 then
     FFillByte:=0
@@ -358,8 +366,8 @@ begin
   FormatExt.Format.nChannels:=Chan;
   FormatExt.Format.nSamplesPerSec:=SR;
   FormatExt.Format.wBitsPerSample:=BPS;
-  FormatExt.Format.nBlockAlign:=(Chan*BPS shr 3);
-  FormatExt.Format.nAvgBytesPerSec:=SR*FormatExt.Format.nBlockAlign;
+  FormatExt.Format.nBlockAlign:=(Chan * (BPS div 8));
+  FormatExt.Format.nAvgBytesPerSec:=SR * FormatExt.Format.nBlockAlign;
   //FormatExt.wValidBitsPerSample:=BPS;
   //FormatExt.wSamplesPerBlock:=0;
   //FormatExt.wReserved:=0;
@@ -371,6 +379,9 @@ begin
   StartInput:=True;
   EndOfInput:=False;
   _TmpUnderruns:=0;
+  VolumeEx:=FVolumeEx; //DW
+  FBuffer.Reset();
+  //DSW_StartOutput(DSW);
 end;
 
 procedure TDXAudioOut.Done();
@@ -382,6 +393,13 @@ begin
     DSW_Initialized:=False;
   end;
   inherited Done();
+end;
+
+function GetBufWriteSize(Buf: TAcsAudioBuffer; ASize: Integer): Integer;
+begin
+  Result:=Min(ASize, (Buf.Size-Buf.WritePosition));
+  Result:=Min(Result, (Buf.Size-Buf.ReadPosition));
+  //Result:=Min(Result, Buf.UnreadSize);
 end;
 
 function TDXAudioOut.DoOutput(Abort: Boolean): Boolean;
@@ -454,47 +472,46 @@ begin
   }
 
   // Try to get allowed output data size
-  RetryCount:=0;
   BytesAllowed:=0;
-  while BytesAllowed = 0 do
-  begin
-    Inc(RetryCount);
-    if RetryCount > 16 then
-    begin
-      if Assigned(OnThreadException) then
-        OnThreadException(Self, Exception.Create('Audio output error'));
-      Result:=False;
-      Exit;
-    end;
-
-    Usleep(FPollingInterval, FPrefetchData);
+  try
     Res:=DSW_QueryOutputSpace(DSW, BytesAllowed);
-    BytesAllowed:=BytesAllowed-(BytesAllowed mod DSW.dsw_BytesPerFrame);
+  except
+    if Assigned(OnThreadException) then
+      OnThreadException(Self, Exception.Create('Audio output error'));
   end;
+  BytesAllowed:=BytesAllowed-(BytesAllowed mod DSW.dsw_BytesPerFrame);
 
-  Len:=Min(BytesAllowed, FBuffer.Size);
-  { // serbod@ Don't get idea about prefetch, it looks same as normal
-  if FPrefetchData then
+  { DS buffer played in a loop, so we need circular buffer }
+
+  if BytesAllowed >= FPrefetchSize then
   begin
-    FInput.GetData(TmpBuf, Len);
-  end
-  }
-  Len:=FInput.GetData(FBuffer.Memory, Len);
-  EndOfInput:=(Len = 0);
-  DSW_WriteBlock(DSW, FBuffer.Memory, Len);
-  if EndOfInput then
-    Res:=DSW_FillEmptySpace(DSW, FFillByte);
-  if _TmpUnderruns <> DSW.dsw_OutputUnderflows then
-  begin
-    FUnderruns:=DSW.dsw_OutputUnderflows;
-    _TmpUnderruns:=DSW.dsw_OutputUnderflows;
-    DSW_StopOutput(DSW);
-    DSW_FillEmptySpace(DSW, FFillByte);
-    if Assigned(OnUnderrun) then
-      OnUnderrun(Self);
-      //EventHandler.PostGenericEvent(Self, FOnUnderrun);
-    //Usleep(FPollingInterval, FPrefetchData);
-    DSW_RestartOutput(DSW); //StartInput := True;
+    // read chunk of data into buffer
+    Len:=GetBufWriteSize(FBuffer, BytesAllowed);
+    Len:=FInput.GetData(FBuffer.Memory + FBuffer.WritePosition, Len);
+    FBuffer.WritePosition:=FBuffer.WritePosition + Len;
+    if FBuffer.WritePosition = FBuffer.Size then FBuffer.WritePosition:=0;
+    EndOfInput:=(Len = 0);
+
+    // write to output
+    DSW_WriteBlock(DSW, FBuffer.Memory + FBuffer.ReadPosition, Len);
+    FBuffer.ReadPosition:=FBuffer.ReadPosition + Len;
+    if FBuffer.ReadPosition = FBuffer.Size then FBuffer.ReadPosition:=0;
+
+    if EndOfInput then
+      Res:=DSW_FillEmptySpace(DSW, FFillByte);
+
+    if _TmpUnderruns <> DSW.dsw_OutputUnderflows then
+    begin
+      FUnderruns:=DSW.dsw_OutputUnderflows;
+      _TmpUnderruns:=DSW.dsw_OutputUnderflows;
+      DSW_StopOutput(DSW);
+      DSW_FillEmptySpace(DSW, FFillByte);
+      if Assigned(OnUnderrun) then
+        OnUnderrun(Self);
+        //EventHandler.PostGenericEvent(Self, FOnUnderrun);
+      //Usleep(FPollingInterval, FPrefetchData);
+      DSW_RestartOutput(DSW); //StartInput := True;
+    end;
   end;
   Result:=True;
 end;
@@ -510,25 +527,7 @@ procedure TDXAudioOut.Resume();
 begin
   if EndOfInput then Exit;
   DSW_RestartOutput(DSW);
-  inherited Resume;
-end;
-
-procedure TDXAudioOut.Usleep(Interval: Word; Prefetch: Boolean);
-var
-  Start, Elapsed {, DataSize, SampleSize}: LongWord;
-begin
-  Start:=timeGetTime;
-  if Prefetch then
-  begin
-    //SampleSize := Chan*(BPS shr 3);
-    //DataSize := ((Interval * Self.SR) div 1000)*SampleSize;
-    //DataSize := (DataSize div 4)*3;
-    //DataSize := DataSize + (DataSize shr 2);
-    //DataSize := DataSize - (DataSize mod SampleSize);
-  end;
-  Elapsed := timeGetTime - Start;
-  if Elapsed >= Interval then Exit;
-  Sleep(Interval - Elapsed);
+  inherited Resume();
 end;
 
 procedure TDXAudioOut.SetDeviceNumber(i: Integer);
@@ -785,5 +784,7 @@ initialization
   RegisterAudioIn('DirectSound', TDXAudioIn, LATENCY);
 
 finalization
+
+{$endif WINDOWS}
 
 end.

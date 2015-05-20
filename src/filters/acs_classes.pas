@@ -91,6 +91,15 @@ type
 
 
   TAcsBufferMode = (bmBlock, bmReport);
+  { TAcsPrefetchMode - prefetch mode for buffer
+    pmAuto - autodetect
+    pmNone - no prefetching, buffer can be fully depleted
+    pmFetch3_4 - fetch data when 3/4 of buffer is depleted
+    pmFetch1_2 - fetch data when 1/2 of buffer is depleted
+    pmFetch1_4 - fetch data when 1/4 of buffer is depleted
+    pmFetch1_8 - fetch data when 1/8 of buffer is depleted
+  }
+  TAcsPrefetchMode = (pmAuto, pmNone, pmFetch3_4, pmFetch1_2, pmFetch1_4, pmFetch1_8);
 
   // Circular buffer with TStream interface
   TAcsCircularBuffer = class(TStream)
@@ -139,6 +148,7 @@ type
     procedure SetByte(Index: Integer; AValue: Byte); virtual;
     function GetSamplePtr(Index: Integer): Pointer; virtual;
     procedure SetWritePos(AValue: Int64);
+    procedure SetReadPos(AValue: Int64);
   public
     { 1-mono, 2-stereo, etc.. }
     ChannelsCount: Integer;
@@ -148,6 +158,10 @@ type
     SampleRate: Integer;
     { Time, when buffer content start play (milliseconds) }
     Timestamp: Int64;
+    { channels allocatin in frame
+      True - channels data interleaved - 1,2, 1,2, 1,2, ...
+      False - data separated by channels - 1,1,1,..,  2,2,2,.. }
+    Interleaved: Boolean;
     { Sound source position in 3D space }
     //Position3D: TPoint3D;
     { Sound source velocity, for Doppler effect }
@@ -171,7 +185,7 @@ type
       can be read again from same position. }
     property ReadExtract: Boolean read FReadExtract write FReadExtract;
     { Position of last and next Read() operation, increased after reading }
-    property ReadPosition: Int64 read FReadPos;
+    property ReadPosition: Int64 read FReadPos write SetReadPos;
     { Position of last and next Write() operation, increased after writing }
     property WritePosition: Int64 read FWritePos write SetWritePos;
     { Size of unread data. Increased when data written and decreased when data readed }
@@ -267,16 +281,23 @@ type
   TAcsCustomOutput = class(TComponent)
   protected
     CanOutput: Boolean;
-    CurProgr: Real;
+    //CurProgr: Real;
     Thread: TAcsOutThread;
+    { delay in milliseconds between data fetch from input }
+    FFetchDelay: Integer;
     FInput: TAcsCustomInput;
     FOnDone: TAcsOutputDoneEvent;
     FOnProgress: TAcsOutputProgressEvent;
     FActive: Boolean;  // Set to true by Run and to False by WhenDone.
     FOnThreadException: TAcsThreadExceptionEvent;
     InputLock: Boolean;
+    // single sample size
+    FSampleSize: Integer;
     FBufferSize: Integer;
     FBuffer: TAcsAudioBuffer;
+    FPrefetchMode: TAcsPrefetchMode;
+    { Unread buffer size for triggering fetching from input. Calculated in Init() }
+    FPrefetchSize: Integer;
 
     { Read data from Input into Buffer, return bytes read
       AEndOfInput set to True if end of input buffer is reached }
@@ -302,7 +323,7 @@ type
     destructor Destroy(); override;
 
     { Set default buffer size and calls FInput.Init() }
-    procedure Prepare(); virtual;
+    procedure Init(); virtual;
     { Called from Thread }
     function DoOutput(Abort: Boolean): Boolean; virtual; abstract;
     { Calls FInput.Done() and reset buffer to zero }
@@ -363,6 +384,11 @@ type
     property OnThreadException: TAcsThreadExceptionEvent read FOnThreadException write FOnThreadException;
     { This Property sets the BufferSize of the component }
     property BufferSize: Integer read GetBufferSize write SetBufferSize;
+    { Fetch data from input, when output buffer partially depleted, preventing output
+      buffer underrun while playing. Large values (3/4, 1/2) suitable for encoded
+      file or stream input. Small values (1/4, 1/8) suitable for RAW files or
+      streams. "None" value suitable when whole playable data fit into buffer. }
+    property PrefetchMode: TAcsPrefetchMode read FPrefetchMode write FPrefetchMode;
   end;
 
   { TAcsStreamedInput introduces Stream property.
@@ -446,8 +472,7 @@ type
   end;
   
 
-  { TAcsCustomFileIn }
-  { TAcsFileIn is the base class for all input components that read data from files
+  { TAcsCustomFileIn - base class for all input components that read data from files
     (or from other streams in the corresponding file format).
     It introduces such properties as FileName, StartSample, EndSample, Loop,
     and Valid and Jump, Seek, SetStartTime, SetEndTime methods. }
@@ -540,8 +565,8 @@ type
     property Loop: Boolean read FLoop write FLoop;
   end;
 
-  { TAcsCustomFileOut }
-
+  { TAcsCustomFileOut - base class for all file/stream formatted output components.
+    It introduces such properties as AccessMask (for Linux), FileName, and FileMode properties. }
   TAcsCustomFileOut = class(TAcsStreamedOutput)
   protected
     { Set to True if internal FStream not used }
@@ -553,11 +578,10 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     { Use this property to set the file access mask. The default value is $1B6,
-    which corresponds to rw-rw-rw- access mask.
-    }
+    which corresponds to rw-rw-rw- access mask. }
     property AccessMask: Integer read FAccessMask write FAccessMask;
     { Check and open file stream }
-    procedure Prepare(); override;
+    procedure Init(); override;
     { Close file stream }
     procedure Done(); override;
   published
@@ -729,6 +753,7 @@ begin
   inherited Create;
   FLock:=TMultiReadExclusiveWriteSynchronizer.Create();
   FReadExtract:=False;
+  Interleaved:=True;
   Reset();
 end;
 
@@ -784,6 +809,15 @@ begin
   Delta:=AValue-FWritePos;
   FWritePos:=AValue;
   FUnreadSize:=FUnreadSize+Delta;
+end;
+
+procedure TAcsAudioBuffer.SetReadPos(AValue: Int64);
+var
+  Delta: Int64;
+begin
+  Delta:=AValue-FReadPos;
+  FReadPos:=AValue;
+  FUnreadSize:=FUnreadSize-Delta;
 end;
 
 function TAcsAudioBuffer.Read(var Buffer; Count: Longint): Longint;
@@ -896,7 +930,7 @@ begin
   ParentComponent:=(Parent as TAcsCustomOutput);
   // init
   try
-    ParentComponent.Prepare();
+    ParentComponent.Init();
   except
     on E: Exception do
     begin
@@ -909,7 +943,7 @@ begin
   //EnterCriticalSection(CS);
   while not Terminated do
   begin
-    if Delay > 5 then Sleep(Delay);
+    if Delay > 0 then Sleep(Delay);
     try
       Res:=ParentComponent.DoOutput(False);
       if (not Res) then Terminate()
@@ -955,12 +989,11 @@ begin
   inherited Create(AOwner);
   FActive:=False;
   FPosition:=0;
-  FAudioBuffer:=TAcsAudioBuffer.Create();
 end;
 
 destructor TAcsCustomInput.Destroy();
 begin
-  FreeAndNil(FAudioBuffer);
+  if Assigned(FAudioBuffer) then FreeAndNil(FAudioBuffer);
   inherited Destroy;
 end;
 
@@ -1032,12 +1065,13 @@ begin
   FPosition:=0;
   BufStart:=1;
   BufEnd:=0;
+  FAudioBuffer:=TAcsAudioBuffer.Create();
   FAudioBuffer.Size:=FBufferSize;
 end;
 
 procedure TAcsCustomInput.Done();
 begin
-  FAudioBuffer.Size:=0;
+  if Assigned(FAudioBuffer) then FreeAndNil(FAudioBuffer);
   FActive:=False;
 end;
 
@@ -1059,12 +1093,41 @@ begin
   inherited Destroy;
 end;
 
-procedure TAcsCustomOutput.Prepare();
+procedure TAcsCustomOutput.Init();
+var
+  //TmpInput: TAcsCustomInput;
+  TmpPrefetchMode: TAcsPrefetchMode;
 begin
   if not Assigned(FInput) then
     raise EAcsException.Create(strInputNotAssigned);
   SetBufferSize(FBufferSize); // set default buffer size
   if Assigned(FInput) then FInput.Init();
+
+  // calculate prefetch mode
+  TmpPrefetchMode:=FPrefetchMode;
+  { TODO: get prefetch mode from filters chain }
+  {
+  if TmpPrefetchMode = pmAuto then
+  begin
+    // get prefetch mode from input
+    TmpInput:=Self.Input;
+    while Assigned(TmpInput) or (TmpPrefetchMode = pmAuto) do
+    begin
+      TmpPrefetchMode:=TmpInput.PrefetchMode;
+      TmpInput:=TmpInput.Input;
+    end;
+  end;
+  }
+  if TmpPrefetchMode = pmAuto then TmpPrefetchMode:=pmFetch1_4;
+
+  // calculate prefetch size
+  FPrefetchSize:=0;
+  case TmpPrefetchMode of
+    pmFetch3_4: FPrefetchSize:=(BufferSize div 4) * 3;
+    pmFetch1_2: FPrefetchSize:=(BufferSize div 2);
+    pmFetch1_4: FPrefetchSize:=(BufferSize div 4);
+    pmFetch1_8: FPrefetchSize:=(BufferSize div 8);
+  end;
 end;
 
 procedure TAcsCustomOutput.Done();
@@ -1086,8 +1149,8 @@ begin
   //Thread.DoOutput:=Self.DoOutput;
   //Thread.FOnDone:=Self.WhenDone;
   Thread.HandleException:=HandleThreadException;
+  Thread.Delay:=FFetchDelay;
   try
-    //Thread.Stop:=False;
     CanOutput:=True;
     Thread.Suspended:=False;
   except
@@ -1160,6 +1223,8 @@ begin
       Break;
     end;
     Inc(Result, n);
+    // if rest of buffer is less than sample
+    if (FBuffer.Size-Result) < (FInput.Channels * (FInput.BitsPerSample div 8)) then Break;
   end;
   InputLock:=False;
 end;
@@ -1205,15 +1270,17 @@ end;
 function TAcsCustomOutput.GetDelay(): Integer;
 begin
   if Assigned(Thread) then Result:=Thread.Delay
-  else Result:=0;
+  else Result:=FFetchDelay;
 end;
 
 procedure TAcsCustomOutput.SetDelay(Value: Integer);
 begin
+  if Value > 1000 then Exit;
   if Assigned(Thread) then
   begin
-    if Value <= 100 then Thread.Delay:=Value;
+    Thread.Delay:=Value;
   end;
+  FFetchDelay:=Value;
 end;
 
 procedure TAcsCustomOutput.Notification(AComponent: TComponent; Operation: TOperation);
@@ -1280,16 +1347,6 @@ end;
 procedure TAcsCustomFileIn.Init();
 begin
   inherited Init();
-  if not FStreamDisabled then
-  begin
-    if not Assigned(FStream) then
-      if FFileName = '' then
-      begin
-        inherited Done();
-        raise EAcsException.Create(strFilenamenotassigned);
-      end;
-  end;
-
   OpenFile();
   if StartSample <> 0 then Seek(StartSample);
   if (StartSample <> 0) or (FEndSample <> -1) then
@@ -1366,12 +1423,26 @@ end;
 
 procedure TAcsCustomFileIn.OpenFile();
 begin
+  if not FStreamDisabled then
+  begin
+    if not Assigned(FStream) then
+    begin
+      if FFileName = '' then
+      begin
+        inherited Done();
+        raise EAcsException.Create(strFilenamenotassigned);
+      end;
+      FStream:=TFileStream.Create(FFileName, fmOpenRead or fmShareDenyWrite);
+    end;
+  end;
   FSize:=0;
+  FOpened:=True;
 end;
 
 procedure TAcsCustomFileIn.CloseFile();
 begin
-
+  if Assigned(FStream) then FreeAndNil(FStream);
+  FOpened:=False;
 end;
 
 function TAcsCustomFileIn.GetTotalTime(): Real;
@@ -1451,9 +1522,9 @@ begin
   {$ENDIF}
 end;
 
-procedure TAcsCustomFileOut.Prepare();
+procedure TAcsCustomFileOut.Init();
 begin
-  inherited Prepare();
+  inherited Init();
   if Assigned(FStream) then FreeAndNil(FStream);
   if FFileName = '' then
     raise EAcsException.Create(strFilenamenotassigned);

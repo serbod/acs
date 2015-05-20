@@ -36,7 +36,7 @@ type
     destructor Destroy(); override;
     procedure Done(); override;
     function DoOutput(Abort: Boolean): Boolean; override;
-    procedure Prepare(); override;
+    procedure Init(); override;
   published
     property CompressionLevel: LongInt read FCompressionLevel write SetCompressionLevel stored True;
     property MaxAudioBytes: Integer read FMaxAudioBytes write FMaxAudioBytes;
@@ -96,11 +96,11 @@ begin
   inherited Destroy;
 end;
 
-procedure TMACOut.Prepare();
+procedure TMACOut.Init();
 var
   r: Integer;
 begin
-  inherited Prepare();
+  inherited Init();
   EndOfStream:=False;
 
   APECompress:=TAPECompress.Create();

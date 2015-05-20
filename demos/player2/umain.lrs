@@ -378,9 +378,9 @@ LazarusResources.Add('TfMain','FORMDATA',[
   +#7'OnClick'#7#15'btPlaylistClick'#8'TabOrder'#2#7#0#0#7'TBitBtn'#6'btVizu'#4
   +'Left'#3#174#0#6'Height'#2#13#3'Top'#2'T'#5'Width'#2#22#25'BorderSpacing.Inn'
   +'erBorder'#2#2#7'Caption'#6#3'Vis'#7'OnClick'#7#11'btVizuClick'#8'TabOrder'#2
-  +#8#0#0#10'TAcsFileIn'#7'FileIn1'#9'EndSample'#2#255#4'Loop'#8#11'StartSample'
-  +#2#0#4'left'#3#172#0#3'top'#2'$'#0#0#6'TTimer'#9'PlayTimer'#7'Enabled'#8#8'I'
-  +'nterval'#2'2'#7'OnTimer'#7#11'Timer1Timer'#4'left'#3#140#0#3'top'#2'$'#0#0
+  +#8#0#0#10'TAcsFileIn'#7'FileIn1'#11'StartSample'#2#0#9'EndSample'#2#255#4'Lo'
+  +'op'#8#4'left'#3#172#0#3'top'#2'$'#0#0#6'TTimer'#9'PlayTimer'#7'Enabled'#8#8
+  +'Interval'#2'2'#7'OnTimer'#7#11'Timer1Timer'#4'left'#3#140#0#3'top'#2'$'#0#0
   +#12'TAcsAudioOut'#9'AudioOut1'#10'BufferSize'#2#0#6'Device'#2#0#6'Volume'#2#0
   +#5'Input'#7#14'SoundIndicator'#5'Delay'#2#255#6'OnDone'#7#13'AudioOut1Done'
   +#17'OnThreadException'#7#24'AudioOut1ThreadException'#4'left'#3#152#0#3'top'

@@ -75,13 +75,16 @@ type
     FOnThreadException: TAcsThreadExceptionEvent;
     FLatency: Integer;
     FBufferSize: Integer;
-    function GetBufferSize: Integer;
+    FPrefetchMode: TAcsPrefetchMode;
+    function GetBufferSize(): Integer;
     procedure SetBufferSize(const AValue: Integer);
+    function GetPrefetchMode(): TAcsPrefetchMode;
+    procedure SetPrefetchMode(const AValue: TAcsPrefetchMode);
     function GetDelay: Integer;
     procedure SetDelay(const AValue: Integer);
     function GetPriority: TThreadPriority;
     procedure SetPriority(const AValue: TThreadPriority);
-    function GetActive: Boolean;
+    function GetActive(): Boolean;
     //function GetProgress: real;
     function GetStatus: TAcsOutputStatus;
     function GetTE: Integer;
@@ -106,7 +109,7 @@ type
 
     procedure Done();
     function DoOutput(Abort: Boolean): Boolean;
-    procedure Prepare();
+    procedure Init();
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -150,6 +153,8 @@ type
   published
     { The output buffer size in bytes default is 4000 }
     property BufferSize: Integer read GetBufferSize write SetBufferSize;
+    { Read-ahead data into buffer, prevent buffer underrun. Suitable for file input }
+    property PrefetchMode: TAcsPrefetchMode read GetPrefetchMode write SetPrefetchMode;
     { use this property to set an driver, on create of this component the driver
       with lowest latency is used for default }
     property Driver: string read FDriverName write SetDriver;
@@ -420,6 +425,20 @@ begin
   if AValue>0 then FBufferSize:=AValue;
 end;
 
+function TAcsAudioOut.GetPrefetchMode(): TAcsPrefetchMode;
+begin
+  if Assigned(FOutputDriver) then
+    Result:=FOutputDriver.PrefetchMode
+  else
+    Result:=FPrefetchMode;
+end;
+
+procedure TAcsAudioOut.SetPrefetchMode(const AValue: TAcsPrefetchMode);
+begin
+  FPrefetchMode:=AValue;
+  if Assigned(FOutputDriver) then FOutputDriver.PrefetchMode:=AValue;
+end;
+
 function TAcsAudioOut.GetActive(): Boolean;
 begin
   if Assigned(FOutputDriver) then
@@ -539,6 +558,7 @@ begin
       FOutputDriver.OnProgress:=OutputProgress;
       FOutputDriver.OnThreadException:=ThreadException;
       if FBufferSize > 0 then FOutputDriver.BufferSize:=FBufferSize;
+      //FOutputDriver.Prefetch:=FPrefetch;
       Exit;
     end;
   end;
@@ -590,9 +610,9 @@ begin
   Result:=Length(OutDriverInfos);
 end;
 
-procedure TAcsAudioOut.Prepare();
+procedure TAcsAudioOut.Init();
 begin
-  if Assigned(FOutputDriver) then FOutputDriver.Prepare();
+  if Assigned(FOutputDriver) then FOutputDriver.Init();
 end;
 
 procedure TAcsAudioOut.Done();
@@ -621,7 +641,12 @@ end;
 procedure TAcsAudioOut.Run();
 begin
   if not Assigned(FOutputDriver) then SetDefaultDriver();
-  if Assigned(FOutputDriver) then FOutputDriver.Run();
+  if Assigned(FOutputDriver) then
+  begin
+    FOutputDriver.BufferSize:=FBufferSize;
+    FOutputDriver.PrefetchMode:=FPrefetchMode;
+    FOutputDriver.Run();
+  end;
 end;
 
 procedure TAcsAudioOut.Stop();

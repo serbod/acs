@@ -32,7 +32,7 @@ type
     FDefaultDriver: String;
     function IsDevicePlayable(const Dev: String): Boolean;
   protected
-    procedure Prepare(); override;
+    procedure Init(); override;
     function DoOutput(Abort: Boolean): Boolean; override;
     procedure Done(); override;
     procedure SetDevice(Ch: Integer); override;
@@ -105,14 +105,14 @@ begin
       FCurrentDriver:=FDrivers[ch];
 end;
 
-procedure TAOLiveAudioOut.Prepare();
+procedure TAOLiveAudioOut.Init();
 var
   did: Integer;
   sf: ao_sample_format;
   opt: PAOOption;
   Info: PAOInfo;
 begin
-  inherited Prepare();
+  inherited Init();
   if FCurrentDriver = '' then
   begin
     did:=ao_default_driver_id;

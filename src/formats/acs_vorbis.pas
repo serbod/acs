@@ -58,7 +58,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    procedure Prepare(); override;
+    procedure Init(); override;
     procedure Done(); override;
     function DoOutput(Abort: Boolean):Boolean; override;
   published
@@ -216,12 +216,12 @@ begin
   FComments.Assign(AComments);
 end;
 
-procedure TVorbisOut.Prepare();
+procedure TVorbisOut.Init();
 var
   i, maxbr, minbr, nombr: Integer;
   Name, Value: String;
 begin
-  inherited Prepare();
+  inherited Init();
 
   if FFileMode = foAppend then
     FStream.Seek(0, soFromEnd);

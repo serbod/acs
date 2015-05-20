@@ -3223,8 +3223,8 @@ var
   FLAC__metadata_simple_iterator_set_block : FLAC__metadata_simple_iterator_set_block_t;
   FLAC__metadata_simple_iterator_insert_block_after : FLAC__metadata_simple_iterator_insert_block_after_t;
 
-  procedure LoadFLACLib;
-  procedure UnloadFLACLib;
+  function LoadFlacLibrary(): Boolean;
+  procedure UnloadFlacLibrary();
 
 implementation
 
@@ -3236,13 +3236,12 @@ var
 {$endif}
 
 
-procedure LoadFLACLib();
+function LoadFlacLibrary(): Boolean;
 begin
-  if LibFLACLoaded then
+  if not LibFLACLoaded then
   begin
-    Exit;
+    Libhandle := LoadLibrary(LibFLACPath);
   end;
-  Libhandle := LoadLibrary(LibFLACPath);
   if Libhandle <> 0 then
   begin
     LibFLACLoaded := True;
@@ -3339,9 +3338,10 @@ begin
     FLAC__metadata_simple_iterator_insert_block_after := GetProcAddress(Libhandle, 'FLAC__metadata_simple_iterator_insert_block_after');
     FLAC__metadata_simple_iterator_insert_block_after := GetProcAddress(Libhandle, 'FLAC__metadata_simple_iterator_insert_block_after');
   end;
+  Result:=LibFLACLoaded;
 end;
 
-procedure UnloadFLACLib();
+procedure UnloadFlacLibrary();
 begin
   if not LibFLACLoaded then Exit;
   LibFLACLoaded := False;

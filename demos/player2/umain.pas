@@ -97,6 +97,7 @@ begin
       FileIn1.FileName := fPlayList.lbPlaylist.Items[fPlayList.lbPlaylist.ItemIndex];
       lFilename.Caption := Format('File: %s',[ExtractFileName(FileIn1.FileName)]);
     end;
+    AudioOut1.BufferSize:=$100000;
     if FileIn1.Valid then AudioOut1.Run();
   end;
   FStopped := False;

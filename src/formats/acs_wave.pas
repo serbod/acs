@@ -206,7 +206,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
-    procedure Prepare(); override;
+    procedure Init(); override;
     procedure Done(); override;
     function DoOutput(Abort: Boolean): Boolean; override;
   published
@@ -443,12 +443,12 @@ begin
   FFileMode:=aMode;
 end;
 
-procedure TWaveOut.Prepare();
+procedure TWaveOut.Init();
 var
   Header: TWaveHeader;
   DVIADPCMHeader: TDVIADPCMHeader;
 begin
-  inherited Prepare();
+  inherited Init();
   EndOfInput:=False;
   if (FFileMode = foAppend) and (FStream.Size <> 0) then
   begin

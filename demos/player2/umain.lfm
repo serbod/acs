@@ -411,9 +411,9 @@ object fMain: TfMain
     TabOrder = 8
   end
   object FileIn1: TAcsFileIn
+    StartSample = 0
     EndSample = -1
     Loop = False
-    StartSample = 0
     left = 172
     top = 36
   end

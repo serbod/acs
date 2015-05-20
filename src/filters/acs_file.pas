@@ -86,7 +86,7 @@ type
   protected
     FBaseChannel: Integer;
     procedure SetInput(AInput: TAcsCustomInput);
-    procedure Prepare();
+    procedure Init();
     procedure Done();
     function DoOutput(Abort: Boolean): Boolean;
     procedure SetFileMode(aMode: TAcsFileOutputMode); virtual;
@@ -321,9 +321,9 @@ begin
   FOutput:=nil;
 end;
 
-procedure TAcsFileOut.Prepare();
+procedure TAcsFileOut.Init();
 begin
-  if Assigned(FOutput) then FOutput.Prepare();
+  if Assigned(FOutput) then FOutput.Init();
 end;
 
 procedure TAcsFileOut.Done();

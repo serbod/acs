@@ -60,11 +60,11 @@ begin
     raise EACSException.Create(Format(strChannelnotavailable, [ch]));
 end;
 
-procedure TStdAudioOut.Prepare();
+procedure TStdAudioOut.Init();
 var
   parm: Integer;
 begin
-  inherited Prepare();
+  inherited Init();
   // No exceptions here!
   case FInput.BitsPerSample of
     8:  parm := AFMT_U8;

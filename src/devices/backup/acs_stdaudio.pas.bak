@@ -94,7 +94,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
-    function GetData(Buffer: Pointer; BufferSize: Integer): Integer; override;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
     procedure Done(); override;
   end;
