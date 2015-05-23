@@ -493,14 +493,16 @@ type
     FTotalSamples: Integer;
     FTotalTime: Real;
     FSize: Integer;
+    OpenCS: TCriticalSection;
     function GetBPS(): Integer; override;
     function GetCh(): Integer; override;
     function GetSR(): Integer; override;
     function GetValid(): Boolean; virtual;
     procedure SetFileName(const AValue: TFileName); virtual;
-    (* Note on FSize calculation:
+    { Create FStream if FStreamDisabled not True
+      Note on FSize calculation:
       FSize is calculated in OpenFile method as the FULL file size.
-      More precise calculations regarding StartSample/EndSample are done in Init. *)
+      More precise calculations regarding StartSample/EndSample are done in Init. }
     procedure OpenFile(); virtual;
     procedure CloseFile(); virtual;
     function GetTotalTime(): Real; virtual;
@@ -509,6 +511,7 @@ type
     function GetProgress(): Real; virtual;
   public
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy(); override;
     procedure Init(); override;
     procedure Done(); override;
     procedure Reset(); override;
@@ -1339,9 +1342,16 @@ end;
 constructor TAcsCustomFileIn.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  OpenCS:=TCriticalSection.Create();
   FStartSample:=0;
   FEndSample:=-1;
   FValid:=False;
+end;
+
+destructor TAcsCustomFileIn.Destroy();
+begin
+  FreeAndNil(OpenCS);
+  inherited Destroy();
 end;
 
 procedure TAcsCustomFileIn.Init();
