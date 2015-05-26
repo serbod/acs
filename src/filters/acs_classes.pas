@@ -174,6 +174,9 @@ type
     function BytesPerSample(): Integer;
     { Reset WritePosition and ReadPosition to 0 }
     procedure Reset();
+    { Get available size for writing, between WritePosition/ReadPosition  and buffer end.
+      Result will be not greater, than specified ASize }
+    function GetBufWriteSize(ASize: Integer): Integer;
     { Size of buffer in sound samples }
     property SamplesCount: Integer read GetSamplesCount write SetSamplesCount;
     { Access to bytes. Inline code from GetByte or SetByte for optimization. }
@@ -874,6 +877,13 @@ begin
   FWritePos:=0;
   FReadPos:=0;
   FUnreadSize:=0;
+end;
+
+function TAcsAudioBuffer.GetBufWriteSize(ASize: Integer): Integer;
+begin
+  Result:=Min(ASize, (Self.Size-Self.WritePosition));
+  Result:=Min(Result, (Self.Size-Self.ReadPosition));
+  //Result:=Min(Result, Self.UnreadSize);
 end;
 
 { TAcsVerySmallThread }

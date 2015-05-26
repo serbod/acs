@@ -38,19 +38,22 @@ type
 {$ENDIF}
 
   { TStdAudioOut }
-
+  { Windows Wavemapper consume audio data as chain of prepared buffers - blocks.
+    Each block points to sample data and to next block. When block played, it
+    set flag WHDR_DONE }
   TStdAudioOut = class(TAcsAudioOutDriver)
   private
-{$IFDEF MSWINDOWS}
-    BlockChain: PWaveHdr;
-    aBlock: Integer;
-    EOC: PPWaveHdr;
-    FReadChunks: Integer;
-{$ENDIF}
     _audio_fd: Integer;
 {$IFDEF MSWINDOWS}
+    { first block in chain }
+    BlockChain: PWaveHdr;
+    FBlockCount: Integer;
+    FBlockSize: Integer;
+    EOC: PPWaveHdr;
+    { how many buffer blocks we use }
+    FReadChunks: Integer;
     procedure WriteBlock(P: Pointer; Len: Integer);
-    procedure AddBlockToChain(WH: PWaveHdr);
+    procedure DelBlockFromChain(WH: PWaveHdr);
 {$ENDIF}
   protected
     function GetDeviceCount(): Integer; override;

@@ -60,13 +60,15 @@ procedure WaveOutProc(hwo, Msg: LongWord; Instance: Pointer; Param1, Param2: Lon
 var
   Audio: TStdAudioOut;
 begin
+  {
   EnterCriticalSection(CrSecO);
   if Msg = WOM_DONE then
   begin
     Audio:=TStdAudioOut(Instance);
-    Audio.AddBlockToChain(PWaveHdr(Param1));
+    Audio.DelBlockFromChain(PWaveHdr(Param1));
   end;
   LeaveCriticalSection(CrSecO);
+  }
 end;
 
 procedure WaveInProc(hwi, Msg: LongWord; Instance: Pointer; Param1, Param2: LongWord); stdcall;
@@ -80,6 +82,23 @@ begin
     Audio.AddBlockToChain(PWaveHdr(Param1));
   end;
   LeaveCriticalSection(CrSecI);
+end;
+
+function MMResultStr(Res: MMRESULT): string;
+begin
+  Result:='';
+  if Res = MMSYSERR_NOERROR then
+    // OK
+  else if Res = MMSYSERR_INVALHANDLE then
+    Result:='Specified device handle is invalid'
+  else if Res = MMSYSERR_NODRIVER then
+    Result:='No device driver is present'
+  else if Res = MMSYSERR_NOMEM then
+    Result:='Unable to allocate or lock memory'
+  else if Res = WAVERR_STILLPLAYING then
+    Result:='The data block pointed to by the pwh parameter is still in the queue'
+  else if Res = WAVERR_UNPREPARED then
+    Result:='The data block pointed to by the pwh parameter hasn''t been prepared';
 end;
 
 constructor TStdAudioOut.Create(AOwner: TComponent);
@@ -99,12 +118,12 @@ begin
   inherited Destroy;
 end;
 
-procedure TStdAudioOut.AddBlockToChain(WH: PWaveHdr);
+procedure TStdAudioOut.DelBlockFromChain(WH: PWaveHdr);
 begin
   WH.lpNext:=nil;
   EOC^:=WH;
   EOC:=@WH.lpNext;
-  Dec(aBlock);
+  Dec(FBlockCount);
 end;
 
 procedure TStdAudioOut.SetDevice(Ch: Integer);
@@ -135,28 +154,31 @@ begin
   WF.wf.nBlockAlign:=WF.wf.nChannels*(WF.wBitsPerSample div 8);
 
   waveOutOpen(@_audio_fd, FBaseChannel, @WF, PtrUInt(@WaveOutProc), DWORD(Self), CALLBACK_FUNCTION or WAVE_MAPPED);
-  aBlock:=0;
-  //FBuffer:=AllocMem(FBufferSize);
-  EOC:=@BlockChain;
+  FBlockCount:=0;
+  FBlockSize:=(FBuffer.Size div FReadChunks);
+  FBlockSize:=FBlockSize - (FBlockSize mod WF.wf.nBlockAlign); // aligned block size
+  BlockChain:=nil;
+  //EOC:=@BlockChain;
+  FBuffer.Reset();
 end;
 
 procedure TStdAudioOut.Done();
 var
-  Tmp: PWaveHdr;
+  WH: PWaveHdr;
 begin
   if _audio_fd <> -1 then
   begin
-    while aBlock > 0 do;
-    Tmp:=BlockChain;
-    while Tmp <> nil do
+    //while FBlockCount > 0 do Sleep(1);
+    WH:=BlockChain;
+    while WH <> nil do
     begin
-      BlockChain:=Tmp.lpNext;
-      waveOutUnprepareHeader(_audio_fd, Tmp, SizeOf(TWaveHdr));
-      FreeMem(Tmp.lpData);
-      Dispose(Tmp);
-      Tmp:=BlockChain;
+      BlockChain:=WH.lpNext;
+      waveOutUnprepareHeader(_audio_fd, WH, SizeOf(TWaveHdr));
+      //FreeMem(WH.lpData);
+      Dispose(WH);
+      WH:=BlockChain;
     end;
-    EOC:=@BlockChain;
+    //EOC:=@BlockChain;
     waveOutClose(_audio_fd);
     //FreeMem(FBuffer);
     _audio_fd:=-1;
@@ -167,49 +189,81 @@ end;
 procedure TStdAudioOut.WriteBlock(P: Pointer; Len: Integer);
 var
   WH: PWaveHdr;
+  Res: string;
 begin
-  Inc(aBlock);
+  Inc(FBlockCount);
   New(WH);
+  WH.lpNext:=nil;
   WH.lpData:=P;
   WH.dwBufferLength:=Len;
   WH.dwLoops:=0;
   WH.dwFlags:=0;
+  if not Assigned(BlockChain) then BlockChain:=WH;
   waveOutPrepareHeader(_audio_fd, WH, SizeOf(TWaveHdr));
-  waveOutWrite(_audio_fd, WH, SizeOf(TWaveHdr));
+  Res:=MMResultStr(waveOutWrite(_audio_fd, WH, SizeOf(TWaveHdr)));
+  if (Res <> '') then
+  begin
+    if Assigned(OnThreadException) then
+      OnThreadException(Self, Exception.Create(Res))
+    else
+      raise EAcsException.Create(Res);
+  end;
 end;
 
 function TStdAudioOut.DoOutput(Abort: Boolean): Boolean;
 var
-  Len, i, k, vCoef: Integer;
+  Len, i, k, vCoef, BytesAllowed, AlignedSize: Integer;
   P8: PAcsBuffer8;
   P16: PAcsBuffer16;
-  Tmp: PWaveHdr;
+  WH: PWaveHdr;
 begin
   // No exceptions Here
   Result:=False;
   if not Assigned(FInput) then Exit;
   if Abort or (not CanOutput) then Exit;
   if not Active then Exit;
-  Tmp:=BlockChain; // clear pending data blocks
-  while Tmp <> nil do
+
+  // Get allowed output data size
+  BytesAllowed:=FBlockSize*FReadChunks;
+  WH:=BlockChain;
+  while WH <> nil do
   begin
-    BlockChain:=Tmp.lpNext;
-    waveOutUnprepareHeader(_audio_fd, Tmp, SizeOf(TWaveHdr));
-    FreeMem(Tmp.lpData);
-    Dispose(Tmp);
-    Tmp:=BlockChain;
+    if (WH.dwFlags AND WHDR_DONE) <> 0 then
+    begin
+      // Remove consumed block from chain
+      BlockChain:=WH.lpNext;
+      waveOutUnprepareHeader(_audio_fd, WH, SizeOf(TWaveHdr));
+      //FreeMem(WH.lpData);
+      Dispose(WH);
+      WH:=BlockChain;
+      Dec(FBlockCount);
+    end
+    else
+    begin
+      WH:=WH.lpNext;
+      Dec(BytesAllowed, FBlockSize);
+    end;
   end;
-  EOC:=@BlockChain;
+  //EOC:=@BlockChain;
+
   (* Write more than one block. This is needed for audio sources like
      Vorbis codec that return data in small chunks. *)
-  for k:=aBlock to FReadChunks do
+  //AlignedSize:=FBlockSize*FReadChunks;
+  //for k:=FBlockCount to FReadChunks do
+  if BytesAllowed >= FPrefetchSize then
   begin
-    while InputLock do;
+    while InputLock do Sleep(1);
     InputLock:=True;
-    Len:=FInput.GetData(FBuffer.Memory, (FBuffer.Size div FReadChunks));
+    Len:=FBuffer.GetBufWriteSize(BytesAllowed);
+    if Len > FBlockSize then Len:=FBlockSize;
+    Len:=FInput.GetData(FBuffer.Memory + FBuffer.WritePosition, Len);
     InputLock:=False;
+    if Len <= 0 then Exit;
+    // manually move writing position
+    FBuffer.WritePosition:=FBuffer.WritePosition + Len;
+    if FBuffer.WritePosition = FBuffer.Size then FBuffer.WritePosition:=0;
 
-    if Len <= 0 then Break;
+    // change volume
     if FVolume < 255 then
     begin
       vCoef:=Round(FVolume/255);
@@ -224,10 +278,16 @@ begin
         for i:=0 to Len-1 do P8[i]:=P8[i] * vCoef;
       end;
     end;
-    WriteBlock(FBuffer.Memory, Len);
+    // create output block, that points to data, and add it to playing chain
+    WriteBlock(FBuffer.Memory+FBuffer.ReadPosition, Len);
+    // manually move read position
+    FBuffer.ReadPosition:=FBuffer.ReadPosition + Len;
+    if FBuffer.ReadPosition = FBuffer.Size then FBuffer.ReadPosition:=0;
   end;
   Result:=True;
 end;
+
+{ TStdAudioIn }
 
 destructor TStdAudioIn.Destroy();
 begin
@@ -328,7 +388,7 @@ begin
   if FRecBytes >= 0 then
     if (FPosition >= FRecBytes) then Exit;
 
-  while aBlock < FBlocksCount do NewBlock;
+  while aBlock < FBlocksCount do NewBlock();
   if BufStart > BufEnd then
   begin
     BufStart:=1;

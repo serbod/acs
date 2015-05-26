@@ -426,6 +426,7 @@ object fMain: TfMain
   end
   object AudioOut1: TAcsAudioOut
     BufferSize = 0
+    PrefetchMode = pmAuto
     Device = 0
     Volume = 0
     Input = SoundIndicator

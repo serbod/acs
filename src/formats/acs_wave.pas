@@ -12,10 +12,10 @@ Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 Status:
 TWaveOut - not updated
 
-TWaveIn: AcsBuffer,
+TWaveIn: AcsBuffer
   PCM       - OK
   MS ADPCM  - OK
-  DVI ADPCM - not completed
+  IMA ADPCM - OK
   ACM       - not tested
   ExtPCM    - not tested
   IEEEFloat - not tested
@@ -35,7 +35,7 @@ uses
   {$IFDEF LINUX}
   Math, MAD,
   {$ENDIF}
-  ACS_File, Classes, SysUtils, ACS_Types, ACS_Classes, ACS_Strings, dbugintf;
+  ACS_File, Classes, SysUtils, ACS_Types, ACS_Classes, ACS_Strings;
 
 type
 
@@ -52,13 +52,14 @@ type
 
     - wtUnsupported - a WAV format that isn't supported
     - wtPCM - a WAV which is raw PCM (the normal format, use this if you're unsure)
-    - wtDVIADPCM - a WAV which is MS DVI IMA ADPCM
+    - wtIMA_ADPCM - a WAV which is DVI IMA ADPCM
+    - wtMS_ADPCM - a WAV which is MS ADPCM
     - wtACM - an MP3 packed inside a WAV
     - wtIEEEFloat - floating point encoding (32 or 64 bits)
     - wtExtPCM - raw PCM encoding with WaveFormatExtensible header.
     - wtExtIEEEFloat - floating point encoding with WaveFormatExtensible header.
   *)
-  TWavType = (wtUnsupported, wtPCM, wtDVIADPCM, wtMSADPCM, wtACM, wtIEEEFloat, wtExtPCM, wtExtIEEEFloat);
+  TWavType = (wtUnsupported, wtPCM, wtIMA_ADPCM, wtMS_ADPCM, wtACM, wtIEEEFloat, wtExtPCM, wtExtIEEEFloat);
 
   (* Record: TWaveHeader
       Represents a RIFF file header.
@@ -127,7 +128,7 @@ type
   end;
 
 
-(* Record: TDVIADPCMHeader
+(* Record: TIMA_ADPCMHeader
     RIFF file header for DVIADPCM (version NNFCAIWFLDL).
 
   Properties:
@@ -151,7 +152,7 @@ type
     DataSize: Integer -  Data size in bytes
   *)
 
-  TDVIADPCMHeader = record
+  TIMA_ADPCMHeader = record
     // RIFF file header
     RIFF: array [0..3] of AnsiChar;          // = 'RIFF'
     FileSize: Integer;                       // = FileSize - 8
@@ -176,21 +177,24 @@ type
     DataSize: Integer;   // Data size in bytes
   end;
 
+  TIMA_ADPCMBlockHeader = packed record
+    Samp0: Int16;           // initial predictor (in little-endian format)
+    StepTableIndex: Int8;   // initial index
+    Reserved: Int8;         // unknown, usually 0 and is probably reserved
+  end;
 
-  TDVI_ADPCM_INFO = record
+  TIMA_ADPCM_INFO = record
     BlockLength: Word;
     SamplesPerBlock: Word;
     DataSize: Integer;
   end;
 
-  TDVI_ADPCM_STATE_STEREO = packed record
-    valprev_l: SmallInt;      // Previous output value
-    index_l: Byte;            // Index into stepsize table
-    valprev_r: SmallInt;      // Previous output value
-    index_r: Byte;            // Index into stepsize table
+  TIMA_ADPCM_STATE_STEREO = packed record
+    valprev: array[0..1] of SmallInt;      // Previous output value
+    index: array[0..1] of Byte;            // Index into stepsize table
   end;
 
-  TDVI_ADPCM_ENCODE_STATE_STEREO = packed record
+  TIMA_ADPCM_ENCODE_STATE_STEREO = packed record
     PredSamp_l: SmallInt;
     Index_l: Byte;
     PredSamp_r: SmallInt;
@@ -201,6 +205,7 @@ type
     Coef1, Coef2: SmallInt;
   end;
 
+  // MS ADPCM
   TMS_ADPCM_INFO = record
     BlockLength: Word;
     SamplesPerBlock: Word;
@@ -237,7 +242,7 @@ type
     EndOfInput: Boolean;
     //Buffer: array [0..BUF_SIZE-1] of Byte;
     FWavType: TWavType;
-    FEncodeState: TDVI_ADPCM_ENCODE_STATE_STEREO;
+    FEncodeState: TIMA_ADPCM_ENCODE_STATE_STEREO;
     FPrevSR: LongWord;
     FPrevCh: Word;
     FPrevBPS: Word;
@@ -255,7 +260,7 @@ type
     procedure FinalizeStream();
     procedure FillHeaderPCM(var Header: TWaveHeader);
     procedure FillHeaderExtPCM(var Header: TWaveHeaderExt);
-    procedure FillHeaderDVIADPCM(var Header: TDVIADPCMHeader);
+    procedure FillHeaderIMA_ADPCM(var Header: TIMA_ADPCMHeader);
     procedure SetBlockSize(BS: Word);
     procedure EncodeDVIADPCMMono(InData: PAcsBuffer16; OutData: PAcsBuffer8);
     procedure EncodeDVIADPCMStereo(InData: PAcsBuffer16; OutData: PAcsBuffer8);
@@ -272,7 +277,7 @@ type
       Use this <TWavType> property to specify output .wav file encoding. When
       you append data to an existing file (with data in either raw PCM or MS
       DVI IMA ADPCM encoding) this property will be automatically set to the
-      file encoding. Only wtPCM, wtExtPCM, and wtDVIADPCM formats are supported for encoding.
+      file encoding. Only wtPCM, wtExtPCM, and wtIMA_ADPCM formats are supported for encoding.
       Do not set wtExtPCM directly. This format is chosen automatically if you encode audio with more than 24 bits per sample or more than 2 channels and <CreateNonMsHeaders> is set to False. *)
     property WavType: TWavType read FWavType write SetWavType;
     (*Property: BlockSize
@@ -303,8 +308,8 @@ type
   TWaveIn = class(TAcsCustomFileIn)
   private
     _WavType: TWavType;
-    DVI_ADPCM_INFO: TDVI_ADPCM_INFO;
-    DVI_ADPCM_STATE: TDVI_ADPCM_STATE_STEREO;
+    IMA_ADPCM_INFO: TIMA_ADPCM_INFO;
+    IMA_ADPCM_STATE: TIMA_ADPCM_STATE_STEREO;
     MS_ADPCM_INFO: TMS_ADPCM_INFO;
     MS_ADPCM_STATE: TMSADPCMBlockHeaderStereo;
     HeaderSize: Word;
@@ -321,11 +326,10 @@ type
     Data: Pointer;
     DataLen: Integer;
     {$ENDIF}
-    function ReadDVIADPCMBlock(AData: Pointer): Boolean;
+    function ReadDecodeIMAADPCMBlock(): Integer;
     function ReadDecodeMSADPCMBlock(): Integer;
     function GetWavType(): TWavType;
     procedure ReadRIFFHeader();
-    function DecodeDVIADPCM(InData: PAcsBuffer8; OutData: PAcsBuffer16; Len: Integer; ChanCount: Integer): Integer;
   protected
     procedure OpenFile(); override;
     procedure CloseFile(); override;
@@ -353,7 +357,7 @@ const
   WAVE_FORMAT_ALAW = 6;
   WAVE_FORMAT_MULAW = 7;
   WAVE_FORMAT_DVI_IMA_ADPCM = 17;
-  WAVE_FORMAT_IMA_ADPCM = 17;
+  WAVE_FORMAT_IMA_ADPCM = $11;
   WAVE_FORMAT_MP3 = 85;
   WAVE_FORMAT_EXTENSIBLE = $FFFE;
   KSDATAFORMAT_SUBTYPE_PCM: TGuid = '{00000001-0000-0010-8000-00aa00389b71}';
@@ -375,7 +379,7 @@ const
                 32767 );
 
   IndexTab: array[0..15] of Integer = ( -1, -1, -1, -1, 2, 4, 6, 8,
-                               -1, -1, -1, -1, 2, 4, 6, 8 );
+                                        -1, -1, -1, -1, 2, 4, 6, 8 );
 
   // MS ADPCM Stuff
 
@@ -390,13 +394,6 @@ const
   LookingForFMT = 2;
   LookingForFACT = 3;
   LookingForDATA = 4;
-
-type
-  TDVIADPCMBlockHeader = packed record
-    Samp0: SmallInt;
-    StepTableIndex: Byte;
-    Reserved: Byte;
-  end;
 
 
 function Compare4(S1, S2: PChar): Boolean;
@@ -565,7 +562,7 @@ end;
 procedure TWaveOut.SetWavType(WT: TWavType);
 begin
   if Active then Exit;
-  if (WT = wtPCM) or (WT = wtDVIADPCM) then
+  if (WT = wtPCM) or (WT = wtIMA_ADPCM) then
     FWavType:=WT;
 end;
 
@@ -578,7 +575,7 @@ procedure TWaveOut.Init();
 var
   Header: TWaveHeader;
   HeaderExt: TWaveHeaderExt;
-  DVIADPCMHeader: TDVIADPCMHeader;
+  IMA_ADPCMHeader: TIMA_ADPCMHeader;
 begin
   inherited Init();
   EndOfInput:=False;
@@ -589,7 +586,7 @@ begin
   if (FFileMode = foAppend) and (FStream.Size <> 0) then
   begin
     ReadRIFFHeader();
-    if not (FPrevWavType in [wtPCM, wtDVIADPCM]) then
+    if not (FPrevWavType in [wtPCM, wtIMA_ADPCM]) then
     begin
       Done();
       raise EAcsException.Create('Cannot append data to this .wav file.');
@@ -626,7 +623,7 @@ begin
         raise EAcsException.Create('Error writing wave file');
      end;
 
-    wtDVIADPCM:
+    wtIMA_ADPCM:
     begin
       if FInput.BitsPerSample <> 16 then
       begin
@@ -646,8 +643,8 @@ begin
       end
       else
       begin
-        FillHeaderDVIADPCM(DVIADPCMHeader);
-        if FStream.Write(DVIADPCMHeader, SizeOf(DVIADPCMHeader)) <> SizeOf(DVIADPCMHeader) then
+        FillHeaderIMA_ADPCM(IMA_ADPCMHeader);
+        if FStream.Write(IMA_ADPCMHeader, SizeOf(IMA_ADPCMHeader)) <> SizeOf(IMA_ADPCMHeader) then
           raise EAcsException.Create('Error writing wave file');
         FEncodeState.Index_l:=0;
         FEncodeState.Index_r:=0;
@@ -700,7 +697,7 @@ begin
       Result:=(Len > 0);
     end;
 
-    wtDVIADPCM:
+    wtIMA_ADPCM:
     begin
       BlockDataSize:=(FBlockAlign - 4*FInput.Channels)*4 + 2*FInput.Channels;
       GetMem(DVIInBuf, BlockDataSize);
@@ -813,7 +810,7 @@ begin
   Header.DataSize:=FInputSize;
 end;
 
-procedure TWaveOut.FillHeaderDVIADPCM(var Header: TDVIADPCMHeader);
+procedure TWaveOut.FillHeaderIMA_ADPCM(var Header: TIMA_ADPCMHeader);
 var
   text: array[0..4] of Char;
   samples: Integer;
@@ -832,7 +829,7 @@ begin
   Header.BytesPerSecond:=(FInput.SampleRate div Header.SamplesPerBlock)*Header.BlockAlign;
   samples:=(FInputSize div (FInput.BitsPerSample shr 3)) div FInput.Channels;
   Header.DataSize:=Round(samples/Header.SamplesPerBlock) * Header.BlockAlign;
-  Header.FileSize:=Header.DataSize + SizeOf(TDVIADPCMHeader);
+  Header.FileSize:=Header.DataSize + SizeOf(TIMA_ADPCMHeader);
   Header.DataChunkId:='data';
   Header.FactChunkId:='fact';
   Header.FactChunkSize:=4;
@@ -843,7 +840,7 @@ procedure TWaveOut.EncodeDVIADPCMMono(InData: PAcsBuffer16; OutData: PAcsBuffer8
 var
   i, j, Diff, PredSamp, Index: Integer;
   Code: Byte;
-  Header: TDVIADPCMBlockHeader;
+  Header: TIMA_ADPCMBlockHeader;
 begin
   FillChar(OutData[0], FBlockAlign, 0);
   Header.Samp0:=FEncodeState.PredSamp_l;
@@ -896,7 +893,7 @@ procedure TWaveOut.EncodeDVIADPCMStereo(InData: PAcsBuffer16; OutData: PAcsBuffe
 var
   i, j, Diff, bPos, PredSamp, Index: Integer;
   Code: Byte;
-  Header: TDVIADPCMBlockHeader;
+  Header: TIMA_ADPCMBlockHeader;
 begin
   FillChar(OutData[0], FBlockAlign, 0);
   Header.Samp0:=FEncodeState.PredSamp_l;
@@ -1054,14 +1051,14 @@ begin
           Move(Buff[i-ChunkSize], WordVal, 2);
           case WordVal of
             WAVE_FORMAT_PCM: FPrevWavType:=wtPCM;
-            WAVE_FORMAT_IMA_ADPCM: FPrevWavType:=wtDVIADPCM;
+            WAVE_FORMAT_IMA_ADPCM: FPrevWavType:=wtIMA_ADPCM;
             else Exit;
           end;
           Move(Buff[i+2-ChunkSize], FPrevCh, 2);
           Move(Buff[i+4-ChunkSize], FPrevSR, 4);
           Move(Buff[i+12-ChunkSize], FBlockAlign, 2);
           Move(Buff[i+14-ChunkSize], FPrevBPS, 2);
-          if FPrevWavType = wtDVIADPCM then
+          if FPrevWavType = wtIMA_ADPCM then
           State:=LookingForFACT
           else State:=LookingForDATA;
           FStream.Read(Buff[i], 4);
@@ -1130,7 +1127,7 @@ end;
 procedure TWaveOut.FinalizeStream();
 var
   Size: Integer;
-  Hdr: TDVIADPCMHeader;
+  Hdr: TIMA_ADPCMHeader;
   BlockSize: Integer;
   P: Pointer;
 begin
@@ -1161,7 +1158,7 @@ begin
         FStream.Write(Size, 4);
       end;
 
-      wtDVIADPCM:
+      wtIMA_ADPCM:
       begin
         if FFileMode = foAppend then
         begin
@@ -1174,7 +1171,7 @@ begin
         end
         else
         begin
-          Size:=FStream.Size - SizeOf(TDVIADPCMHeader);
+          Size:=FStream.Size - SizeOf(TIMA_ADPCMHeader);
           FStream.Seek(0, soFromBeginning);
           FStream.Read(Hdr, SizeOf(Hdr));
           Hdr.DataSize:=Size;
@@ -1253,14 +1250,15 @@ begin
           FValid:=False;
         end;
 
-        wtDVIADPCM:
+        wtIMA_ADPCM:
         begin
           if FBPS <> 4 then FValid:=False;
           FBPS:=16;
-          FSize:=LongWord(DVI_ADPCM_INFO.DataSize) * 2 * FChan;
+          FSize:=LongWord(IMA_ADPCM_INFO.DataSize) * 2 * FChan;
+          if not Assigned(TmpBuffer) then GetMem(TmpBuffer, IMA_ADPCM_INFO.BlockLength);
         end;
 
-        wtMSADPCM:
+        wtMS_ADPCM:
         begin
           FValid:=True;
           FBPS:=16;
@@ -1367,7 +1365,7 @@ begin
           FreeAndNil(_MS);
         end;
       end
-      else if _WavType = wtMSADPCM then
+      else if (_WavType in [wtMS_ADPCM, wtIMA_ADPCM]) then
       begin
         if Assigned(TmpBuffer) then FreeMem(TmpBuffer);
         TmpBuffer:=nil;
@@ -1382,9 +1380,8 @@ end;
 function TWaveIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   Len, AlignedSize: Integer;
-  Data: Pointer;
 begin
-  if not Active then
+  if (not Active) or (not FOpened) then
     raise EAcsException.Create('The Stream is not opened');
 
   AlignedSize:=FAudioBuffer.Size - (FAudioBuffer.Size mod FSampleSize);
@@ -1392,28 +1389,13 @@ begin
   begin
     FAudioBuffer.Reset();
     case _WavType of
-      wtDVIADPCM:
+      wtIMA_ADPCM:
       begin
-        Len:=DVI_ADPCM_INFO.BlockLength - (FChan * 4);
-        GetMem(Data, Len);
-        if ReadDVIADPCMBlock(Data) then
-        begin
-          Len:=DecodeDVIADPCM(Data, FAudioBuffer.Memory, Len, FChan);
-          FAudioBuffer.WritePosition:=FAudioBuffer.WritePosition + (Len * FChan);
-          FreeMem(Data);
-        end
-        else
-        begin
-          FreeMem(Data);
-          if not Seekable then
-          begin
-           Result:=0;
-           Exit;
-          end;
-        end;
+        Len:=ReadDecodeIMAADPCMBlock();
+        FAudioBuffer.WritePosition:=FAudioBuffer.WritePosition + Len;
       end;
 
-      wtMSADPCM:
+      wtMS_ADPCM:
       begin
         Len:=ReadDecodeMSADPCMBlock();
         FAudioBuffer.WritePosition:=FAudioBuffer.WritePosition + Len;
@@ -1421,7 +1403,10 @@ begin
 
       wtPCM, wtExtPCM:
       begin
-        Len:=FAudioBuffer.CopyFrom(FStream, AlignedSize);
+        Len:=AlignedSize;
+        if Len > (FStream.Size-FStream.Position) then Len:=(FStream.Size-FStream.Position);
+        if Len > (FAudioBuffer.Size-FAudioBuffer.WritePosition) then Len:=(FAudioBuffer.Size-FAudioBuffer.WritePosition);
+        if Len > 0 then Len:=FAudioBuffer.CopyFrom(FStream, Len);
       end;
 
       wtExtIEEEFloat, wtIEEEFloat:
@@ -1441,10 +1426,13 @@ begin
 
       wtACM:
       begin
-        //FStream.Read(Buf, BUF_SIZE);
-        FAudioBuffer.CopyFrom(FStream, AlignedSize);
+        Len:=AlignedSize;
+        if Len > (FStream.Size-FStream.Position) then Len:=(FStream.Size-FStream.Position);
+        if Len > (FAudioBuffer.Size-FAudioBuffer.WritePosition) then Len:=(FAudioBuffer.Size-FAudioBuffer.WritePosition);
+        if Len > 0 then Len:=FAudioBuffer.CopyFrom(FStream, AlignedSize);
       end;
     end;
+    if Len <= 0 then
   end;
 
   Result:=ABufferSize;
@@ -1470,14 +1458,14 @@ begin
       Result:=True;
     end;
 
-    wtDVIADPCM:
+    wtIMA_ADPCM:
     begin
-      OffsSize:=(SampleNum div DVI_ADPCM_INFO.SamplesPerBlock)*DVI_ADPCM_INFO.BlockLength;
+      OffsSize:=(SampleNum div IMA_ADPCM_INFO.SamplesPerBlock)*IMA_ADPCM_INFO.BlockLength;
       Stream.Seek(OffsSize + HeaderSize, soFromBeginning);
       Result:=True;
     end;
 
-    wtMSADPCM:
+    wtMS_ADPCM:
     begin
       OffsSize:=(SampleNum div MS_ADPCM_INFO.SamplesPerBlock)*MS_ADPCM_INFO.BlockLength;
       Stream.Seek(OffsSize + HeaderSize, soFromBeginning);
@@ -1494,74 +1482,91 @@ begin
   CloseFile();
 end;
 
-function TWaveIn.ReadDVIADPCMBlock(AData: Pointer): Boolean;
+function TWaveIn.ReadDecodeIMAADPCMBlock(): Integer;
 var
-  block: array of Byte;
-  BH: TDVIADPCMBlockHeader;
-begin
-  Result:=False;
-  if Seekable then
-  if FStream.Position >= FStream.Size then Exit;
-  SetLength(Block, DVI_ADPCM_INFO.BlockLength);
-  if FStream.Read(Block[0], Length(Block))= 0 then Exit;
-  Result:=True;
-  Move(Block[0], BH, SizeOf(BH));
-  DVI_ADPCM_STATE.valprev_l:=BH.Samp0;
-  DVI_ADPCM_STATE.index_l:=BH.StepTableIndex;
-  if FChan = 2 then
-  begin
-    Move(Block[4], BH, SizeOf(BH));
-    DVI_ADPCM_STATE.valprev_r:=BH.Samp0;
-    DVI_ADPCM_STATE.index_r:=BH.StepTableIndex;
-    Move(Block[8], AData^, DVI_ADPCM_INFO.BlockLength-8);
-  end else
-  Move(Block[4], AData^, DVI_ADPCM_INFO.BlockLength-4);
-end;
-
-function TWaveIn.DecodeDVIADPCM(InData: PAcsBuffer8; OutData: PAcsBuffer16;
-  Len: Integer; ChanCount: Integer): Integer;
-var
-  i, j, SP, ch: Integer;
-  Diff, SampleValue: Integer;
-  Code: Byte;
-  Index: Integer;
+  BlockHeaderSize, Len: Integer;
+  BH: TIMA_ADPCMBlockHeader;
+  i, j, OutPos, InPos, ch, chIndex: Integer;
+  Diff, SampleValue, Step, StepIndex: Integer;
+  Nibble: Byte;
+  InData: PAcsBuffer8;
+  OutData: PAcsBuffer16;
 begin
   Result:=0;
-  {$R-}
-  for ch:=0 to ChanCount-1 do
+  // === Read ===
+  //if Seekable then
+  //if FStream.Position >= FStream.Size then Exit;
+  //SetLength(Block, IMA_ADPCM_INFO.BlockLength);
+  if FStream.Read(TmpBuffer^, IMA_ADPCM_INFO.BlockLength) < IMA_ADPCM_INFO.BlockLength then Exit;
+  BlockHeaderSize:=0;
+  for ch:=0 to FChan-1 do
   begin
-    OutData[ch]:=DVI_ADPCM_STATE.valprev_r;
-    SP:=ch;
-    SampleValue:=DVI_ADPCM_STATE.valprev_r;
-    Index:=DVI_ADPCM_STATE.index_r;
+    Move((TmpBuffer+BlockHeaderSize)^, BH, SizeOf(BH));
+    IMA_ADPCM_STATE.valprev[ch]:=BH.Samp0;
+    IMA_ADPCM_STATE.index[ch]:=BH.StepTableIndex;
+    BlockHeaderSize:=BlockHeaderSize + SizeOf(BH);
+  end;
+
+  // === Decode ===
+  InData:=TmpBuffer + BlockHeaderSize;
+  OutData:=FAudioBuffer.Memory;
+  OutPos:=0;
+  {$R-}
+  // get first sample from header
+  for ch:=0 to FChan-1 do
+  begin
+    OutData[OutPos]:=IMA_ADPCM_STATE.valprev[ch];
+    Inc(OutPos);
+  end;
+  // decode samples
+  { The remaining bytes in the chunk are the IMA nibbles.
+  Each byte is decoded bottom nibble first, then top nibble as follows:
+  byte0 byte1 byte2 byte3 ...
+  n1n0  n3n2  n5n4  n7n6  ...
+
+  In stereo, the first 4 bytes, or 8 nibbles, belong to the left channel and the
+  next 4 bytes belong to the right channel. This interleaving continues until
+  the end of the chunk  }
+
+  //Len:=IMA_ADPCM_INFO.BlockLength - BlockHeaderSize;
+  Len:=(IMA_ADPCM_INFO.SamplesPerBlock-1) * 2; // nibbles count
+  for ch:=0 to FChan-1 do
+  begin
+    InPos:=0;
+    OutPos:=FChan + ch;
+    SampleValue:=IMA_ADPCM_STATE.valprev[ch];
+    StepIndex:=IMA_ADPCM_STATE.index[ch];
     for i:=0 to (Len-1) do
     begin
-      j:=i shr 1; // i div 2
-      Code:=InData[(j div 4)*8 + (j mod 4) + (ch * 4)];
-      if (i AND 1) = 0 then
-        Code:=Code AND 15
+      j := i div 2;  // byte index
+      if FChan = 2 then j:=(j div 4)*8 + (j mod 4) + (ch * 4);
+
+      if (i and 1) = 1 then
+        Nibble:=InData[j] shr 4    // high half-byte
       else
-        Code:=Code shr 4;
-      Diff:=(StepTab[Index] shr 3);
-      if (Code AND 4) <> 0 then
-        Diff:=Diff + StepTab[Index];
-      if (Code AND 2) <> 0 then
-        Diff:=Diff + (StepTab[Index] shr 1);
-      if (Code AND 1) <> 0 then
-        Diff:=Diff + (StepTab[Index] shr 2);
-      if (Code AND 8) <> 0 then Diff:=-Diff;
+        Nibble:=InData[j] and 15;  // low half-byte
+
+      Step:=StepTab[StepIndex];
+      Diff:=(Step shr 3);
+      if (Nibble AND 1) <> 0 then Diff:=Diff + (Step shr 2);
+      if (Nibble AND 2) <> 0 then Diff:=Diff + (Step shr 1);
+      if (Nibble AND 4) <> 0 then Diff:=Diff + Step;
+      if (Nibble AND 8) <> 0 then Diff:=-Diff;
       SampleValue:=SampleValue + Diff;
       if SampleValue > 32767 then SampleValue:=32767;
       if SampleValue < -32767 then SampleValue:=-32767;
-      SP:=SP+2;
-      OutData[SP]:=SampleValue;
-      Index:=Index + IndexTab[Code];
-      if Index > 88 then Index:=88;
-      if Index < 0 then Index:=0;
+      StepIndex:=StepIndex + IndexTab[Nibble];
+      if StepIndex > 88 then StepIndex:=88;
+      if StepIndex < 0 then StepIndex:=0;
+
+      OutData[OutPos]:=SampleValue;
+      Inc(OutPos, 2);
+      //IMA_ADPCM_STATE.index[ch]:=StepIndex;
+      //IMA_ADPCM_STATE.valprev[ch]:=SampleValue;
     end;
   end;
   {$R+}
-  Result:=(SP div ch)+1;
+  Result:=(Len + 1) * (FBPS div 8);
 end;
 
 function TWaveIn.ReadDecodeMSADPCMBlock(): Integer;
@@ -1569,13 +1574,12 @@ var
   BlockHeaderSize, Len: Integer;
   BHM: TMSADPCMBlockHeaderMono;
   BHS: TMSADPCMBlockHeaderStereo;
-  pos, i, PredSamp, ErrorDelta, ch, chIndex: Integer;
+  pos, i, PredSamp, Nibble, ch, chIndex: Integer;
   InData: PAcsBuffer8;
   OutData: PAcsBuffer16;
 begin
   Result:=0;
   // === Read ===
-  if FStream.Position >= FStream.Size then Exit;
   if FStream.Read(TmpBuffer^, MS_ADPCM_INFO.BlockLength) < MS_ADPCM_INFO.BlockLength then Exit;
   if FChan = 1 then
   begin
@@ -1609,7 +1613,6 @@ begin
     OutData[pos]:=MS_ADPCM_STATE.Samp1[ch];
     Inc(pos);
   end;
-  {$R+}
 
   Len:=MS_ADPCM_INFO.SamplesPerBlock-2;
   for i:=0 to Len-1 do
@@ -1621,29 +1624,25 @@ begin
 
       PredSamp:=(MS_ADPCM_STATE.Samp1[ch] * MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[ch]].Coef1 +
                    MS_ADPCM_STATE.Samp2[ch] * MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[ch]].Coef2) div 256;
-      {$R-}
       if chIndex = 0 then
-        ErrorDelta:=InData[BlockHeaderSize+i] shr 4    // high half-byte
+        Nibble:=InData[BlockHeaderSize+i] shr 4    // high half-byte
       else if chIndex = 1 then
-        ErrorDelta:=InData[BlockHeaderSize+i] and 15;  // low half-byte
-      {$R+}
-      if (ErrorDelta and 8) <> 0 then
-        PredSamp:=PredSamp + MS_ADPCM_STATE.Delta[ch] * (ErrorDelta - 16)
+        Nibble:=InData[BlockHeaderSize+i] and 15;  // low half-byte
+      if (Nibble and 8) <> 0 then
+        PredSamp:=PredSamp + MS_ADPCM_STATE.Delta[ch] * (Nibble - 16)
       else
-        PredSamp:=PredSamp + MS_ADPCM_STATE.Delta[ch] * (ErrorDelta);
+        PredSamp:=PredSamp + MS_ADPCM_STATE.Delta[ch] * (Nibble);
       if PredSamp > 32767 then PredSamp:=32767;
       if PredSamp < -32768 then PredSamp:=-32768;
-      {$R-}
       OutData[pos]:=PredSamp;
-      {$R+}
       Inc(pos);
-      MS_ADPCM_STATE.Delta[ch]:=(MS_ADPCM_STATE.Delta[ch] * adaptive[ErrorDelta]) div 256;
+      MS_ADPCM_STATE.Delta[ch]:=(MS_ADPCM_STATE.Delta[ch] * adaptive[Nibble]) div 256;
       if MS_ADPCM_STATE.Delta[ch] < 16 then MS_ADPCM_STATE.Delta[ch]:=16;
       MS_ADPCM_STATE.Samp2[ch]:=MS_ADPCM_STATE.Samp1[ch];
       MS_ADPCM_STATE.Samp1[ch]:=PredSamp;
     end;
   end;
-  Result:=pos * 2;
+  Result:=pos * FChan;
   {$R+}
 end;
 
@@ -1723,8 +1722,8 @@ begin
           Move(Buff[i-ChunkSize], WordVal, 2);
           case WordVal of
             WAVE_FORMAT_PCM: _WavType:=wtPCM;
-            WAVE_FORMAT_IMA_ADPCM: _WavType:=wtDVIADPCM;
-            WAVE_FORMAT_ADPCM: _WavType:=wtMSADPCM;
+            WAVE_FORMAT_IMA_ADPCM: _WavType:=wtIMA_ADPCM;
+            WAVE_FORMAT_ADPCM: _WavType:=wtMS_ADPCM;
             WAVE_FORMAT_MP3: _WavType:=wtACM;
             WAVE_FORMAT_IEEE_FLOAT: _WavType:=wtIEEEFloat;
             WAVE_FORMAT_EXTENSIBLE: _WavType:=wtExtPCM;
@@ -1735,8 +1734,8 @@ begin
           Move(Buff[i+4-ChunkSize], IntVal, 4);
           FSR:=IntVal;
           Move(Buff[i+12-ChunkSize], WordVal, 2);
-          if _WavType = wtDVIADPCM then
-            DVI_ADPCM_INFO.BlockLength:=WordVal
+          if _WavType = wtIMA_ADPCM then
+            IMA_ADPCM_INFO.BlockLength:=WordVal
           else
             MS_ADPCM_INFO.BlockLength:=WordVal;
           Move(Buff[i+14-ChunkSize], WordVal, 2);
@@ -1751,14 +1750,14 @@ begin
            if not IsEqualGUID(SubType, KSDATAFORMAT_SUBTYPE_PCM) then
               _WavType:=wtUnsupported;
           end;
-          if _WavType in [wtDVIADPCM, wtMSADPCM, wtACM] then
+          if _WavType in [wtIMA_ADPCM, wtMS_ADPCM, wtACM] then
           begin
             Move(Buff[i+18-ChunkSize], WordVal, 2);
-            if _WavType = wtDVIADPCM then
-              DVI_ADPCM_INFO.SamplesPerBlock:=WordVal
+            if _WavType = wtIMA_ADPCM then
+              IMA_ADPCM_INFO.SamplesPerBlock:=WordVal
             else
               MS_ADPCM_INFO.SamplesPerBlock:=WordVal;
-            if _WavType = wtMSADPCM then
+            if _WavType = wtMS_ADPCM then
             begin
               Move(Buff[i+20-ChunkSize], WordVal, 2);
               MS_ADPCM_INFO.NumCoeff:=WordVal;
@@ -1792,8 +1791,8 @@ begin
           FStream.Read(Buff[i], ChunkSize);
           Inc(i, ChunkSize);
           Move(Buff[i-ChunkSize], IntVal, 4);
-          if _WavType = wtDVIADPCM then
-          DVI_ADPCM_INFO.DataSize:=IntVal
+          if _WavType = wtIMA_ADPCM then
+          IMA_ADPCM_INFO.DataSize:=IntVal
           else
           MS_ADPCM_INFO.DataSize:=IntVal;
           FStream.Read(Buff[i], 4);

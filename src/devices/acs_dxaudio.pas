@@ -395,13 +395,6 @@ begin
   inherited Done();
 end;
 
-function GetBufWriteSize(Buf: TAcsAudioBuffer; ASize: Integer): Integer;
-begin
-  Result:=Min(ASize, (Buf.Size-Buf.WritePosition));
-  Result:=Min(Result, (Buf.Size-Buf.ReadPosition));
-  //Result:=Min(Result, Buf.UnreadSize);
-end;
-
 function TDXAudioOut.DoOutput(Abort: Boolean): Boolean;
 var
   Len, offs, lb, RetryCount: Integer;
@@ -486,7 +479,7 @@ begin
   if BytesAllowed >= FPrefetchSize then
   begin
     // read chunk of data into buffer
-    Len:=GetBufWriteSize(FBuffer, BytesAllowed);
+    Len:=FBuffer.GetBufWriteSize(BytesAllowed);
     Len:=FInput.GetData(FBuffer.Memory + FBuffer.WritePosition, Len);
     FBuffer.WritePosition:=FBuffer.WritePosition + Len;
     if FBuffer.WritePosition = FBuffer.Size then FBuffer.WritePosition:=0;

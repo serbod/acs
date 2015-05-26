@@ -15,7 +15,7 @@ uses
   ComCtrls, uPlaylist, ACS_Indicator, uvis
   //You must include Output drivers to not get an "No drier selected" exception
   {$IFDEF WINDOWS}
-  ,ACS_DXAudio  //DirectSound Driver
+  //,ACS_DXAudio  //DirectSound Driver
   {$ELSE}
   ,acs_alsaaudio //Alsa Driver
 //  ,ACS_AOLive    //AO Live Driver
