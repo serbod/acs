@@ -8,6 +8,14 @@ Copyright (c) 2002-2009, Andrei Borovsky, anb@symmetrica.net
 Copyright (c) 2005-2006  Christian Ulrich, mail@z0m3ie.de
 Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 *)
+{
+Status:
+TStdAudioOut Win: AcsBuffer, prefetching, tested OK
+             Lin: not updated
+
+TStdAudioIn Win: not updated
+            Lin: not updated
+}
 
 unit acs_stdaudio;
 
@@ -44,18 +52,25 @@ type
   TStdAudioOut = class(TAcsAudioOutDriver)
   private
     _audio_fd: Integer;
+    FTimeElapsed: Real;
 {$IFDEF MSWINDOWS}
     { first block in chain }
-    BlockChain: PWaveHdr;
+    FirstBlock: PWaveHdr;
+    { last block in chain }
+    LastBlock: PWaveHdr;
+    { number of blocks in use }
     FBlockCount: Integer;
+    { size of single block, aligned to sample size }
     FBlockSize: Integer;
-    EOC: PPWaveHdr;
+    //EOC: PPWaveHdr;
     { how many buffer blocks we use }
     FReadChunks: Integer;
     procedure WriteBlock(P: Pointer; Len: Integer);
-    procedure DelBlockFromChain(WH: PWaveHdr);
+    { remove played block from chain, return remaining blocks size }
+    function ClearUsedBlocks(): Integer;
 {$ENDIF}
   protected
+    function GetTE(): Real; override;
     function GetDeviceCount(): Integer; override;
     procedure SetDevice(Ch: Integer); override;
     function GetDeviceName(ADeviceNumber: Integer): string; override;
@@ -66,6 +81,8 @@ type
     procedure Init(); override;
     function DoOutput(Abort: Boolean): Boolean; override;
     procedure Done(); override;
+    { increase played time by number of played bytes, used in player callback }
+    procedure PlayedBytes(AValue: Integer);
   end;
 
   { TStdAudioIn }
@@ -119,6 +136,12 @@ var
   {$I linux\acs_audio.inc}
 {$ENDIF}
 
+function TStdAudioOut.GetTE(): Real;
+begin
+  //Result:=inherited GetTE;
+  Result:=FTimeElapsed;
+end;
+
 function TStdAudioOut.GetDeviceName(ADeviceNumber: Integer): string;
 begin
   Result:=GetDeviceInfo(ADeviceNumber).DeviceName;
@@ -133,6 +156,11 @@ end;
 function TStdAudioOut.GetDeviceCount(): Integer;
 begin
   Result:=OutputChannelsCount;
+end;
+
+procedure TStdAudioOut.PlayedBytes(AValue: Integer);
+begin
+  FTimeElapsed:=FTimeElapsed + ((AValue div FSampleSize) / FInput.SampleRate);
 end;
 
 { TStdAudioIn }

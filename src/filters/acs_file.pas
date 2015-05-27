@@ -76,7 +76,7 @@ type
     function GetDelay(): Integer;
     function GetPriority(): TThreadPriority;
     function GetStatus(): TAcsOutputStatus;
-    function GetTE(): Integer;
+    function GetTE(): Real;
     procedure SetDelay(const AValue: Integer);
     procedure SetPriority(const AValue: TThreadPriority);
 
@@ -103,7 +103,7 @@ type
     property Delay: Integer read GetDelay write SetDelay;
     property ThreadPriority: TThreadPriority read GetPriority write SetPriority;
     property Status: TAcsOutputStatus read GetStatus;
-    property TimeElapsed: Integer read GetTE;
+    property TimeElapsed: Real read GetTE;
 {$IFDEF LINUX}
     property AccessMask: Integer read FAccessMask write FAccessMask;
 {$ENDIF}
@@ -355,7 +355,7 @@ begin
   if Assigned(FOutput) then Result:=FOutput.Status;
 end;
 
-function TAcsFileOut.GetTE: Integer;
+function TAcsFileOut.GetTE(): Real;
 begin
   Result:=0;
   if Assigned(FOutput) then Result:=FOutput.TimeElapsed;

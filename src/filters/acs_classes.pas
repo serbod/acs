@@ -312,7 +312,7 @@ type
     { Called from Thread when thread stopped }
     procedure WhenDone(); virtual;
     { Time elapsed }
-    function GetTE(): Integer; virtual;
+    function GetTE(): Real; virtual;
     function GetStatus(): TAcsOutputStatus; virtual;
     function GetDelay(): Integer; virtual;
     procedure SetDelay(Value: Integer); virtual;
@@ -358,7 +358,7 @@ type
       tosPaused: the component is paused (the Pause method was called);
       tosIdle: the component is idle; }
     property Status: TAcsOutputStatus read GetStatus;
-    property TimeElapsed: Integer read GetTE;
+    property TimeElapsed: Real read GetTE;
   published
     { This property allows you to set the input component for the output component.
       The valid input components must be descendants of TAcsInput. }
@@ -1272,7 +1272,7 @@ begin
     FInput:=AInput;
 end;
 
-function TAcsCustomOutput.GetTE(): Integer;
+function TAcsCustomOutput.GetTE(): Real;
 begin
    if not Assigned(FInput) then
      Result:=0

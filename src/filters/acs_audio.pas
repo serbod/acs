@@ -87,7 +87,7 @@ type
     function GetActive(): Boolean;
     //function GetProgress: real;
     function GetStatus: TAcsOutputStatus;
-    function GetTE: Integer;
+    function GetTE(): Real;
 
     procedure ThreadException(Sender: TComponent; E: Exception);
     procedure OutputDone(Sender: TComponent);
@@ -148,7 +148,8 @@ type
       tosPaused: the component is paused (the Pause method was called);
       tosIdle: the component is idle; }
     property Status: TAcsOutputStatus read GetStatus;
-    property TimeElapsed: Integer read GetTE;
+    { Time from start of playing, seconds}
+    property TimeElapsed: Real read GetTE;
     property Latency: Integer read FLatency;
   published
     { The output buffer size in bytes default is 4000 }
@@ -475,13 +476,12 @@ begin
     Result:=tosUndefined;
 end;
 
-function TAcsAudioOut.GetTE(): Integer;
+function TAcsAudioOut.GetTE(): Real;
 begin
   if Assigned(FOutputDriver) then
-    Result:=FOutputDriver.GetTE
+    Result:=FOutputDriver.TimeElapsed
   else
     Result:=0;
-  //  raise EAcsException.Create(strNoDriverselected);
 end;
 
 procedure TAcsAudioOut.SetPriority(const AValue: TThreadPriority);

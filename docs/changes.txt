@@ -1,6 +1,6 @@
 2015-05-26  serbod
 * TVorbisIn - updated
-* TStdAudioOut - updated
+* TStdAudioOut Wawemapper - updated
 
 2015-05-23  serbod
 * TWaveIn - updated
