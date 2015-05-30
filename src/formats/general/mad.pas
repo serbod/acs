@@ -1,38 +1,16 @@
 (*
-  this file is a part of audio components suite v 2.3.
-  copyright (c) 2002-2005 andrei borovsky. all rights reserved.
-  see the license file for more details.
-  you can contact me at mail@z0m3ie.de
+MPEG Audio Decoder (MAD) library bindings
+
+This file is a part of Audio Components Suite.
+All rights reserved. See the license file for more details.
+
+Copyright (c) 2002-2010, Andrei Borovsky, anb@symmetrica.net
+Copyright (c) 2005-2006  Christian Ulrich, mail@z0m3ie.de
+Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 *)
 
-{
-$Log: mad.pas,v $
-Revision 1.2  2006/08/03 17:31:09  z0m3ie
-*** empty log message ***
-
-Revision 1.1  2005/12/19 18:36:56  z0m3ie
-*** empty log message ***
-
-Revision 1.1  2005/09/12 22:04:53  z0m3ie
-modified structure again, fileformats are now in an sperat folder.
-all File In/Out classes are capsulated from TFileIn and TFileOut
-
-Revision 1.1  2005/08/25 20:18:00  z0m3ie
-Version 2.4 restructure
-TCDPlayer removed (fits not in component structure)
-TMP3ToWavConverter removed (fits not in component structure)
-
-Revision 1.2  2005/08/22 20:17:01  z0m3ie
-changed Headers to log
-changed mail adress
-
-}
 
 unit mad;
-
-{$ifdef fpc}
-{$mode delphi}
-{$endif}
 
 interface
 
@@ -43,7 +21,7 @@ uses
 {$ENDIF}
 
 {$IFDEF LINUX}
-  baseunix,dl, ACS_Procs;
+  dynlibs, ACS_Procs;
 {$ENDIF}
 
 
@@ -61,7 +39,7 @@ const
 
 var
 
-  MADLibLoaded : Boolean = False;
+  MADLibLoaded: Boolean = False;
 
 type
 
@@ -217,22 +195,26 @@ var
   mad_stream_skip : mad_stream_skip_t;
   mad_stream_sync : mad_stream_sync_t;
 
+function LoadMADLibrary(): Boolean;
+procedure UnloadMADLibrary();
+
 implementation
 
-
-{$IFDEF WIN32}
-
 var
-  Libhandle : HMODULE;
+  Libhandle : TLibHandle;
 
-initialization
 
-  Libhandle := LoadLibraryEx(MADLibPath, 0, 0);
-
-  if Libhandle <> 0 then
+function LoadMADLibrary(): Boolean;
+var
+  Path : string;
+begin
+  Path:=MADLibPath;
+{$ifdef SEARCH_LIBS}
+  Path := FindLibs(MADLibPath);
+{$endif}
+  if Path <> '' then Libhandle := LoadLibrary(Path);
+  if Libhandle <> NilHandle then
   begin
-    MADLibLoaded := True;
-
     mad_decoder_init := GetProcAddress(Libhandle, 'mad_decoder_init');
     mad_decoder_finish := GetProcAddress(Libhandle, 'mad_decoder_finish');
     mad_decoder_run := GetProcAddress(Libhandle, 'mad_decoder_run');
@@ -240,58 +222,16 @@ initialization
     mad_stream_buffer := GetProcAddress(Libhandle, 'mad_stream_buffer');
     mad_stream_skip := GetProcAddress(Libhandle, 'mad_stream_skip');
     mad_stream_sync := GetProcAddress(Libhandle, 'mad_stream_sync');
-
-  end;
-
-finalization
-
-  if Libhandle <> 0 then FreeLibrary(Libhandle);
-
- {$ENDIF}
-
-  {$IFDEF LINUX}
-
-var
-  Libhandle : Pointer;
-
-{$IFDEF SEARCH_LIBS}
-  Path : String;
-{$ENDIF}
-
-initialization
-
-{$IFDEF SEARCH_LIBS}
-
-  Libhandle := nil;
-  Path := FindLibs(MADLibPath);
-  if Path <> '' then Libhandle := dlopen(@Path[1], RTLD_NOW or RTLD_GLOBAL);
-
-{$ELSE}
-
-  Libhandle := dlopen(MADLibPath, RTLD_NOW or RTLD_GLOBAL);
-
-{$ENDIF}
-
-  if Libhandle <> nil then
-  begin
-
     MADLibLoaded := True;
-
-    mad_decoder_init := dlsym(Libhandle, 'mad_decoder_init');
-    mad_decoder_finish := dlsym(Libhandle, 'mad_decoder_finish');
-    mad_decoder_run := dlsym(Libhandle, 'mad_decoder_run');
-    mad_decoder_message := dlsym(Libhandle, 'mad_decoder_message');
-    mad_stream_buffer := dlsym(Libhandle, 'mad_stream_buffer');
-    mad_stream_skip := dlsym(Libhandle, 'mad_stream_skip');
-    mad_stream_sync := dlsym(Libhandle, 'mad_stream_sync');
-
   end;
+  Result:=MADLibLoaded;
+end;
 
-finalization
-
-  if Libhandle <> nil then dlclose(Libhandle);
-
-  {$ENDIF}
+procedure UnloadMADLibrary();
+begin
+  if Libhandle <> NilHandle then FreeLibrary(Libhandle);
+  MADLibLoaded:=False;
+end;
 
 
 end.

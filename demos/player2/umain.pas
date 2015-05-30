@@ -132,7 +132,7 @@ end;
 procedure TfMain.AudioOut1ThreadException(Sender: TComponent; E: Exception);
 begin
   SendDebug(E.Message);
-  ShowMessage(E.Message);
+  //ShowMessage(E.Message);
 end;
 
 procedure TfMain.FormClose(Sender: TObject; var CloseAction: TCloseAction);

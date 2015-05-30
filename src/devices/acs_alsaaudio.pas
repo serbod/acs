@@ -7,6 +7,9 @@ See the license file for more details.
 This is the ACS for Linux version of the unit.
 *)
 
+{
+Status: 24 bit PCM works wrong
+}
 
 unit acs_alsaaudio;
 
@@ -16,7 +19,8 @@ interface
 {$ifdef mswindows}{$message error 'unit not supported'}{$endif}
 
 uses
-  Classes, SysUtils, ACS_Types, ACS_Classes, baseunix, alsa, ACS_Strings, ACS_Audio;
+  Classes, SysUtils, ACS_Types, ACS_Classes, alsa, ACS_Strings,
+  ACS_Audio, BaseUnix{, dbugintf};
 
 const
   BUF_SIZE = $4000;
@@ -69,6 +73,8 @@ type
 
 
   { TALSAAudioOut }
+  { ALSA use ring buffer, can play async with callback or polling
+    Polling is tricky }
 
   TALSAAudioOut = class(TAcsAudioOutDriver)
   private
@@ -80,7 +86,8 @@ type
     //_audio_fd: Integer;
     FLatency: Double;
     FSilentOnUnderrun: Boolean;
-    function GetDriverState: Integer;
+    function GetDriverState(): Integer;
+    function PollFreeBufferSize(): Integer;
   protected
     procedure SetDevice(Ch: Integer); override;
   public
@@ -104,6 +111,17 @@ type
 implementation
 
 {$ifdef LINUX}
+
+{
+procedure alsa_callback(ahandler: Psnd_async_handler_t); cdecl;
+var
+  audio_handle: Psnd_pcm_t;
+  AlsaAudioOut: TALSAAudioOut;
+begin
+  audio_handle:=snd_async_handler_get_pcm(ahandler);
+  AlsaAudioOut:=snd_async_handler_get_callback_private(ahandler);
+end;
+}
 
 constructor TALSAAudioIn.Create(AOwner: TComponent);
 begin
@@ -276,6 +294,7 @@ begin
   //FBufferSize:=32768;
   //FBufferSize:=$40000;
   FBufferSize:=$4000;
+  FFetchDelay:=10;
   FSilentOnUnderrun:=True;
 end;
 
@@ -293,8 +312,10 @@ var
 begin
   inherited Init();
 
+  FSampleSize:=(FInput.Channels * (FInput.BitsPerSample div 8));
   iNearDir:=0; // target/chosen exact value is <,=,> val following dir (-1,0,1)
-  Res:=snd_pcm_open(_audio_handle, PChar(FDeviceName), SND_PCM_STREAM_PLAYBACK, 0);
+
+  Res:=snd_pcm_open(_audio_handle, PChar(FDeviceName), SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
   if Res < 0 then
      raise EACSException.Create(Format(strCoudntopendeviceOut, [FDeviceName]));
   // set audio parameters
@@ -312,8 +333,10 @@ begin
   // set sample format
   if FInput.BitsPerSample = 8 then
     Res:=snd_pcm_hw_params_set_format(_audio_handle, _hw_params, SND_PCM_FORMAT_U8)
-  else
-    Res:=snd_pcm_hw_params_set_format(_audio_handle, _hw_params, SND_PCM_FORMAT_S16_LE);
+  else if FInput.BitsPerSample = 16 then
+    Res:=snd_pcm_hw_params_set_format(_audio_handle, _hw_params, SND_PCM_FORMAT_S16)
+  else if FInput.BitsPerSample = 24 then
+    Res:=snd_pcm_hw_params_set_format(_audio_handle, _hw_params, SND_PCM_FORMAT_S24);
   if Res < 0 then
      raise EACSException.Create('cannot set sample format');
 
@@ -329,22 +352,25 @@ begin
      raise EACSException.Create('cannot set channel count');
 
   // buffer size in samples
+  //FPeriodNum:=4;
+  //FPeriodSize:=(FBuffer.Size div FSampleSize) div FPeriodNum;
   if (FPeriodSize <> 0) and (FPeriodNum <> 0) then
   begin
     // approximate target period size in frames / returned chosen approximate target period size
     Res:=snd_pcm_hw_params_set_period_size_near(_audio_handle, _hw_params, @FPeriodSize, @iNearDir);
     // approximate target periods per buffer / returned chosen approximate target periods per buffer
     Res:=snd_pcm_hw_params_set_periods_near(_audio_handle, _hw_params, @FPeriodNum, @iNearDir);
-    iBufSize:=(FPeriodSize * FPeriodNum) div (FInput.Channels * (FInput.BitsPerSample div 8));
+    iBufSize:=(FPeriodSize * FPeriodNum) * FSampleSize;
   end
   else
-    iBufSize := FBuffer.Size div (FInput.Channels * (FInput.BitsPerSample div 8));
+    iBufSize := FBuffer.Size div FSampleSize;
   // approximate target buffer size in frames / returned chosen approximate target buffer size in frames
   // Returns 0 otherwise a negative error code if configuration space is empty
   if snd_pcm_hw_params_set_buffer_size_near(_audio_handle, _hw_params, @iBufSize) < 0 then
     raise EACSException.Create('cannot set buffer');
   // set new buffer size
-  FBuffer.Size:=iBufSize * (FInput.Channels * (FInput.BitsPerSample div 8));
+  FBuffer.Size:=iBufSize * FSampleSize;
+  FBuffer.Reset();
 
   // set parameters
   Res:=snd_pcm_hw_params(_audio_handle, _hw_params);
@@ -388,61 +414,85 @@ begin
   inherited Done();
 end;
 
+function TALSAAudioOut.PollFreeBufferSize(): Integer;
+begin
+  // Try to get allowed output data size
+  // wait till the interface is ready for data, or 500 msecond has elapsed.
+  Result:=snd_pcm_wait(_audio_handle, 500);
+  if Result < 0 then
+  begin
+    //if Assigned(OnThreadException) then
+    //  OnThreadException(Self, Exception.Create('poll failed'));
+    Exit;
+  end;
+
+  // find out how much space is available for playback data
+  Result:=snd_pcm_avail_update(_audio_handle);
+  if Result < 0 then
+  begin
+    //if Assigned(OnThreadException) then
+    //  OnThreadException(Self, Exception.Create('unknown ALSA avail update return value'));
+    Exit;
+  end;
+  Result:=Result * FSampleSize;
+end;
+
 function TALSAAudioOut.DoOutput(Abort: Boolean): Boolean;
 var
-  Len, i, VCoef, iSamplesCount, iSamplesWritten: Integer;
-  P8: PACSBuffer8;
-  P16: PACSBuffer16;
+  Len, i, iSamplesCount, iSamplesWritten, BytesAllowed, BytesWritten: Integer;
+  res: Integer;
 begin
   // No exceptions Here
   Result:=False;
   if not CanOutput then Exit;
   Len:=0;
-  if Abort then
-  begin
-    Done();
-    Exit;
-  end;
-  try
-    Len:=FillBufferFromInput();
-    if Len = 0 then
-    begin
-      Result:=False;
-      Exit;
-    end;
-    // apply volume coefficient
-    if FVolume < 255 then
-    begin
-      VCoef:=Round(FVolume / 255);
-      if FInput.BitsPerSample = 16 then
-      begin
-        P16:=FBuffer.Memory;
-        for i:=0 to (Len div 2)-1 do
-        P16[i]:=P16[i] * VCoef;
-      end
-      else
-      begin
-        P8:=FBuffer.Memory;
-        for i:=0 to Len-1 do
-        P8[i]:=P8[i] * VCoef;
-      end;
-    end;
+  if Abort then Exit;
 
-    iSamplesCount:=Len div (FInput.Channels * (FInput.BitsPerSample div 8));
-    // Write interleaved frames to a PCM.
-    // size	- frames to be written
-    // Returns a positive number of frames actually written, otherwise a negative error code
-    iSamplesWritten:=snd_pcm_writei(_audio_handle, FBuffer.Memory, iSamplesCount);
-    // retry when error (???)
-    while iSamplesWritten < 0 do
+  BytesAllowed:=PollFreeBufferSize();
+  if BytesAllowed < 0 then Exit;
+  // returned BytesAllowed not accurate, and can be greater, than actual
+
+  Result:=True;
+  // fill buffer if needed
+  if BytesAllowed >= FPrefetchSize then
+  begin
+    FBuffer.Reset();
+    // read chunk of data into buffer
+    Len:=FBuffer.GetBufWriteSize(BytesAllowed);
+    Len:=FInput.GetData(FBuffer.Memory + FBuffer.WritePosition, Len);
+    FBuffer.WritePosition:=FBuffer.WritePosition + Len;
+    //if FBuffer.WritePosition = FBuffer.Size then FBuffer.WritePosition:=0;
+    //EndOfInput:=(Len = 0);
+
+    while FBuffer.UnreadSize > 0 do
     begin
-      snd_pcm_prepare(_audio_handle);
-      if not FSilentOnUnderrun then
-         raise EALSABufferUnderrun.Create(strBufferunderrun);
-      iSamplesWritten:=snd_pcm_writei(_audio_handle, FBuffer.Memory, iSamplesCount);
+      // apply volume coefficient
+      //ApplyVolumeToBuffer(Len);
+
+      // write to output
+      iSamplesCount:=Len div FSampleSize;
+      // Write interleaved frames to a PCM.
+      // size	- frames to be written
+      // Returns a positive number of frames actually written, otherwise a negative error code
+      iSamplesWritten:=snd_pcm_writei(_audio_handle, FBuffer.Memory + FBuffer.ReadPosition, iSamplesCount);
+      BytesWritten:=(iSamplesWritten * FSampleSize);
+      //SendDebug('snd_pcm_writei()='+IntToStr(iSamplesWritten)+' BytesAllowed='+IntToStr(BytesAllowed)+' BytesWritten='+IntToStr(BytesWritten));
+      if iSamplesWritten = -ESysEPIPE then
+      begin
+        // underrrun
+        res := snd_pcm_prepare(_audio_handle);
+        iSamplesWritten:=snd_pcm_writei(_audio_handle, FBuffer.Memory + FBuffer.ReadPosition, iSamplesCount);
+        if iSamplesWritten < 0 then
+        begin
+          // error
+          Exit;
+        end;
+      end;
+      BytesWritten:=(iSamplesWritten * FSampleSize);
+      FBuffer.ReadPosition:=FBuffer.ReadPosition + BytesWritten;
+      //if FBuffer.ReadPosition = FBuffer.Size then FBuffer.ReadPosition:=0;
     end;
-    Result:=(iSamplesWritten = iSamplesCount);
-  except
+    Result:=(Len > 0) or (BytesAllowed < FBuffer.Size);
   end;
 end;
 

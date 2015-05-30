@@ -23,7 +23,7 @@ uses
   {$ENDIF}
 
   {$IFDEF LINUX}
-  Libc, ACS_Procs;
+  dynlibs, ACS_Procs;
   {$ENDIF}
 
 var
@@ -78,7 +78,7 @@ const
  {$ENDIF}
 
  {$IFDEF LINUX}
-  LibFLACPath = 'libFLAC.so*'; // libFLAC.so
+  LibFLACPath = 'libFLAC.so'; // libFLAC.so
   {$DEFINE SEARCH_LIBS}
  {$ENDIF}
 
@@ -332,7 +332,6 @@ type
     sample_rate : unsigned;
     channels : unsigned;
     bits_per_sample : unsigned;
-    d1 : single;
     total_samples : FLAC__uint64;
     md5sum : array[0..15] of FLAC__byte;
   end;
@@ -353,8 +352,8 @@ type
   FLAC__StreamMetadata = packed record
     _type : FLAC__MetadataType;
     is_last : FLAC__bool;
-    length : LongWord;
-    case i : Integer of
+    length : unsigned;
+    case integer of
       0: (stream_info : FLAC__StreamMetadata_StreamInfo);
       1: (vorbis_comment : FLAC__StreamMetadata_VorbisComment);
     // IMPORTANT: There is much more data in this structure actually,

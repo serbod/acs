@@ -17,11 +17,11 @@ TDXAudioIn - old buffer
 
 unit acs_dxaudio;
 
+interface
+
 {$ifdef WINDOWS}
 {$ifdef linux}{$message error 'unit not supported'}{$endif linux}
 {$DEFINE USE_EXTENDED_SPEC_FOR_24_BPS }
-
-interface
 
 uses
   ACS_Audio, SysUtils, Classes, Forms, ACS_Types, ACS_Classes, Windows,

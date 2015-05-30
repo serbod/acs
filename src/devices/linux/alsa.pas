@@ -35,7 +35,7 @@ unit alsa;
 interface
 
 uses
-  baseunix, ACS_Procs, ctypes, dl;
+  dynlibs, BaseUnix, ACS_Procs;
 
 const
   asoundlib_path = 'libasound.so*';
@@ -80,7 +80,7 @@ type
    Pu_int32_t = ^u_int32_t;
    u_int32_t = dword;
 
-   int16_t = cint16;
+   int16_t = int16;
    Pint16_t = ^int16_t;
 
   {  PCM generic info container  }
@@ -425,6 +425,7 @@ type
   snd_pcm_hwsync_t = function(pcm: Psnd_pcm_t):longint;cdecl;
   snd_pcm_delay_t = function(pcm:Psnd_pcm_t; delayp:Psnd_pcm_sframes_t):longint;cdecl;
   snd_pcm_resume_t = function(pcm:Psnd_pcm_t):longint;cdecl;
+  snd_pcm_avail_t = function(pcm:Psnd_pcm_t):snd_pcm_sframes_t;cdecl;
   snd_pcm_avail_update_t = function(pcm:Psnd_pcm_t):snd_pcm_sframes_t;cdecl;
   snd_pcm_rewind_t = function(pcm:Psnd_pcm_t; frames:snd_pcm_uframes_t):snd_pcm_sframes_t;cdecl;
   snd_pcm_writei_t = function(pcm:Psnd_pcm_t; buffer:pointer; size:snd_pcm_uframes_t):snd_pcm_sframes_t;cdecl;
@@ -581,7 +582,7 @@ type
   snd_pcm_hw_params_set_buffer_size_min_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; val:Psnd_pcm_uframes_t):longint;cdecl;
   snd_pcm_hw_params_set_buffer_size_max_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; val:Psnd_pcm_uframes_t):longint;cdecl;
   snd_pcm_hw_params_set_buffer_size_minmax_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t; min:Psnd_pcm_uframes_t; max:Psnd_pcm_uframes_t):longint;cdecl;
-  snd_pcm_hw_params_set_buffer_size_near_t = function(pcm:Psnd_pcm_t; params: Psnd_pcm_hw_params_t; val: Psnd_pcm_uframes_t): snd_pcm_uframes_t; cdecl;
+  snd_pcm_hw_params_set_buffer_size_near_t = function(pcm:Psnd_pcm_t; params: Psnd_pcm_hw_params_t; val: Psnd_pcm_uframes_t): snd_pcm_sframes_t; cdecl;
   snd_pcm_hw_params_set_buffer_size_first_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t):snd_pcm_uframes_t;cdecl;
   snd_pcm_hw_params_set_buffer_size_last_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_hw_params_t):snd_pcm_uframes_t;cdecl;
   snd_pcm_hw_params_get_tick_time_t = function(params:Psnd_pcm_hw_params_t; dir:Plongint):longint;cdecl;
@@ -825,6 +826,14 @@ var
   snd_pcm_mmap_readi : snd_pcm_mmap_readi_t;
   snd_pcm_mmap_writei : snd_pcm_mmap_writei_t;
   snd_pcm_open : snd_pcm_open_t;
+  { Wait for a PCM to become ready.
+    timeout	maximum time in milliseconds to wait, a negative value means infinity
+    Returns: a positive value on success otherwise a negative error code
+            (-EPIPE for the xrun and -ESTRPIPE for the suspended status, others for general errors)
+    0 - timeout occurred
+    1 - PCM stream is ready for I/O
+  }
+  snd_pcm_wait : snd_pcm_wait_t;
   snd_pcm_pause : snd_pcm_pause_t;
   snd_pcm_prepare : snd_pcm_prepare_t;
   snd_pcm_readi : snd_pcm_readi_t;
@@ -833,6 +842,30 @@ var
   snd_pcm_state : snd_pcm_state_t_t;
   snd_pcm_stream : snd_pcm_stream_t_t;
   snd_pcm_writei : snd_pcm_writei_t;
+  { Return number of frames ready to be read (capture) / written (playback)
+    Returns: a positive number of frames ready otherwise a negative error code
+    On capture does all the actions needed to transport to application level all
+    the ready frames across underlying layers.
+
+    The position is synced with hardware (driver) position in the sound ring
+    buffer in this functions. }
+  snd_pcm_avail : snd_pcm_avail_t;
+
+  { Return number of frames ready to be read (capture) / written (playback)
+    Returns: a positive number of frames ready otherwise a negative error code
+    On capture does all the actions needed to transport to application level all
+    the ready frames across underlying layers.
+
+    The position is not synced with hardware (driver) position in the sound ring
+    buffer in this function. This function is a light version of snd_pcm_avail() .
+
+    Using this function is ideal after poll() or select() when audio file descriptor
+    made the event and when application expects just period timing.
+
+    Also this function might be called after snd_pcm_delay() or snd_pcm_hwsync()
+    functions to move private ring buffer pointers in alsa-lib (the internal plugin chain). }
+  snd_pcm_avail_update : snd_pcm_avail_update_t;
+  snd_async_handler_get_pcm : snd_async_handler_get_pcm_t;
 
 // Mixer types
 
@@ -901,6 +934,9 @@ begin
     snd_pcm_mmap_readi := GetProcAddress(Libhandle, 'snd_pcm_mmap_readi');
     snd_pcm_mmap_writei := GetProcAddress(Libhandle, 'snd_pcm_mmap_writei');
     snd_pcm_open := GetProcAddress(Libhandle, 'snd_pcm_open');
+    snd_pcm_wait := GetProcAddress(Libhandle, 'snd_pcm_wait');
+    snd_pcm_avail := GetProcAddress(Libhandle, 'snd_pcm_avail');
+    snd_pcm_avail_update := GetProcAddress(Libhandle, 'snd_pcm_avail_update');
     snd_pcm_pause := GetProcAddress(Libhandle, 'snd_pcm_pause');
     snd_pcm_prepare := GetProcAddress(Libhandle, 'snd_pcm_prepare');
     snd_pcm_readi := GetProcAddress(Libhandle, 'snd_pcm_readi');

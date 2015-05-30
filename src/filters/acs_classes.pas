@@ -183,9 +183,7 @@ type
     property Bytes[Index: Integer]: Byte read GetByte write SetByte;
     { Access to samples. Inline code from GetSamplePtr for optimization. }
     property Samples[Index: Integer]: Pointer read GetSamplePtr;
-    { If True, then readed data extracted from buffer
-      If False, then ReadPosition not changed after read and data
-      can be read again from same position. }
+    { If True, then readed data extracted from buffer }
     property ReadExtract: Boolean read FReadExtract write FReadExtract;
     { Position of last and next Read() operation, increased after reading }
     property ReadPosition: Int64 read FReadPos write SetReadPos;
@@ -490,6 +488,7 @@ type
     FBPS: Integer;
     FSR: Integer;
     FChan: Integer;
+    FSampleSize: Integer;  // Sample size in bytes
     FLoop: Boolean;
     FStartSample: Integer;
     FEndSample: Integer;
@@ -832,7 +831,9 @@ var
 begin
   FLock.BeginRead();
   Position:=FReadPos;
+  if Count > (Size-Position) then Count:=(Size-Position);
   Result:=inherited Read(Buffer, Count);
+  Inc(FReadPos, Result);
   if ReadExtract then
   begin
     // remove readed data from buffer
@@ -845,10 +846,6 @@ begin
       Move(Pointer(s)^, (Self.Memory+FReadPos)^, Length(s));
       Dec(FWritePos, Result);
     end;
-  end
-  else
-  begin
-    Inc(FReadPos, Result);
   end;
   Dec(FUnreadSize, Result);
   FLock.EndRead();
@@ -1146,7 +1143,7 @@ end;
 procedure TAcsCustomOutput.Done();
 begin
   if Assigned(FInput) then FInput.Done();
-  SetBufferSize(0);
+  //SetBufferSize(0);
 end;
 
 procedure TAcsCustomOutput.Run();
@@ -1246,10 +1243,13 @@ function TAcsCustomOutput.FillBufferFromInput(): Integer;
 begin
   Result:=0;
   if not Assigned(FInput) then Exit;
-  while InputLock do;
+  while InputLock do Sleep(1);
   InputLock:=True;
   //Result:=FInput.GetData(FBuffer);
+  FBuffer.Reset();
   Result:=FInput.GetData(FBuffer.Memory, FBuffer.Size);
+  FBuffer.WritePosition:=FBuffer.WritePosition + Result;
+  //if FBuffer.WritePosition = FBuffer.Size then FBuffer.WritePosition:=0;
   InputLock:=False;
 end;
 
@@ -1274,10 +1274,10 @@ end;
 
 function TAcsCustomOutput.GetTE(): Real;
 begin
-   if not Assigned(FInput) then
-     Result:=0
+   if Assigned(FInput) then
+     Result:=Round(FInput.Position / ((FInput.BitsPerSample shr 3) * FInput.Channels * FInput.SampleRate))
    else
-     Result:=Round(FInput.Position / ((FInput.BitsPerSample shr 3) * FInput.Channels * FInput.SampleRate));
+     Result:=0;
 end;
 
 function TAcsCustomOutput.GetDelay(): Integer;
@@ -1330,12 +1330,15 @@ end;
 
 function TAcsCustomOutput.GetBufferSize(): Integer;
 begin
-  Result:=FBuffer.Size;
+ if Assigned(FBuffer) then
+   Result:=FBuffer.Size
+ else
+   Result:=0;
 end;
 
 procedure TAcsCustomOutput.SetBufferSize(AValue: Integer);
 begin
-  if AValue > 0 then FBuffer.Size:=AValue;
+  if (AValue > 0) and Assigned(FBuffer) then FBuffer.Size:=AValue;
 end;
 
 { TAcsStreamedInput }

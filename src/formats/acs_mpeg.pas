@@ -1,11 +1,14 @@
 (*
-SDL SMPEG library (MPEG-1) components
+SMPEG library (MPEG-1) components
 
 This file is a part of Audio Components Suite.
 Copyright (C) 2002-2005 Andrei Borovsky. All rights reserved.
 See the license file for more details.
 This is the ACS for Linux and Windows version of the unit.
 *)
+{
+Status: tested
+}
 
 unit acs_mpeg;
 
@@ -18,6 +21,7 @@ type
   TMPEGIn = class(TAcsCustomFileIn)
   private
     _M: Pointer;
+    info: SMPEG_info;
   protected
     procedure OpenFile(); override;
     procedure CloseFile(); override;
@@ -33,7 +37,7 @@ implementation
 constructor TMPEGIn.Create();
 begin
   inherited Create(AOwner);
-  BufferSize:=$8000;
+  FBufferSize:=$8000;
   FStreamDisabled:=True;
 end;
 
@@ -44,10 +48,10 @@ end;
 
 procedure TMPEGIn.OpenFile();
 var
-  info: SMPEG_info;
   spec: SDL_AudioSpec;
 begin
-  if not FOpened then
+  inherited OpenFile();
+  if FOpened then
   begin
     (* the next call is needed just to make sure
       the SDL library is loaded *)
@@ -61,18 +65,24 @@ begin
     if info.has_audio <> 1 then
     begin
       SMPEG_delete(_M);
+      _M:=nil;
       FValid:=False;
       Exit;
     end;
-    FTotalTime:=info.total_time;
-    FTime:=Round(info.total_time);
+    FTotalTime:=info.total_time / 2;
     SMPEG_wantedSpec(_M, spec);
     FSR:=spec.freq;
     FBPS:=16;
     if (spec.format = AUDIO_S8) or (spec.format = AUDIO_U8) then
       FBPS:=8;
+    if (spec.format = AUDIO_S32) then
+      FBPS:=32;
+    if (spec.format = AUDIO_F32) then
+      FBPS:=32;
     FChan:=spec.channels;
-    FSize:=Round(FTotalTime * FChan * FSR * (FBPS div 8));
+    FSampleSize:=FChan * (FBPS div 8);
+    FSize:=Round(FTotalTime * FSR) * FSampleSize;
+    FBufferSize:=spec.samples * FSampleSize;
     FValid:=True;
     FOpened:=True;
     SMPEG_play(_M);
@@ -85,22 +95,23 @@ begin
   begin
     if SMPEG_status(_M) = SMPEG_PLAYING then SMPEG_stop(_M);
     SMPEG_delete(_M);
-    FOpened:=False;
+    inherited CloseFile();
   end;
 end;
 
 function TMPEGIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
-  l, offs: Integer;
-  tmp: Single;
+  Len, offs, AlignedSize: Integer;
+  //tmp: Single;
 begin
-  if not Active then
-    raise EACSException.Create('The Stream is not opened');
-  if not FOpened then
+  if (not Active) or (not FOpened) then
     raise EACSException.Create('The Stream is not opened');
 
-  if BufStart > BufEnd then
+  if FAudioBuffer.UnreadSize <= 0 then
   begin
+    //if FAudioBuffer.Size <> FBufferSize then FAudioBuffer.Size:=FBufferSize;
+    FAudioBuffer.Reset();
+    {
     if FOffset <> 0 then
     begin
       offs:=Round((FOffset / 100) * FSize);
@@ -113,21 +124,25 @@ begin
       begin
         SMPEG_rewind(_M);
         SMPEG_play(_M);
-        tmp:=(FPosition / FSize) * FTime;
+        tmp:=(FPosition / FSize) * FTotalTime;
         SMPEG_skip(_M, tmp);
       end;
-      tmp:=(FOffset / 100) * FTime;
+      tmp:=(FOffset / 100) * FTotalTime;
       SMPEG_skip(_M, tmp);
       FOffset:=0;
     end;
-    BufStart:=1;
-    //FillChar(Self.FBuffer, Self.BufferSize, 0);
+    }
+    // it's very special voodoo!! looks like, SMPEG use XOR to set buffer content
+    FillChar(FAudioBuffer.Memory^, FAudioBuffer.Size, 0);
 
-    l:=Self.BufferSize;
-    //l:=SMPEG_playAudio(_M, @FBuffer[BufEnd+1], ABufferSize - BufEnd);
-    l:=SMPEG_playAudio(_M, @Self.FBuffer[1], Self.BufferSize);
-    if l = 0 then
+    // align buffer size
+    AlignedSize:=FAudioBuffer.Size - (FAudioBuffer.Size mod FSampleSize);
+    // decode audio to PCM
+    Len:=SMPEG_playAudio(_M, FAudioBuffer.Memory, AlignedSize);
+    FAudioBuffer.WritePosition:=FAudioBuffer.WritePosition + Len;
+    if Len = 0 then
     begin
+      {
       if FLoop then
       begin
         Done();
@@ -135,24 +150,21 @@ begin
         SMPEG_rewind(_M);
         SMPEG_play(_M);
         FPosition:=0;
-        //l:=SMPEG_playAudio(_M, @FBuffer[BufEnd+1], ABufferSize - BufEnd);
-        l:=SMPEG_playAudio(_M, @Self.FBuffer[0], Self.BufferSize);
+        //Len:=SMPEG_playAudio(_M, @FBuffer[BufEnd+1], ABufferSize - BufEnd);
+        Len:=SMPEG_playAudio(_M, @Self.FBuffer[0], Self.BufferSize);
       end
       else
+      }
       begin
         Result:=0;
         Exit;
       end;
     end;
-    BufEnd:=l;
   end;
 
-  if ABufferSize < (BufEnd - BufStart + 1) then
-    Result:=ABufferSize
-  else
-    Result:=BufEnd - BufStart + 1;
-  Move(FBuffer[BufStart], ABuffer^, Result);
-  Inc(BufStart, Result);
+  Result:=FAudioBuffer.UnreadSize;
+  if Result > ABufferSize then Result:=ABufferSize;
+  FAudioBuffer.Read(ABuffer^, Result);
   Inc(FPosition, Result);
 end;
 

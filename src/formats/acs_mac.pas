@@ -12,9 +12,10 @@
 
 unit acs_mac;
 
-{$ifdef linux}{$message error 'unit not supported'}{$endif linux}
-
 interface
+
+{$ifdef WINDOWS}
+{$ifdef linux}{$message error 'unit not supported'}{$endif linux}
 
 uses
   ACS_File, Classes, SysUtils, Windows, ACS_Classes, MACDll;
@@ -74,7 +75,11 @@ type
     property TotalBlocks: Integer read GetTotalBlocks;
   end;
 
+{$endif WINDOWS}
+
 implementation
+
+{$ifdef WINDOWS}
 
 constructor TMACOut.Create();
 begin
@@ -386,6 +391,7 @@ initialization
 finalization
   UnloadMacLibrary();
 
+{$endif WINDOWS}
 
 end.
 

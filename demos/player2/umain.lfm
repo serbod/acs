@@ -1,7 +1,7 @@
 object fMain: TfMain
-  Left = 271
+  Left = 333
   Height = 99
-  Top = 150
+  Top = 310
   Width = 201
   HorzScrollBar.Page = 203
   VertScrollBar.Page = 98
@@ -25,9 +25,9 @@ object fMain: TfMain
     TabOrder = 0
     object lTime: TLabel
       Left = 1
-      Height = 35
+      Height = 29
       Top = 24
-      Width = 88
+      Width = 96
       Caption = '00:00:00'
       Font.Height = -25
       ParentColor = False
@@ -35,7 +35,7 @@ object fMain: TfMain
     end
     object lFilename: TLabel
       Left = 1
-      Height = 12
+      Height = 11
       Top = 1
       Width = 190
       Align = alTop
@@ -47,7 +47,7 @@ object fMain: TfMain
     end
     object lTime1: TLabel
       Left = 1
-      Height = 12
+      Height = 11
       Top = 20
       Width = 50
       Caption = 'Time remain'
@@ -58,9 +58,9 @@ object fMain: TfMain
     end
     object lTime2: TLabel
       Left = 116
-      Height = 12
+      Height = 11
       Top = 20
-      Width = 13
+      Width = 14
       Caption = 'left'
       Font.Height = -9
       ParentColor = False
@@ -70,7 +70,7 @@ object fMain: TfMain
       Left = 116
       Height = 15
       Top = 28
-      Width = 42
+      Width = 48
       Caption = '00:00:00'
       Font.Height = -12
       ParentColor = False

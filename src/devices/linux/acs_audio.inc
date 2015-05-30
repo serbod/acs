@@ -212,7 +212,7 @@ function TStdAudioIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   l: Integer;
 begin
-  if not Busy then
+  if not Active then
     raise EACSException.Create(strStreamnotOpen);
   if (FRecBytes >= 0) and (FPosition >= FRecBytes) then
   begin

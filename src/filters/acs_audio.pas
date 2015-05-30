@@ -21,7 +21,7 @@ unit acs_audio;
 interface
 
 uses
-  acs_classes, Classes, ACS_Strings, SysUtils;
+  acs_classes, Classes, acs_strings, SysUtils, acs_types;
 
 const
   DefaultBufferSize = $8000;
@@ -252,6 +252,8 @@ type
     function GetDeviceCount: Integer; virtual;
     function GetDeviceName(ADeviceNumber: Integer): string; virtual;
     function GetDeviceInfo(ADeviceNumber: Integer): TAcsDeviceInfo; virtual;
+    { Modify volume in buffer for ALen bytes. If ALen not set, modify whole buffer }
+    procedure ApplyVolumeToBuffer(ALen: Integer = 0);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -834,6 +836,34 @@ function TAcsAudioOutDriver.GetDeviceInfo(ADeviceNumber: Integer
 begin
   if (ADeviceNumber < 0) or (ADeviceNumber >= GetDeviceCount) then Exit;
   Result:=FDeviceInfoArray[ADeviceNumber];
+end;
+
+procedure TAcsAudioOutDriver.ApplyVolumeToBuffer(ALen: Integer);
+var
+  i: Integer;
+  VCoef: Real;
+  P8: PACSBuffer8;
+  P16: PACSBuffer16;
+begin
+  {$R-}
+  // apply volume coefficient
+  if FVolume < 255 then
+  begin
+    VCoef:=FVolume / 255;
+    if FInput.BitsPerSample = 16 then
+    begin
+      P16:=FBuffer.Memory;
+      for i:=0 to (ALen div 2)-1 do
+        P16[i]:=Trunc(P16[i] * VCoef);
+    end
+    else
+    begin
+      P8:=FBuffer.Memory;
+      for i:=0 to ALen-1 do
+        P8[i]:=Trunc(P8[i] * VCoef);
+    end;
+  end;
+  {$R+}
 end;
 
 constructor TAcsAudioOutDriver.Create(AOwner: TComponent);

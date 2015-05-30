@@ -32,12 +32,24 @@ uses
   MSAcm, waveconverter, mmsystem,
   {$ENDIF}
 
-  {$IFDEF LINUX}
+  {$ifdef LINUX}
   Math, MAD,
-  {$ENDIF}
-  ACS_File, Classes, SysUtils, ACS_Types, ACS_Classes, ACS_Strings;
+  {$endif}
+  ACS_File, Classes, SysUtils, ACS_Types, ACS_Classes, ACS_Strings{, dbugintf};
 
 type
+
+  {$ifdef LINUX}
+  TWaveFormatEx = packed Record
+    wFormatTag: WORD;
+    nChannels: WORD;
+    nSamplesPerSec: DWORD;
+    nAvgBytesPerSec: DWORD;
+    nBlockAlign: WORD;
+    wBitsPerSample: WORD;
+    cbSize: WORD;
+  end;
+  {$endif}
 
   TWaveFormatExtensible = packed record
     Format: TWaveFormatEx;
@@ -318,7 +330,6 @@ type
     OldStreamAssigned: Boolean;
     TmpBuffer: Pointer;
     ShortIEEEFloat: Boolean;
-    FSampleSize: Integer;
     {$IFDEF LINUX}
     // MS ACM stuff
     HasFirstFrame: Boolean;
@@ -1438,6 +1449,7 @@ begin
   Result:=ABufferSize;
   if Result > FAudioBuffer.UnreadSize then
     Result:=FAudioBuffer.UnreadSize;
+  //SendDebug('Wave.Pos='+IntToStr(FPosition)+'  Result='+IntToStr(Result));
   FAudioBuffer.Read(ABuffer^, Result);
   Inc(FPosition, Result);
 end;
