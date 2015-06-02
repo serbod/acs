@@ -14,6 +14,9 @@ Status:
 TFLACOut - not tested
 
 TFLACIn - OK
+
+Some problems in record packing/alignment for FLAC__StreamMetadata and it's members
+tested for Win32
 }
 
 unit acs_flac;
@@ -267,7 +270,7 @@ begin
     Inc(StrCount);
     Inc(BS, Length(Comments.AlbumPeak) + 4);
   end;
-  Header[0]:=FLAC__METADATA_TYPE_VORBIS_COMMENT;
+  Header[0]:=Ord(FLAC__METADATA_TYPE_VORBIS_COMMENT);
   if not HasNext then
     Inc(Header[0], 128);
   Move(BS, Header[1], 3);
@@ -328,7 +331,7 @@ begin
       Move(buffer^, Header, 4);
       BI.HasNext:=(Header[0] shr 7) = 0;
       BI.BlockType:=Header[0] mod 128;
-      if (BI.BlockType = FLAC__METADATA_TYPE_VORBIS_COMMENT) then
+      if (BI.BlockType = Ord(FLAC__METADATA_TYPE_VORBIS_COMMENT)) then
       begin
         FLACOut.BolckInserted:=True;
         if FlacOut.FTags.Artist <> '' then

@@ -106,7 +106,7 @@ begin
   FVolume:=255;
   _audio_fd:=-1;
   Delay:=6;
-  FReadChunks:=8;
+  FReadChunks:=4;
   FBufferSize:=$8000; // default buffer size
 end;
 
@@ -260,6 +260,8 @@ begin
     InputLock:=True;
     Len:=FBuffer.GetBufWriteSize(BytesAllowed);
     if Len > FBlockSize then Len:=FBlockSize;
+    Assert(FBuffer.WritePosition >= 0);
+    Assert((FBuffer.WritePosition + Len) <= FBuffer.Size, 'WP='+IntToStr(FBuffer.WritePosition)+'  Len='+IntToStr(Len)+'  Size='+IntToStr(FBuffer.Size));
     Len:=FInput.GetData(FBuffer.Memory + FBuffer.WritePosition, Len);
     InputLock:=False;
     if Len <= 0 then
@@ -289,6 +291,8 @@ begin
       end;
     end;
     // create output block, that points to data, and add it to playing chain
+    Assert(FBuffer.ReadPosition >= 0);
+    Assert((FBuffer.ReadPosition + Len) <= FBuffer.Size);
     EnterCriticalSection(CrSecO);
     try
       WriteBlock(FBuffer.Memory+FBuffer.ReadPosition, Len);

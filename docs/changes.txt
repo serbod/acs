@@ -1,3 +1,6 @@
+2015-06-02  serbod
+* memory bugs fixed in TWaveIn, TStdAudio, TFlacIn
+
 2015-05-29  serbod
 * AcsTags - updated
 

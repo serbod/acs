@@ -328,7 +328,8 @@ type
     _MS: TMemoryStream;
     OldStream: TStream;
     OldStreamAssigned: Boolean;
-    TmpBuffer: Pointer;
+    //TmpBuffer: Pointer;
+    TmpBuffer: array of Byte;
     ShortIEEEFloat: Boolean;
     {$IFDEF LINUX}
     // MS ACM stuff
@@ -337,8 +338,8 @@ type
     Data: Pointer;
     DataLen: Integer;
     {$ENDIF}
-    function ReadDecodeIMAADPCMBlock(): Integer;
-    function ReadDecodeMSADPCMBlock(): Integer;
+    function ReadDecodeIMAADPCMBlock(AOutBuf: Pointer; AOutBufSize: Integer): Integer;
+    function ReadDecodeMSADPCMBlock(AOutBuf: Pointer; AOutBufSize: Integer): Integer;
     function GetWavType(): TWavType;
     procedure ReadRIFFHeader();
   protected
@@ -677,7 +678,7 @@ var
   DVIInBuf: PAcsBuffer16;
   DVIOutBuf: PAcsBuffer8;
   P: PAcsBuffer8;
-  Ptr: Pointer;
+  //Ptr: Pointer;
   BlockDataSize: Integer;
 begin
   // No exceptions Here
@@ -823,7 +824,7 @@ end;
 
 procedure TWaveOut.FillHeaderIMA_ADPCM(var Header: TIMA_ADPCMHeader);
 var
-  text: array[0..4] of Char;
+  //text: array[0..4] of Char;
   samples: Integer;
 begin
   Header.RIFF:='RIFF';
@@ -1235,7 +1236,6 @@ end;
 
 procedure TWaveIn.OpenFile();
 var
-  Len: Integer;
 {$IFDEF WIN32}
   WaveConverter: TWaveConverter;
   ValidItems: LongWord;
@@ -1266,7 +1266,8 @@ begin
           if FBPS <> 4 then FValid:=False;
           FBPS:=16;
           FSize:=LongWord(IMA_ADPCM_INFO.DataSize) * 2 * FChan;
-          if not Assigned(TmpBuffer) then GetMem(TmpBuffer, IMA_ADPCM_INFO.BlockLength);
+          //if not Assigned(TmpBuffer) then GetMem(TmpBuffer, IMA_ADPCM_INFO.BlockLength);
+          SetLength(TmpBuffer, IMA_ADPCM_INFO.BlockLength);
         end;
 
         wtMS_ADPCM:
@@ -1274,7 +1275,8 @@ begin
           FValid:=True;
           FBPS:=16;
           FSize:=MS_ADPCM_INFO.DataSize * 2 * FChan;
-          if not Assigned(TmpBuffer) then GetMem(TmpBuffer, MS_ADPCM_INFO.BlockLength);
+          //if not Assigned(TmpBuffer) then GetMem(TmpBuffer, MS_ADPCM_INFO.BlockLength);
+          SetLength(TmpBuffer, MS_ADPCM_INFO.BlockLength);
         end;
 
         wtIEEEFloat, wtExtIEEEFloat:
@@ -1378,8 +1380,9 @@ begin
       end
       else if (_WavType in [wtMS_ADPCM, wtIMA_ADPCM]) then
       begin
-        if Assigned(TmpBuffer) then FreeMem(TmpBuffer);
-        TmpBuffer:=nil;
+        //if Assigned(TmpBuffer) then FreeMem(TmpBuffer);
+        //TmpBuffer:=nil;
+        SetLength(TmpBuffer, 0);
       end;
     end;
     inherited CloseFile();
@@ -1402,13 +1405,13 @@ begin
     case _WavType of
       wtIMA_ADPCM:
       begin
-        Len:=ReadDecodeIMAADPCMBlock();
+        Len:=ReadDecodeIMAADPCMBlock(FAudioBuffer.Memory, FAudioBuffer.Size);
         FAudioBuffer.WritePosition:=FAudioBuffer.WritePosition + Len;
       end;
 
       wtMS_ADPCM:
       begin
-        Len:=ReadDecodeMSADPCMBlock();
+        Len:=ReadDecodeMSADPCMBlock(FAudioBuffer.Memory, FAudioBuffer.Size);
         FAudioBuffer.WritePosition:=FAudioBuffer.WritePosition + Len;
       end;
 
@@ -1443,7 +1446,6 @@ begin
         if Len > 0 then Len:=FAudioBuffer.CopyFrom(FStream, AlignedSize);
       end;
     end;
-    if Len <= 0 then
   end;
 
   Result:=ABufferSize;
@@ -1494,40 +1496,41 @@ begin
   CloseFile();
 end;
 
-function TWaveIn.ReadDecodeIMAADPCMBlock(): Integer;
+function TWaveIn.ReadDecodeIMAADPCMBlock(AOutBuf: Pointer; AOutBufSize: Integer
+  ): Integer;
 var
   BlockHeaderSize, Len: Integer;
   BH: TIMA_ADPCMBlockHeader;
-  i, j, OutPos, InPos, ch, chIndex: Integer;
+  i, OutPos, InPos, ch: Integer;
   Diff, SampleValue, Step, StepIndex: Integer;
   Nibble: Byte;
-  InData: PAcsBuffer8;
+  //InData: PAcsBuffer8;
   OutData: PAcsBuffer16;
 begin
   Result:=0;
+  if AOutBufSize < (IMA_ADPCM_INFO.SamplesPerBlock * FSampleSize) then Exit;
   // === Read ===
-  //if Seekable then
-  //if FStream.Position >= FStream.Size then Exit;
-  //SetLength(Block, IMA_ADPCM_INFO.BlockLength);
-  if FStream.Read(TmpBuffer^, IMA_ADPCM_INFO.BlockLength) < IMA_ADPCM_INFO.BlockLength then Exit;
+  if Seekable and (FStream.Position >= (FStream.Size - IMA_ADPCM_INFO.BlockLength)) then Exit;
+  if FStream.Read(TmpBuffer[0], IMA_ADPCM_INFO.BlockLength) < IMA_ADPCM_INFO.BlockLength then Exit;
   BlockHeaderSize:=0;
   for ch:=0 to FChan-1 do
   begin
-    Move((TmpBuffer+BlockHeaderSize)^, BH, SizeOf(BH));
+    Move(TmpBuffer[BlockHeaderSize], BH, SizeOf(BH));
     IMA_ADPCM_STATE.valprev[ch]:=BH.Samp0;
     IMA_ADPCM_STATE.index[ch]:=BH.StepTableIndex;
     BlockHeaderSize:=BlockHeaderSize + SizeOf(BH);
   end;
 
   // === Decode ===
-  InData:=TmpBuffer + BlockHeaderSize;
-  OutData:=FAudioBuffer.Memory;
+  //InData:=TmpBuffer + BlockHeaderSize;
+  OutData:=AOutBuf;
   OutPos:=0;
-  {$R-}
   // get first sample from header
   for ch:=0 to FChan-1 do
   begin
+    {$R-}
     OutData[OutPos]:=IMA_ADPCM_STATE.valprev[ch];
+    {$R+}
     Inc(OutPos);
   end;
   // decode samples
@@ -1540,23 +1543,26 @@ begin
   next 4 bytes belong to the right channel. This interleaving continues until
   the end of the chunk  }
 
-  //Len:=IMA_ADPCM_INFO.BlockLength - BlockHeaderSize;
-  Len:=(IMA_ADPCM_INFO.SamplesPerBlock-1) * 2; // nibbles count
+  // nibbles (half-bytes) count
+  //Len:=(IMA_ADPCM_INFO.BlockLength - BlockHeaderSize) * (2 div FChan);
+  Len:=(IMA_ADPCM_INFO.SamplesPerBlock-1) * (2 div FChan);
   for ch:=0 to FChan-1 do
   begin
-    InPos:=0;
+    InPos:=BlockHeaderSize + (ch * 4);
     OutPos:=FChan + ch;
     SampleValue:=IMA_ADPCM_STATE.valprev[ch];
     StepIndex:=IMA_ADPCM_STATE.index[ch];
     for i:=0 to (Len-1) do
     begin
-      j := i div 2;  // byte index
-      if FChan = 2 then j:=(j div 4)*8 + (j mod 4) + (ch * 4);
-
-      if (i and 1) = 1 then
-        Nibble:=InData[j] shr 4    // high half-byte
+      if (i and 1) > 0 then
+      begin
+        Nibble:=TmpBuffer[InPos] shr 4;    // high half-byte
+        Inc(InPos);
+        // for stereo, skip every 4 bytes
+        if (FChan = 2) and ((InPos mod 4) = 0) then Inc(InPos, 4);
+      end
       else
-        Nibble:=InData[j] and 15;  // low half-byte
+        Nibble:=TmpBuffer[InPos] and 15;  // low half-byte
 
       Step:=StepTab[StepIndex];
       Diff:=(Step shr 3);
@@ -1571,32 +1577,37 @@ begin
       if StepIndex > 88 then StepIndex:=88;
       if StepIndex < 0 then StepIndex:=0;
 
+      {$R-}
       OutData[OutPos]:=SampleValue;
+      {$R+}
       Inc(OutPos, 2);
       //IMA_ADPCM_STATE.index[ch]:=StepIndex;
       //IMA_ADPCM_STATE.valprev[ch]:=SampleValue;
     end;
   end;
-  {$R+}
-  Result:=(Len + 1) * (FBPS div 8);
+  Result:=IMA_ADPCM_INFO.SamplesPerBlock * FSampleSize;
 end;
 
-function TWaveIn.ReadDecodeMSADPCMBlock(): Integer;
+function TWaveIn.ReadDecodeMSADPCMBlock(AOutBuf: Pointer; AOutBufSize: Integer
+  ): Integer;
 var
   BlockHeaderSize, Len: Integer;
   BHM: TMSADPCMBlockHeaderMono;
   BHS: TMSADPCMBlockHeaderStereo;
   pos, i, PredSamp, Nibble, ch, chIndex: Integer;
-  InData: PAcsBuffer8;
+  //InData: PAcsBuffer8;
   OutData: PAcsBuffer16;
 begin
   Result:=0;
+  //InData:=@TmpBuffer[0];
+  if AOutBufSize< (MS_ADPCM_INFO.SamplesPerBlock * FSampleSize) then Exit;
   // === Read ===
-  if FStream.Read(TmpBuffer^, MS_ADPCM_INFO.BlockLength) < MS_ADPCM_INFO.BlockLength then Exit;
+  if Seekable and (FStream.Position >= (FStream.Size - MS_ADPCM_INFO.BlockLength)) then Exit;
+  if FStream.Read(TmpBuffer[0], MS_ADPCM_INFO.BlockLength) < MS_ADPCM_INFO.BlockLength then Exit;
   if FChan = 1 then
   begin
     BlockHeaderSize:=SizeOf(BHM);
-    Move(TmpBuffer^, BHM, BlockHeaderSize);
+    Move(TmpBuffer[0], BHM, BlockHeaderSize);
     MS_ADPCM_STATE.predictor[0]:=BHM.predictor;
     MS_ADPCM_STATE.Delta[0]:=BHM.Delta;
     MS_ADPCM_STATE.Samp1[0]:=BHM.Samp1;
@@ -1606,23 +1617,25 @@ begin
   begin
     BlockHeaderSize:=SizeOf(BHS);
     //Move(TmpBuffer^, BHS, BlockHeaderSize);
-    Move(TmpBuffer^, MS_ADPCM_STATE, BlockHeaderSize);
+    Move(TmpBuffer[0], MS_ADPCM_STATE, BlockHeaderSize);
     //MS_ADPCM_STATE:=BHS;
   end;
 
   // === Decode ===
-  InData:=TmpBuffer;
-  OutData:=FAudioBuffer.Memory;
-  {$R-}
+  OutData:=AOutBuf;
   pos:=0;
   for ch:=0 to FChan-1 do
   begin
+    {$R-}
     OutData[pos]:=MS_ADPCM_STATE.Samp2[ch];
+    {$R+}
     Inc(pos);
   end;
   for ch:=0 to FChan-1 do
   begin
+    {$R-}
     OutData[pos]:=MS_ADPCM_STATE.Samp1[ch];
+    {$R+}
     Inc(pos);
   end;
 
@@ -1637,16 +1650,18 @@ begin
       PredSamp:=(MS_ADPCM_STATE.Samp1[ch] * MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[ch]].Coef1 +
                    MS_ADPCM_STATE.Samp2[ch] * MS_ADPCM_INFO.CoefSets[MS_ADPCM_STATE.predictor[ch]].Coef2) div 256;
       if chIndex = 0 then
-        Nibble:=InData[BlockHeaderSize+i] shr 4    // high half-byte
+        Nibble:=TmpBuffer[BlockHeaderSize+i] shr 4    // high half-byte
       else if chIndex = 1 then
-        Nibble:=InData[BlockHeaderSize+i] and 15;  // low half-byte
+        Nibble:=TmpBuffer[BlockHeaderSize+i] and 15;  // low half-byte
       if (Nibble and 8) <> 0 then
         PredSamp:=PredSamp + MS_ADPCM_STATE.Delta[ch] * (Nibble - 16)
       else
         PredSamp:=PredSamp + MS_ADPCM_STATE.Delta[ch] * (Nibble);
       if PredSamp > 32767 then PredSamp:=32767;
       if PredSamp < -32768 then PredSamp:=-32768;
+      {$R-}
       OutData[pos]:=PredSamp;
+      {$R+}
       Inc(pos);
       MS_ADPCM_STATE.Delta[ch]:=(MS_ADPCM_STATE.Delta[ch] * adaptive[Nibble]) div 256;
       if MS_ADPCM_STATE.Delta[ch] < 16 then MS_ADPCM_STATE.Delta[ch]:=16;

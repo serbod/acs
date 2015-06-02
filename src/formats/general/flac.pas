@@ -31,27 +31,42 @@ var
   LibFLACLoaded : Boolean = False;
 
 type
-
+  {$ifdef WINDOWS}
+    //{$PackRecords NORMAL}
+  {$else}
+    {$ifdef LINUX}
+      {$PackRecords C}
+    {$endif}
+  {$endif}
   unsigned = LongWord;
   long = Integer;
 
   FLAC__byte = Byte;
   PFLAC__byte = ^FLAC__byte;
 
-  FLAC__uint64 = Int64;
+  FLAC__uint64 = uint64;
   PFLAC__uint64 = ^FLAC__uint64;
 
-  FLAC__uint32 = LongWord;
+  FLAC__uint32 = uint32;
   PFLAC__uint32 = ^FLAC__uint32;
   PPFLAC__uint32 = ^PFLAC__uint32;
 
-  FLAC__int32 = Integer;
+  FLAC__int32 = int32;
   PFLAC__int32 = ^FLAC__int32;
   PPFLAC__int32 = ^PFLAC__int32;
 
   FLAC__bool = LongBool;
 
-  FLAC__MetadataType = Integer;
+  //FLAC__MetadataType = Integer;
+  FLAC__MetadataType = (FLAC__METADATA_TYPE_STREAMINFO = 0,
+                        FLAC__METADATA_TYPE_PADDING = 1,
+                        FLAC__METADATA_TYPE_APPLICATION = 2,
+                        FLAC__METADATA_TYPE_SEEKTABLE = 3,
+                        FLAC__METADATA_TYPE_VORBIS_COMMENT = 4,
+                        FLAC__METADATA_TYPE_CUESHEET = 5,
+                        FLAC__METADATA_TYPE_PICTURE = 6,
+                        FLAC__METADATA_TYPE_UNDEFINED = 7,
+                        FLAC__MAX_METADATA_TYPE = 126);
 
   P_FLAC__StreamDecoder = Pointer;
 
@@ -326,7 +341,7 @@ type
 
   PFLAC__Frame = ^FLAC__Frame;
 
-  FLAC__StreamMetadata_StreamInfo = packed record
+  FLAC__StreamMetadata_StreamInfo = {packed} record
     min_blocksize, max_blocksize : unsigned;
     min_framesize, max_framesize : unsigned;
     sample_rate : unsigned;
@@ -343,17 +358,17 @@ type
 
   PFLAC__StreamMetadata_VorbisComment_Entry = ^FLAC__StreamMetadata_VorbisComment_Entry;
 
-  FLAC__StreamMetadata_VorbisComment = packed record
+  FLAC__StreamMetadata_VorbisComment = {packed} record
     vendor_string : FLAC__StreamMetadata_VorbisComment_Entry;
     num_comments : FLAC__uint32;
     comments : PFLAC__StreamMetadata_VorbisComment_Entry;
   end;
 
-  FLAC__StreamMetadata = packed record
+  FLAC__StreamMetadata = {packed} record
     _type : FLAC__MetadataType;
     is_last : FLAC__bool;
     length : unsigned;
-    case integer of
+    case data: FLAC__MetadataType of
       0: (stream_info : FLAC__StreamMetadata_StreamInfo);
       1: (vorbis_comment : FLAC__StreamMetadata_VorbisComment);
     // IMPORTANT: There is much more data in this structure actually,
@@ -2876,7 +2891,7 @@ Translated from format.h
 
 //** An enumeration of the available metadata block types. */
 // FLAC__MetadataType constants
-const
+{const
 
   FLAC__METADATA_TYPE_STREAMINFO = 0;
   FLAC__METADATA_TYPE_PADDING = 1;
@@ -2885,7 +2900,7 @@ const
   FLAC__METADATA_TYPE_VORBIS_COMMENT = 4;
   FLAC__METADATA_TYPE_CUESHEET = 5;
   FLAC__METADATA_TYPE_PICTURE = 6;
-  FLAC__METADATA_TYPE_UNDEFINED = 7;
+  FLAC__METADATA_TYPE_UNDEFINED = 7;}
 
 
 

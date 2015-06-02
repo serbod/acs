@@ -634,10 +634,10 @@ type
 
 implementation
 
-function Min(n1, n2: Integer): Integer;
+function Min(n1, n2: Int64): Int64;
 begin
   Result:=n1;
-  if n2 < n2 then Result:=n2;
+  if Result > n2 then Result:=n2;
 end;
 
 { TAcsCircularAudioBuffer }
@@ -878,8 +878,9 @@ end;
 
 function TAcsAudioBuffer.GetBufWriteSize(ASize: Integer): Integer;
 begin
-  Result:=Min(ASize, (Self.Size-Self.WritePosition));
-  Result:=Min(Result, (Self.Size-Self.ReadPosition));
+  Result:=ASize;
+  if Result > (Self.Size-Self.WritePosition) then Result:=(Self.Size-Self.WritePosition);
+  if Result > (Self.Size-Self.ReadPosition) then Result:=(Self.Size-Self.ReadPosition);
   //Result:=Min(Result, Self.UnreadSize);
 end;
 
@@ -1009,13 +1010,15 @@ end;
 
 function TAcsCustomInput.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 begin
-  Result:=Min(Self.BufferSize, ABufferSize);
+  Result:=Length(FBuffer);
+  if Result > ABufferSize then Result:=ABufferSize;
   Move(ABuffer, FBuffer, Result);
 end;
 
 function TAcsCustomInput.GetData(AStream: TStream): Integer;
 begin
-  Result:=Min(Self.BufferSize, AStream.Size);
+  Result:=Length(FBuffer);
+  if Result > (AStream.Size - AStream.Position) then Result:=(AStream.Size - AStream.Position);
   AStream.Read(FBuffer, Result);
 end;
 
