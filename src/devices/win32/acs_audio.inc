@@ -39,6 +39,9 @@ begin
   while WIC.szPname[i] <> #0 do Inc(i);
   SetLength(Result.DeviceName, i);
   Move(WIC.szPname[0], Result.DeviceName[1], i);
+  {$ifdef FPC}
+  Result.DeviceName:=AnsiToUtf8(Result.DeviceName);
+  {$endif}
   Result.Formats:=[];
   if (WIC.dwFormats and WAVE_FORMAT_1M08) <> 0 then Result.Formats := Result.Formats + [af1M08];
   if (WIC.dwFormats and WAVE_FORMAT_1M16) <> 0 then Result.Formats := Result.Formats + [af1M16];

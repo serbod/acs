@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="9"/>
+    <BuildModes Active="Default"/>
+    <Units Count="15">
+      <Unit0>
+        <Filename Value="audiodeck.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="audiodeck"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
+        <TopLine Value="-1"/>
+        <CursorPos X="-1" Y="-1"/>
+        <UsageCount Value="20"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="mainform.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormMain"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="MainForm"/>
+        <TopLine Value="81"/>
+        <CursorPos Y="96"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="..\player2\umain.pas"/>
+        <UnitName Value="uMain"/>
+        <EditorIndex Value="13"/>
+        <TopLine Value="198"/>
+        <CursorPos X="47" Y="218"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="..\..\src\filters\acs_file.pas"/>
+        <UnitName Value="acs_file"/>
+        <EditorIndex Value="11"/>
+        <TopLine Value="529"/>
+        <CursorPos Y="543"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="..\..\src\filters\acs_classes.pas"/>
+        <UnitName Value="acs_classes"/>
+        <EditorIndex Value="12"/>
+        <TopLine Value="1151"/>
+        <CursorPos Y="1159"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="..\..\src\formats\acs_allformats.pas"/>
+        <UnitName Value="acs_allformats"/>
+        <EditorIndex Value="5"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="..\..\src\formats\acs_vorbis.pas"/>
+        <UnitName Value="acs_vorbis"/>
+        <EditorIndex Value="10"/>
+        <TopLine Value="38"/>
+        <CursorPos Y="823"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="..\..\src\filters\acs_audio.pas"/>
+        <UnitName Value="acs_audio"/>
+        <EditorIndex Value="4"/>
+        <TopLine Value="86"/>
+        <CursorPos X="47" Y="106"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="..\..\src\devices\acs_stdaudio.pas"/>
+        <UnitName Value="acs_stdaudio"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="128"/>
+        <CursorPos X="38" Y="180"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="..\..\src\devices\win32\acs_audio.inc"/>
+        <EditorIndex Value="3"/>
+        <TopLine Value="347"/>
+        <CursorPos Y="364"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="..\..\src\devices\acs_dxaudio.pas"/>
+        <UnitName Value="acs_dxaudio"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="245"/>
+        <CursorPos X="51" Y="288"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="..\..\src\formats\acs_dsfiles.pas"/>
+        <UnitName Value="acs_dsfiles"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="6"/>
+        <TopLine Value="90"/>
+        <CursorPos X="81" Y="107"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="C:\lazarus\fpc\2.6.4\source\rtl\win\wininc\struct.inc"/>
+        <EditorIndex Value="9"/>
+        <TopLine Value="7728"/>
+        <CursorPos X="3" Y="7742"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="C:\lazarus\fpc\2.6.4\source\packages\winunits-base\src\mmsystem.pp"/>
+        <UnitName Value="mmsystem"/>
+        <EditorIndex Value="8"/>
+        <TopLine Value="1125"/>
+        <CursorPos X="2" Y="1139"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="..\..\src\devices\win32\directshow9.pas"/>
+        <UnitName Value="directshow9"/>
+        <EditorIndex Value="7"/>
+        <TopLine Value="958"/>
+        <CursorPos X="14" Y="5726"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit14>
+    </Units>
+    <JumpHistory Count="30" HistoryIndex="29">
+      <Position1>
+        <Filename Value="..\..\src\filters\acs_file.pas"/>
+        <Caret Line="330" TopLine="314"/>
+      </Position1>
+      <Position2>
+        <Filename Value="..\..\src\filters\acs_file.pas"/>
+        <Caret Line="332" TopLine="314"/>
+      </Position2>
+      <Position3>
+        <Filename Value="..\..\src\filters\acs_file.pas"/>
+        <Caret Line="333" TopLine="314"/>
+      </Position3>
+      <Position4>
+        <Filename Value="..\..\src\filters\acs_file.pas"/>
+        <Caret Line="335" TopLine="314"/>
+      </Position4>
+      <Position5>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="118" TopLine="107"/>
+      </Position5>
+      <Position6>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="237" TopLine="223"/>
+      </Position6>
+      <Position7>
+        <Filename Value="..\..\src\filters\acs_file.pas"/>
+        <Caret Line="543" TopLine="529"/>
+      </Position7>
+      <Position8>
+        <Filename Value="..\..\src\filters\acs_classes.pas"/>
+        <Caret Line="1156" TopLine="1145"/>
+      </Position8>
+      <Position9>
+        <Filename Value="..\..\src\filters\acs_classes.pas"/>
+        <Caret Line="1157" TopLine="1145"/>
+      </Position9>
+      <Position10>
+        <Filename Value="..\..\src\filters\acs_classes.pas"/>
+        <Caret Line="1159" TopLine="1151"/>
+      </Position10>
+      <Position11>
+        <Filename Value="..\..\src\formats\acs_allformats.pas"/>
+      </Position11>
+      <Position12>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="244" Column="16" TopLine="81"/>
+      </Position12>
+      <Position13>
+        <Filename Value="..\..\src\formats\acs_dsfiles.pas"/>
+        <Caret Line="120" TopLine="98"/>
+      </Position13>
+      <Position14>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="96" TopLine="81"/>
+      </Position14>
+      <Position15>
+        <Filename Value="..\..\src\formats\acs_dsfiles.pas"/>
+        <Caret Line="116" Column="18" TopLine="101"/>
+      </Position15>
+      <Position16>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="96" TopLine="81"/>
+      </Position16>
+      <Position17>
+        <Filename Value="..\..\src\formats\acs_dsfiles.pas"/>
+        <Caret Line="109" TopLine="95"/>
+      </Position17>
+      <Position18>
+        <Filename Value="..\..\src\formats\acs_dsfiles.pas"/>
+        <Caret Line="110" TopLine="95"/>
+      </Position18>
+      <Position19>
+        <Filename Value="..\..\src\formats\acs_dsfiles.pas"/>
+        <Caret Line="111" TopLine="95"/>
+      </Position19>
+      <Position20>
+        <Filename Value="..\..\src\formats\acs_dsfiles.pas"/>
+        <Caret Line="112" TopLine="95"/>
+      </Position20>
+      <Position21>
+        <Filename Value="..\..\src\formats\acs_dsfiles.pas"/>
+        <Caret Line="113" TopLine="95"/>
+      </Position21>
+      <Position22>
+        <Filename Value="..\..\src\formats\acs_dsfiles.pas"/>
+        <Caret Line="114" TopLine="95"/>
+      </Position22>
+      <Position23>
+        <Filename Value="..\..\src\formats\acs_dsfiles.pas"/>
+        <Caret Line="30" Column="5" TopLine="16"/>
+      </Position23>
+      <Position24>
+        <Filename Value="..\..\src\formats\acs_dsfiles.pas"/>
+        <Caret Line="29" Column="14" TopLine="16"/>
+      </Position24>
+      <Position25>
+        <Filename Value="..\..\src\formats\acs_dsfiles.pas"/>
+        <Caret Line="108" Column="87" TopLine="89"/>
+      </Position25>
+      <Position26>
+        <Filename Value="..\..\src\devices\win32\directshow9.pas"/>
+        <Caret Line="5726" Column="14" TopLine="5713"/>
+      </Position26>
+      <Position27>
+        <Filename Value="C:\lazarus\fpc\2.6.4\source\packages\winunits-base\src\mmsystem.pp"/>
+        <Caret Line="1139" Column="2" TopLine="1125"/>
+      </Position27>
+      <Position28>
+        <Filename Value="..\..\src\devices\win32\directshow9.pas"/>
+        <Caret Line="5726" Column="14" TopLine="5740"/>
+      </Position28>
+      <Position29>
+        <Filename Value="..\..\src\formats\acs_dsfiles.pas"/>
+        <Caret Line="29" Column="14" TopLine="14"/>
+      </Position29>
+      <Position30>
+        <Filename Value="..\..\src\formats\acs_dsfiles.pas"/>
+        <Caret Line="22" Column="64" TopLine="10"/>
+      </Position30>
+    </JumpHistory>
+  </ProjectSession>
+  <Debugging>
+    <BreakPoints Count="1">
+      <Item1>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="mainform.pas"/>
+        <Line Value="96"/>
+      </Item1>
+    </BreakPoints>
+  </Debugging>
+</CONFIG>

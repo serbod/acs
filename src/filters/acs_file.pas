@@ -54,75 +54,76 @@ type
     function FindFromFileName(const FileName: String; Typs: TAcsFileCapTyps): TAcsFormatClass;
     procedure Remove(AClass: TAcsFormatClass);
     procedure BuildFilterStrings(var Descriptions: String; Typs: TAcsFileCapTyps);
+    function GetItem(Index: Integer): TAcsFileFormat;
   end;
 
 
   { TAcsFileOut }
   { Wrapper for all fileformats }
-  TAcsFileOut = class(TComponent)
+  TAcsFileOut = class(TAcsCustomFileOut)
   private
     FBufferSize: Integer;
-    FFileMode: TAcsFileOutputMode;
     FFileName: string;
-    FOnDone: TAcsOutputDoneEvent;
-    FOnProgress: TAcsOutputProgressEvent;
-    FOnThreadException: TAcsThreadExceptionEvent;
+    FInput: TAcsCustomInput;
     FOutput: TAcsCustomFileOut;
     FDialog: TSaveDialog;
-    FInput: TAcsCustomInput;
-{$IFDEF LINUX}
-    FAccessMask : Integer;
-{$ENDIF}
-    function GetDelay(): Integer;
-    function GetPriority(): TThreadPriority;
-    function GetStatus(): TAcsOutputStatus;
-    function GetTE(): Real;
-    procedure SetDelay(const AValue: Integer);
-    procedure SetPriority(const AValue: TThreadPriority);
+  protected
+    //FBaseChannel: Integer;
+    function GetDelay(): Integer; override;
+    procedure SetDelay(Value: Integer); override;
+    function GetPriority(): TThreadPriority; override;
+    procedure SetPriority(Priority: TThreadPriority); override;
+    function GetStatus(): TAcsOutputStatus; override;
+    function GetTE(): Real; override;
+    function GetActive(): Boolean; override;
 
-    procedure ThreadException(Sender: TComponent; E : Exception);
     procedure OutputDone(Sender: TComponent);
     procedure OutputProgress(Sender: TComponent);
-  protected
-    FBaseChannel: Integer;
-    procedure SetInput(AInput: TAcsCustomInput);
-    procedure Init();
-    procedure Done();
-    function DoOutput(Abort: Boolean): Boolean;
-    procedure SetFileMode(aMode: TAcsFileOutputMode); virtual;
+    procedure ThreadException(Sender: TComponent; E: Exception);
+
+    procedure SetInput(AInput: TAcsCustomInput); override;
+    procedure SetFileMode(aMode: TAcsFileOutputMode); override;
     procedure SetFileName(const AValue: string);
+
+    function GetDriversCount(): Integer;
+    function GetDriverName(idx: Integer): string;
+    procedure SetDriver(ADriver: string); virtual;
+    procedure SetDefaultDriver();
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
+    destructor Destroy(); override;
+    procedure Init(); override;
+    procedure Done(); override;
+    function DoOutput(Abort: Boolean): Boolean; override;
     procedure Open();
-    property Buffersize: Integer read FBufferSize write FBufferSize;
-    procedure Pause; virtual;
-    procedure Resume; virtual;
-    procedure Run;
-    procedure Stop;
-    property Delay: Integer read GetDelay write SetDelay;
-    property ThreadPriority: TThreadPriority read GetPriority write SetPriority;
-    property Status: TAcsOutputStatus read GetStatus;
-    property TimeElapsed: Real read GetTE;
-{$IFDEF LINUX}
-    property AccessMask: Integer read FAccessMask write FAccessMask;
-{$ENDIF}
+    procedure Pause(); override;
+    procedure Resume(); override;
+    procedure Run(); override;
+    procedure Stop(); override;
+
+    { This can be used to enumerate the Drivers
+      use 0..DriversCount-1 as index, it returns the DriverName }
+    property Drivers[idx: Integer]: string read GetDriverName;
+    { Returns the total count of avalible drivers }
+    property DriversCount: Integer read GetDriversCount;
+    { Fill AValue by available drivers names }
+    function GetDriversList(AValue: TStrings): Boolean;
   published
-    property FileMode: TAcsFileOutputMode read FFileMode write SetFileMode;
     property FileName: string read FFileName write SetFileName;
     property Input: TAcsCustomInput read FInput write SetInput;
-    property OnDone: TAcsOutputDoneEvent read FOnDone write FOndone;
-    property OnProgress: TAcsOutputProgressEvent read FOnProgress write FOnProgress;
-    property OnThreadException: TAcsThreadExceptionEvent read FOnThreadException write FOnThreadException;
+    property BufferSize: Integer read FBufferSize write FBufferSize;
+    property OnDone;
+    property OnProgress;
+    property OnThreadException;
   end;
 
   { TAcsFileIn }
   { Wrapper for all fileformats }
-  TAcsFileIn = CLASS(TAcsCustomFileIn)
+  TAcsFileIn = class(TAcsCustomFileIn)
   private
     FInput: TAcsCustomFileIn;
     FDialog: TOpenDialog;
-    FTotalSamples: Integer;
+    //FTotalSamples: Integer;
   protected
     function GetBPS(): Integer; override;
     function GetCh(): Integer; override;
@@ -145,6 +146,9 @@ type
     function SetStartTime(Minutes, Seconds: Integer): Boolean;
     function SetEndTime(Minutes, Seconds: Integer): Boolean;
     procedure Jump(Offs: Real); override;
+    { Fill AValue by available drivers names }
+    function GetDriversList(AValue: TStrings): Boolean;
+    property Input: TAcsCustomFileIn read FInput;
   published
     property FileName;
   end;
@@ -193,12 +197,18 @@ begin
 end;
 
 procedure TAcsFileIn.SetFileName(const AValue: TFileName);
+var
+  AcsFormatClass: TAcsFormatClass;
 begin
   FFileName:=AValue;
   if Assigned(FInput) then FreeAndNil(FInput);
   if AValue='' then Exit;
-  FInput:=TAcsFileInClass(FileFormats.FindFromFileName(AValue, [fcLoad])).Create(nil);
-  if Assigned(FInput) then FInput.FileName:=FFilename;
+  AcsFormatClass:=FileFormats.FindFromFileName(AValue, [fcLoad]);
+  if Assigned(AcsFormatClass) then
+  begin
+    FInput:=TAcsFileInClass(AcsFormatClass).Create(nil);
+    if Assigned(FInput) then FInput.FileName:=FFilename;
+  end;
 end;
 
 function TAcsFileIn.GetSize(): Integer;
@@ -244,10 +254,7 @@ begin
   FDialog.Filter:=desc;
   if FDialog.Execute then
   begin
-    if Assigned(FInput) then FreeAndNil(FInput);
-    FInput:=TAcsFileInClass(FileFormats.FindFromFileName(FDialog.FileName, [fcLoad])).Create(nil);
-    FFileName:=FDialog.FileName;
-    if Assigned(FInput) then FInput.FileName:=FFilename;
+    SetFileName(FDialog.FileName);
   end;
   FDialog.Free;
 end;
@@ -295,22 +302,118 @@ begin
     //raise EAcsException.Create(strNoFileOpened);
 end;
 
+function TAcsFileIn.GetDriversList(AValue: TStrings): Boolean;
+var
+  i: integer;
+  Item: TAcsFileFormat;
+begin
+  Result:=False;
+  if not Assigned(AValue) then Exit;
+  AValue.Clear();
+  for i:=0 to FileFormats.Count-1 do
+  begin
+    Item:=FileFormats.GetItem(i);
+    if Item.FileClass.InheritsFrom(TAcsCustomFileIn) then
+      AValue.AddObject(Item.Description+' ('+Item.Extension+')', Item);
+  end;
+  Result:=True;
+end;
+
 { TAcsFileOut }
 
 procedure TAcsFileOut.SetFileName(const AValue: string);
+var
+  AcsFormatClass: TAcsFormatClass;
 begin
   if FFileName=AValue then Exit;
-  if Assigned(FOutput) then FreeAndNil(FOutput);
-  FOutput:=TAcsFileOutClass(FileFormats.FindFromFileName(AValue, [fcSave])).Create(nil);
-  if Assigned(FOutput) then
+  AcsFormatClass:=FileFormats.FindFromFileName(AValue, [fcSave]);
+  if Assigned(AcsFormatClass) then
   begin
-    FOutput.FileName:=AValue;
-    FOutput.FileMode:=FFileMode; //GAK:20060731
-    FOutput.Input:=FInput;
-    FOutput.OnDone:=OutputDone;
-    FOutput.OnProgress:=OutputProgress;
-    FOutput.OnThreadException:=ThreadException;
-    FFileName:=AValue; //GAK:20060731
+    FFileName:=AValue;
+    SetDefaultDriver();
+  end;
+end;
+
+function TAcsFileOut.GetDriversCount(): Integer;
+var
+  i: integer;
+  Item: TAcsFileFormat;
+begin
+  Result:=0;
+  for i:=0 to FileFormats.Count-1 do
+  begin
+    Item:=FileFormats.GetItem(i);
+    if Item.FileClass.InheritsFrom(TAcsCustomFileOut) then Inc(Result);
+  end;
+end;
+
+function TAcsFileOut.GetDriverName(idx: Integer): string;
+var
+  i, n: integer;
+  Item: TAcsFileFormat;
+begin
+  Result:='';
+  n:=0;
+  for i:=0 to FileFormats.Count-1 do
+  begin
+    Item:=FileFormats.GetItem(i);
+    if not Item.FileClass.InheritsFrom(TAcsCustomFileOut) then Continue;
+    if idx = n then
+    begin
+      Result:=Item.Description;
+      Exit;
+    end;
+    Inc(n);
+  end;
+end;
+
+procedure TAcsFileOut.SetDriver(ADriver: string);
+var
+  i: integer;
+  Item: TAcsFileFormat;
+begin
+  for i:=0 to FileFormats.Count-1 do
+  begin
+    Item:=FileFormats.GetItem(i);
+    if Item.FileClass.InheritsFrom(TAcsCustomFileOut) then
+    begin
+      if Item.Description = ADriver then
+      begin
+        if Assigned(FOutput) then FreeAndNil(FOutput);
+        FOutput:=TAcsFileOutClass(Item.FileClass).Create(nil);
+        if Assigned(FOutput) then
+        begin
+          FOutput.FileName:=FFileName;
+          FOutput.FileMode:=FFileMode; //GAK:20060731
+          FOutput.Input:=FInput;
+          FOutput.OnDone:=OutputDone;
+          FOutput.OnProgress:=OutputProgress;
+          FOutput.OnThreadException:=ThreadException;
+        end;
+        Exit;
+      end;
+    end;
+  end;
+end;
+
+procedure TAcsFileOut.SetDefaultDriver();
+var
+  AcsFormatClass: TAcsFormatClass;
+begin
+  if Assigned(FOutput) then FreeAndNil(FOutput);
+  AcsFormatClass:=FileFormats.FindFromFileName(FFileName, [fcSave]);
+  if Assigned(AcsFormatClass) then
+  begin
+    FOutput:=TAcsFileOutClass(AcsFormatClass).Create(nil);
+    if Assigned(FOutput) then
+    begin
+      FOutput.FileName:=FFileName;
+      FOutput.FileMode:=FFileMode; //GAK:20060731
+      FOutput.Input:=FInput;
+      FOutput.OnDone:=OutputDone;
+      FOutput.OnProgress:=OutputProgress;
+      FOutput.OnThreadException:=ThreadException;
+    end;
   end;
 end;
 
@@ -343,13 +446,13 @@ begin
   if not Assigned(FOutput) then Result:=FOutput.Delay;
 end;
 
-function TAcsFileOut.GetPriority: TThreadPriority;
+function TAcsFileOut.GetPriority(): TThreadPriority;
 begin
   Result:=TThreadPriority.tpNormal;
   if not Assigned(FOutput) then Result:=FOutput.ThreadPriority;
 end;
 
-function TAcsFileOut.GetStatus: TAcsOutputStatus;
+function TAcsFileOut.GetStatus(): TAcsOutputStatus;
 begin
   Result:=TAcsOutputStatus.tosUndefined;
   if Assigned(FOutput) then Result:=FOutput.Status;
@@ -361,14 +464,22 @@ begin
   if Assigned(FOutput) then Result:=FOutput.TimeElapsed;
 end;
 
-procedure TAcsFileOut.SetDelay(const AValue: Integer);
+function TAcsFileOut.GetActive(): Boolean;
 begin
-  if Assigned(FOutput) then FOutput.Delay:=AValue;
+  if Assigned(FOutput) then
+    Result:=FOutput.Active
+  else
+    Result:=False;
 end;
 
-procedure TAcsFileOut.SetPriority(const AValue: TThreadPriority);
+procedure TAcsFileOut.SetDelay(Value: Integer);
 begin
-  if Assigned(FOutput) then FOutput.ThreadPriority:=AValue;
+  if Assigned(FOutput) then FOutput.Delay:=Value;
+end;
+
+procedure TAcsFileOut.SetPriority(Priority: TThreadPriority);
+begin
+  if Assigned(FOutput) then FOutput.ThreadPriority:=Priority;
 end;
 
 procedure TAcsFileOut.ThreadException(Sender: TComponent; E: Exception);
@@ -392,7 +503,7 @@ begin
   if Assigned(FOutput) then FOutput.Input:=FInput;
 end;
 
-procedure TAcsFileOut.SetFileMode(AMode: TAcsFileOutputMode);
+procedure TAcsFileOut.SetFileMode(aMode: TAcsFileOutputMode);
 begin
   // GAK:20060731 changed whole of this method, as it was stopping component loading/creating
   if AMode <> FFileMode then
@@ -402,7 +513,7 @@ begin
   end;
 end;
 
-procedure TAcsFileOut.Open;
+procedure TAcsFileOut.Open();
 var
   desc: string;
 begin
@@ -412,39 +523,46 @@ begin
   FDialog.Filter:=desc;
   if FDialog.Execute then
   begin
-    FOutput:=TAcsFileOutClass(FileFormats.FindFromFileName(FDialog.FileName, [fcSave])).Create(nil);
-    FileName:=FDialog.FileName;
-    FOutput.FileMode:=FFileMode;
-    FOutput.Input:=FInput;
-    FInput:=FInput;
-    FOutput.OnDone:=OutputDone;
-    FOutput.OnProgress:=OutputProgress;
-    FOutput.OnThreadException:=ThreadException;
+    SetFileName(FDialog.FileName);
   end;
-  FDialog.Free;
+  FreeAndNil(FDialog);
 end;
 
-procedure TAcsFileOut.Pause;
+procedure TAcsFileOut.Pause();
 begin
-  if Assigned(FOutput) then FOutput.Pause;
-    //raise EAcsException.Create(strNoFileOpened);
+  if Assigned(FOutput) then FOutput.Pause();
 end;
 
-procedure TAcsFileOut.Resume;
+procedure TAcsFileOut.Resume();
 begin
-  if Assigned(FOutput) then FOutput.Resume;
-    //raise EAcsException.Create(strNoFileOpened);
+  if Assigned(FOutput) then FOutput.Resume();
 end;
 
-procedure TAcsFileOut.Run;
+procedure TAcsFileOut.Run();
 begin
-  if Assigned(FOutput) then FOutput.Run;
-    //raise EAcsException.Create(strNoFileOpened);
+  if Assigned(FOutput) then FOutput.Run();
 end;
 
-procedure TAcsFileOut.Stop;
+procedure TAcsFileOut.Stop();
 begin
-  if Assigned(FOutput) then FOutput.Stop;
+  if Assigned(FOutput) then FOutput.Stop();
+end;
+
+function TAcsFileOut.GetDriversList(AValue: TStrings): Boolean;
+var
+  i: integer;
+  Item: TAcsFileFormat;
+begin
+  Result:=False;
+  if not Assigned(AValue) then Exit;
+  AValue.Clear();
+  for i:=0 to FileFormats.Count-1 do
+  begin
+    Item:=FileFormats.GetItem(i);
+    if Item.FileClass.InheritsFrom(TAcsCustomFileOut) then
+      AValue.AddObject(Item.Description+' ('+Item.Extension+')', Item);
+  end;
+  Result:=True;
 end;
 
 destructor TAcsFileOut.Destroy;
@@ -508,8 +626,8 @@ begin
   Ext:=ExtractFileExt(Filename);
   System.Delete(Ext, 1, 1);
   Result:=FindExt(Ext, Typs);
-  if not Assigned(Result) then
-    raise EAcsException.CreateFmt(strUnknownExtension, [Ext]);
+  //if not Assigned(Result) then
+  //  raise EAcsException.CreateFmt(strUnknownExtension, [Ext]);
 end;
 
 procedure TAcsFileFormatsList.Remove(AClass: TAcsFormatClass);
@@ -556,6 +674,12 @@ begin
     end;
   end;
   Descriptions:=strAllFormats+'|'+sFilters+'|'+Descriptions;
+end;
+
+function TAcsFileFormatsList.GetItem(Index: Integer): TAcsFileFormat;
+begin
+  Result:=nil;
+  if (Index >= 0) and (Index < Count) then Result:=TAcsFileFormat(Self.Items[Index]);
 end;
 
 initialization

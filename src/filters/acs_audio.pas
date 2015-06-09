@@ -65,91 +65,73 @@ type
   under IDE, it may crash if you close the application during sound playback
   without stopping playback first. To prevent this, change the creation order
   of the output and input components so that the input component is created first. }
-  TAcsAudioOut = class(TComponent)
+  TAcsAudioOut = class(TAcsCustomOutput)
   private
     FDriverName: string;
     FOutputDriver: TAcsAudioOutDriver;
-    FInput: TAcsCustomInput;
-    FOnDone: TAcsOutputDoneEvent;
-    FOnProgress: TAcsOutputProgressEvent;
-    FOnThreadException: TAcsThreadExceptionEvent;
     FLatency: Integer;
-    FBufferSize: Integer;
-    FPrefetchMode: TAcsPrefetchMode;
-    function GetBufferSize(): Integer;
-    procedure SetBufferSize(const AValue: Integer);
+  protected
+    FBaseChannel: Integer;
+    FVolume: Byte;
+    function GetBufferSize(): Integer; override;
+    procedure SetBufferSize(AValue: Integer); override;
     function GetPrefetchMode(): TAcsPrefetchMode;
     procedure SetPrefetchMode(const AValue: TAcsPrefetchMode);
-    function GetDelay: Integer;
-    procedure SetDelay(const AValue: Integer);
-    function GetPriority: TThreadPriority;
-    procedure SetPriority(const AValue: TThreadPriority);
-    function GetActive(): Boolean;
+    function GetDelay(): Integer; override;
+    procedure SetDelay(AValue: Integer); override;
+    function GetPriority(): TThreadPriority; override;
+    procedure SetPriority(AValue: TThreadPriority); override;
+    function GetActive(): Boolean; override;
     //function GetProgress: real;
-    function GetStatus: TAcsOutputStatus;
-    function GetTE(): Real;
+    function GetStatus(): TAcsOutputStatus; override;
+    function GetTE(): Real; override;
 
     procedure ThreadException(Sender: TComponent; E: Exception);
     procedure OutputDone(Sender: TComponent);
     procedure OutputProgress(Sender: TComponent);
-  protected
-    FBaseChannel: Integer;
-    FVolume: Byte;
-    
-    procedure SetInput(Input: TAcsCustomInput);
+
+    procedure SetInput(Input: TAcsCustomInput); override;
 
     procedure SetDevice(Ch: Integer); virtual;
     function GetDeviceCount: Integer; virtual;
     function GetDeviceInfo(ADeviceNumber: Integer): TAcsDeviceInfo; virtual;
 
-    function GetDriversCount: Integer;
+    function GetDriversCount(): Integer;
     function GetDriverName(idx: Integer): string;
     procedure SetDriver(ADriver: string); virtual;
     procedure SetDefaultDriver();
 
-    procedure Done();
-    function DoOutput(Abort: Boolean): Boolean;
-    procedure Init();
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
+    destructor Destroy(); override;
+    procedure Init(); override;
+    procedure Done(); override;
+    function DoOutput(Abort: Boolean): Boolean; override;
+
+    { This can be used to enumerate the Drivers
+      use 0..DriversCount-1 as index, it returns the DriverName }
+    property Drivers[idx: Integer]: string read GetDriverName;
+    { Returns the total count of avalible drivers }
+    property DriversCount: Integer read GetDriversCount;
+    { Fill AValue by available drivers names }
+    function GetDriversList(AValue: TStrings): Boolean;
     { The result returns an TAcsDeviceInfo record that can be used to enumerate devices
       just set device property 0..DeviceCount-1 and read DeviceInfo to
       enumerate all Devices from current Driver }
     property DeviceInfo[ADeviceNumber: Integer]: TAcsDeviceInfo read GetDeviceInfo;
     { Returns the count of devices supported by actual driver }
     property DeviceCount: Integer read GetDeviceCount;
-    { This can be used to enumerate the Drivers
-      use 0..DriversCount-1 as index, it returns the DriverName }
-    property Drivers[idx: Integer]: string read GetDriverName;
-    { Returns the total count of avalible drivers }
-    property DriversCount: Integer read GetDriversCount;
 
     { This is the most important method in the output components.
       After an input component has been assigned, call Run to start audio-processing chain. }
-    procedure Run();
+    procedure Run(); override;
     { Stops the running output process. }
-    procedure Stop();
+    procedure Stop(); override;
     { pauses the output. }
-    procedure Pause(); virtual;
+    procedure Pause(); override;
     { Resumes previously paused output. }
-    procedure Resume(); virtual;
+    procedure Resume(); override;
 
-    { Output components perform output in their own threads.
-      Use this property to set the priority for the thread. }
-    property ThreadPriority: TThreadPriority read GetPriority write SetPriority;
-    { Read Progress to get the output progress in percents.
-      This value is meaningful only after the input component has been set
-      and only if the input component can tell the size of its stream. }
-    //property Progress: Real read GetProgress;
-
-    { This property indicates the output component's current status. Possible values are:
-      tosPlaying: the component is working;
-      tosPaused: the component is paused (the Pause method was called);
-      tosIdle: the component is idle; }
-    property Status: TAcsOutputStatus read GetStatus;
-    { Time from start of playing, seconds}
-    property TimeElapsed: Real read GetTE;
     property Latency: Integer read FLatency;
   published
     { The output buffer size in bytes default is 4000 }
@@ -160,19 +142,17 @@ type
       with lowest latency is used for default }
     property Driver: string read FDriverName write SetDriver;
     { Use this property to set the output device }
-    property Active: Boolean read GetActive;
     property Device: Integer read FBaseChannel write SetDevice;
     property Volume: Byte read FVolume write FVolume;
-    property Input: TAcsCustomInput read FInput write SetInput;
     { Use this property to set the delay (in milliseconds) in output thread.
       This property allows the user to reduce the stress the output thread puts
       on the CPU (especially under Windows).
       Be careful with this property when using TAudioOut component.
       Assigning too large values to it can cause dropouts in audio playback. }
     property Delay: Integer read GetDelay write SetDelay;
-    property OnDone: TAcsOutputDoneEvent read FOnDone write FOndone;
-    property OnProgress: TAcsOutputProgressEvent read FOnProgress write FOnProgress;
-    property OnThreadException: TAcsThreadExceptionEvent read FOnThreadException write FOnThreadException;
+    property OnDone;
+    property OnProgress;
+    property OnThreadException;
   end;
 
   { TAcsAudioIn component }
@@ -201,10 +181,12 @@ type
     procedure SetDevice(Ch: Integer);
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
+    destructor Destroy(); override;
     function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
     procedure Done(); override;
+    { Fill AValue by available drivers names }
+    function GetDriversList(AValue: TStrings): Boolean;
     { Returns the total count of avalible devices from current Driver }
     property DeviceCount: Integer read GetDeviceCount;
     { The result returns an deviceinfo record that can be used to enumerate devices
@@ -401,6 +383,20 @@ begin
   inherited Destroy;
 end;
 
+function TAcsAudioOut.GetDriversList(AValue: TStrings): Boolean;
+var
+  i: Integer;
+begin
+  Result:=False;
+  if not Assigned(AValue) then Exit;
+  AValue.Clear();
+  for i:=0 to Length(OutDriverInfos)-1 do
+  begin
+    AValue.AddObject(OutDriverInfos[i].DriverName+' ('+IntToStr(OutDriverInfos[i].Latency)+'ms)', nil);
+  end;
+  Result:=True;
+end;
+
 function TAcsAudioOut.GetDelay(): Integer;
 begin
   if Assigned(FOutputDriver) then
@@ -409,7 +405,7 @@ begin
     Result:=-1;
 end;
 
-procedure TAcsAudioOut.SetDelay(const AValue: Integer);
+procedure TAcsAudioOut.SetDelay(AValue: Integer);
 begin
   if Assigned(FOutputDriver) then FOutputDriver.SetDelay(AValue);
 end;
@@ -422,7 +418,7 @@ begin
     Result:=FBufferSize;
 end;
 
-procedure TAcsAudioOut.SetBufferSize(const AValue: Integer);
+procedure TAcsAudioOut.SetBufferSize(AValue: Integer);
 begin
   if Assigned(FOutputDriver) then FOutputDriver.BufferSize:=AValue;
   if AValue>0 then FBufferSize:=AValue;
@@ -486,7 +482,7 @@ begin
     Result:=0;
 end;
 
-procedure TAcsAudioOut.SetPriority(const AValue: TThreadPriority);
+procedure TAcsAudioOut.SetPriority(AValue: TThreadPriority);
 begin
   if Assigned(FOutputDriver) then FOutputDriver.SetPriority(AValue);
 end;
@@ -799,6 +795,20 @@ end;
 procedure TAcsAudioIn.Done();
 begin
   if not Assigned(FInput) then FInput.Done();
+end;
+
+function TAcsAudioIn.GetDriversList(AValue: TStrings): Boolean;
+var
+  i: Integer;
+begin
+  Result:=False;
+  if not Assigned(AValue) then Exit;
+  AValue.Clear();
+  for i:=0 to Length(InDriverInfos)-1 do
+  begin
+    AValue.AddObject(InDriverInfos[i].DriverName+' ('+IntToStr(InDriverInfos[i].Latency)+'ms)', nil);
+  end;
+  Result:=True;
 end;
 
 procedure RegisterAudioOut(DrvName: string; OutClass: TAcsAudioOutDriverClass; Latency: Integer);

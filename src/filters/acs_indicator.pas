@@ -4,6 +4,9 @@
   see the license file for more details.
   you can contact me at mail@z0m3ie.de
 *)
+{
+Status: broken =(
+}
 {$define FFTREAL_}
 unit acs_indicator;
 

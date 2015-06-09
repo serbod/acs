@@ -281,6 +281,7 @@ type
   { TAcsCustomOutput is the base class for all ACS output components. }
   TAcsCustomOutput = class(TComponent)
   protected
+    FActive: Boolean;  // Set to true by Run and to False by WhenDone.
     CanOutput: Boolean;
     //CurProgr: Real;
     Thread: TAcsOutThread;
@@ -289,7 +290,6 @@ type
     FInput: TAcsCustomInput;
     FOnDone: TAcsOutputDoneEvent;
     FOnProgress: TAcsOutputProgressEvent;
-    FActive: Boolean;  // Set to true by Run and to False by WhenDone.
     FOnThreadException: TAcsThreadExceptionEvent;
     InputLock: Boolean;
     // single sample size
@@ -309,6 +309,7 @@ type
     procedure SetInput(AInput: TAcsCustomInput); virtual;
     { Called from Thread when thread stopped }
     procedure WhenDone(); virtual;
+    function GetActive(): Boolean; virtual;
     { Time elapsed }
     function GetTE(): Real; virtual;
     function GetStatus(): TAcsOutputStatus; virtual;
@@ -316,7 +317,7 @@ type
     procedure SetDelay(Value: Integer); virtual;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure HandleThreadException(E: Exception); virtual;
-    function GetBufferSize(): Integer;
+    function GetBufferSize(): Integer; virtual;
     procedure SetBufferSize(AValue: Integer); virtual;
   public
     LastErrorDescription: string;
@@ -332,16 +333,16 @@ type
 
     { This is the most important method in the output components.
       After an input component has been assigned, call Run to start audio-processing chain. }
-    procedure Run();
+    procedure Run(); virtual;
     { Stops the running output process. }
-    procedure Stop();
+    procedure Stop(); virtual;
     { pauses the output (the output thread is suspended). }
     procedure Pause(); virtual;
     { Resumes previously paused output. }
     procedure Resume(); virtual;
 
     { Set to true by Run and to False by WhenDone. }
-    property Active: Boolean read FActive;
+    property Active: Boolean read GetActive;
     { Use this property to set the delay (in milliseconds) in output thread.
       This property allows the user to reduce the stress the output thread puts
       on the CPU (especially under Windows).
@@ -356,9 +357,10 @@ type
       tosPaused: the component is paused (the Pause method was called);
       tosIdle: the component is idle; }
     property Status: TAcsOutputStatus read GetStatus;
+    { Time from start of playing, seconds }
     property TimeElapsed: Real read GetTE;
   published
-    { This property allows you to set the input component for the output component.
+    { Data source component for this component.
       The valid input components must be descendants of TAcsInput. }
     property Input: TAcsCustomInput read FInput write SetInput;
     { This event is invoked when the output is finished.
@@ -1192,6 +1194,11 @@ begin
   CanOutput:=False;
   Done();
   FActive:=False;
+end;
+
+function TAcsCustomOutput.GetActive(): Boolean;
+begin
+  Result:=FActive;
 end;
 
 function TAcsCustomOutput.GetStatus(): TAcsOutputStatus;

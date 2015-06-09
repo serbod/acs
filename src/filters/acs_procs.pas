@@ -306,7 +306,6 @@ begin
   begin
     OutData[i]:=0;
     num:=sqrt((InData[i].Re * 2) + (InData[i].Im * 2));
-    //num:=InData[i]^.Re;
     if num > 0 then
     begin
       num:=log10(num)+Shift;

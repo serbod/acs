@@ -70,7 +70,7 @@ type
     function ClearUsedBlocks(): Integer;
 {$ENDIF}
   protected
-    function GetTE(): Integer; override;
+    function GetTE(): Real; override;
     function GetDeviceCount(): Integer; override;
     procedure SetDevice(Ch: Integer); override;
     function GetDeviceName(ADeviceNumber: Integer): string; override;
@@ -136,7 +136,7 @@ var
   {$I linux\acs_audio.inc}
 {$ENDIF}
 
-function TStdAudioOut.GetTE(): Integer;
+function TStdAudioOut.GetTE(): Real;
 begin
   //Result:=inherited GetTE;
   Result:=FTimeElapsed;

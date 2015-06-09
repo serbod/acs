@@ -108,6 +108,7 @@ type
     function GetBPS(): Integer; override;
     function GetCh(): Integer; override;
     function GetSR(): Integer; override;
+    function GetDeviceCount(): Integer; override;
     procedure SetDevice(Ch: Integer); override;
     function GetDeviceName(ADeviceNumber: Integer): string; override;
     function GetDeviceInfo(ADeviceNumber: Integer): TAcsDeviceInfo; override;
@@ -174,6 +175,11 @@ function TStdAudioIn.GetDeviceInfo(ADeviceNumber: Integer): TAcsDeviceInfo;
 begin
   //Result:=GetAudioDeviceInfo(FBaseChannel, False);
   Result:=GetAudioDeviceInfo(ADeviceNumber, False);
+end;
+
+function TStdAudioIn.GetDeviceCount(): Integer;
+begin
+  Result:=InputChannelsCount;
 end;
 
 constructor TStdAudioIn.Create(AOwner: TComponent);

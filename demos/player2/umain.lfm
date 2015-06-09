@@ -429,7 +429,7 @@ object fMain: TfMain
     PrefetchMode = pmAuto
     Device = 0
     Volume = 0
-    Input = FileIn1
+    Input = SoundIndicator
     Delay = -1
     OnDone = AudioOut1Done
     OnThreadException = AudioOut1ThreadException
@@ -437,6 +437,7 @@ object fMain: TfMain
     top = 8
   end
   object SoundIndicator: TAcsSoundIndicator
+    Input = FileIn1
     ValuesCount = 32
     left = 87
     top = 50

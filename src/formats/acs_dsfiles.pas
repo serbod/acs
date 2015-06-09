@@ -19,14 +19,14 @@ interface
 {$DEFINE DYNAMIC_LINK_ALL}
 
 uses
-  ACS_File, ACS_Classes, DirectShow9, Classes, ActiveX, MMSystem, Windows;
+  ACS_File, ACS_Classes, DirectShow9, Classes, ActiveX, Windows, MMSystem;
 
 type
   { TDSIn }
 
   TDSIn = class(TAcsCustomFileIn)
   private
-    {$ifdef fpc}
+    {$ifdef _fpc}
     FxFormat: _WAVEFORMATEX;
     {$else}
     FxFormat: TWaveFormatEx;
