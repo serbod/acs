@@ -19,7 +19,7 @@ unit acs_file;
 interface
 
 uses
-  Classes, ACS_Classes, Dialogs, SysUtils, ACS_Strings;
+  Classes, ACS_Classes, SysUtils, ACS_Strings;
 
 type
   TAcsFileInClass = class of TAcsCustomFileIn;
@@ -66,7 +66,7 @@ type
     FFileName: string;
     FInput: TAcsCustomInput;
     FOutput: TAcsCustomFileOut;
-    FDialog: TSaveDialog;
+    //FDialog: TSaveDialog;
   protected
     //FBaseChannel: Integer;
     function GetDelay(): Integer; override;
@@ -95,7 +95,6 @@ type
     procedure Init(); override;
     procedure Done(); override;
     function DoOutput(Abort: Boolean): Boolean; override;
-    procedure Open();
     procedure Pause(); override;
     procedure Resume(); override;
     procedure Run(); override;
@@ -122,7 +121,7 @@ type
   TAcsFileIn = class(TAcsCustomFileIn)
   private
     FInput: TAcsCustomFileIn;
-    FDialog: TOpenDialog;
+    //FDialog: TOpenDialog;
     //FTotalSamples: Integer;
   protected
     function GetBPS(): Integer; override;
@@ -137,7 +136,6 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    procedure Open();
     procedure Done(); override;
     procedure Init(); override;
     procedure Reset(); override;
@@ -242,21 +240,6 @@ destructor TAcsFileIn.Destroy();
 begin
   if Assigned(FInput) then FreeAndNil(FInput);
   inherited Destroy;
-end;
-
-procedure TAcsFileIn.Open();
-var
-  desc: string;
-begin
-  desc:='';
-  FDialog:=TOpenDialog.Create(nil);
-  FileFormats.BuildFilterStrings(desc, [fcLoad]);
-  FDialog.Filter:=desc;
-  if FDialog.Execute then
-  begin
-    SetFileName(FDialog.FileName);
-  end;
-  FDialog.Free;
 end;
 
 procedure TAcsFileIn.Done();
@@ -511,21 +494,6 @@ begin
     FFileMode:=AMode;
     if Assigned(FOutput) then FOutput.FileMode:=AMode;
   end;
-end;
-
-procedure TAcsFileOut.Open();
-var
-  desc: string;
-begin
-  desc:='';
-  FDialog:=TSaveDialog.Create(nil);
-  FileFormats.BuildFilterStrings(desc, [fcSave]);
-  FDialog.Filter:=desc;
-  if FDialog.Execute then
-  begin
-    SetFileName(FDialog.FileName);
-  end;
-  FreeAndNil(FDialog);
 end;
 
 procedure TAcsFileOut.Pause();

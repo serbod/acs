@@ -23,7 +23,7 @@ interface
 uses
 
 {$IFDEF MSWINDOWS}
-  Windows, Dialogs,
+  Windows,
 {$ENDIF}
   acs_strings, Classes, SysUtils, syncobjs;
 

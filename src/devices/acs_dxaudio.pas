@@ -24,8 +24,8 @@ interface
 {$DEFINE USE_EXTENDED_SPEC_FOR_24_BPS }
 
 uses
-  ACS_Audio, SysUtils, Classes, Forms, ACS_Types, ACS_Classes, Windows,
-  DSWrapper, ACS_Strings, DirectSound, mmsystem;
+  ACS_Audio, SysUtils, Classes, ACS_Types, ACS_Classes, Windows,
+  DSWrapper, ACS_Strings, DirectSound, mmsystem{$ifdef LCL},Forms{$endif};
 
 const
   LATENCY = 25;
@@ -329,7 +329,9 @@ begin
   DSW_Initialized:=True;
 
   Wnd:=0;
+  {$ifdef LCL}
   if (Owner is TForm) then Wnd:=(Owner as TForm).Handle;
+  {$endif}
 
   // align buffer size to sample size
   Self.SetBufferSize(FBufferSize - (FBufferSize mod FSampleSize));
