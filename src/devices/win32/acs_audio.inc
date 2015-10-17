@@ -76,13 +76,13 @@ procedure WaveInProc(hwi, Msg: LongWord; Instance: Pointer; Param1, Param2: Long
 var
   Audio: TStdAudioIn;
 begin
-  EnterCriticalSection(CrSecI);
+  CrSecI.Enter();
   if Msg = WIM_DATA then
   begin
     Audio:=TStdAudioIn(Instance);
     Audio.AddBlockToChain(PWaveHdr(Param1));
   end;
-  LeaveCriticalSection(CrSecI);
+  CrSecI.Leave();
 end;
 
 function MMResultStr(Res: MMRESULT): string;
@@ -296,11 +296,11 @@ begin
     // create output block, that points to data, and add it to playing chain
     Assert(FBuffer.ReadPosition >= 0);
     Assert((FBuffer.ReadPosition + Len) <= FBuffer.Size);
-    EnterCriticalSection(CrSecO);
+    CrSecO.Enter();
     try
       WriteBlock(FBuffer.Memory+FBuffer.ReadPosition, Len);
     finally
-      LeaveCriticalSection(CrSecO);
+      CrSecO.Leave();
     end;
     // manually move read position
     FBuffer.ReadPosition:=FBuffer.ReadPosition + Len;

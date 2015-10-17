@@ -20,8 +20,37 @@ const
 
 type
 
+
+  { TAcsCustomEncoder }
+
+  { Encode PCM samples from input buffer to output stream }
+  TAcsCustomEncoder = class(TComponent)
+  public
+    Input: TAcsCustomInput;
+    Buffer: TAcsAudioBuffer;
+    OutStream: TStream;
+    procedure Init(); virtual;
+    procedure Done(); virtual;
+    function DoOutput(Abort: Boolean): Boolean; virtual;
+  end;
+
+
+  { TAcsCustomDecoder }
+
+  { Encode PCM samples from input buffer to output stream }
+  TAcsCustomDecoder = class(TComponent)
+  public
+    Buffer: TAcsAudioBuffer;
+    InStream: TStream;
+    procedure Init(); virtual;
+    procedure Done(); virtual;
+    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; virtual;
+  end;
+
+
   TAcsStreamOut = class(TAcsStreamedOutput)
   protected
+    FEncoder: TAcsCustomEncoder;
     function GetBPS(): Integer;
     function GetCh(): Integer;
     function GetSR(): Integer;
@@ -32,6 +61,7 @@ type
     property OutSampleRate: Integer read GetSR;
     property OutBitsPerSample: Integer read GetBPS;
     property OutChannles: Integer read GetCh;
+    property Encoder: TAcsCustomEncoder read FEncoder write FEncoder;
   end;
 
   TAcsStreamIn = class(TAcsStreamedInput)
@@ -39,6 +69,7 @@ type
     FBPS: Integer;
     FChan: Integer;
     FSampleRate: Integer;
+    FDecoder: TAcsCustomDecoder;
   protected
     function GetBPS: Integer; override;
     function GetCh: Integer; override;
@@ -53,10 +84,71 @@ type
     property InBitsPerSample: Integer read FBPS write FBPS;
     property InChannels: Integer read FChan write FChan;
     property InSampleRate: Integer read FSampleRate write FSampleRate;
+    property Decoder: TAcsCustomDecoder read FDecoder write FDecoder;
   end;
 
 
 implementation
+
+{ TAcsCustomDecoder }
+
+procedure TAcsCustomDecoder.Init();
+begin
+  // initialize decoder
+end;
+
+procedure TAcsCustomDecoder.Done();
+begin
+  // un-initialize decoder
+end;
+
+function TAcsCustomDecoder.GetData(ABuffer: Pointer; ABufferSize: Integer
+  ): Integer;
+begin
+  Result:=InStream.Read(ABuffer^, ABufferSize);
+  //FPosition:=FStream.Position;
+end;
+
+{ TAcsCustomEncoder }
+
+procedure TAcsCustomEncoder.Init();
+begin
+  // initialize encoder
+end;
+
+procedure TAcsCustomEncoder.Done();
+begin
+  // de-initialize encoder
+end;
+
+function TAcsCustomEncoder.DoOutput(Abort: Boolean): Boolean;
+var
+  Len: Integer;
+begin
+  // send raw data from input
+  // No exceptions Here
+  Result:=False;
+  //if not Active then Exit;
+  //if Abort or (not CanOutput) then Exit;
+  if not Assigned(OutStream) then Exit;
+
+  // copy samples from input
+  //while InputLock do;
+  //InputLock:=True;
+  Buffer.Reset();
+  Len:=Input.GetData(Buffer.Memory, Buffer.Size);
+  Buffer.WritePosition:=Buffer.WritePosition+Len;
+  //Len:=Input.GetData(FBuffer);
+  //InputLock:=False;
+
+  // write samples to stream
+  if Len > 0 then
+  begin
+    Buffer.Position:=0;
+    OutStream.CopyFrom(Buffer, Len);
+    Result:=True;
+  end;
+end;
 
 constructor TAcsStreamOut.Create();
 begin
@@ -73,6 +165,11 @@ function TAcsStreamOut.DoOutput(Abort: Boolean): Boolean;
 var
   Len: Integer;
 begin
+  if Assigned(Encoder) then
+  begin
+    Result:=Encoder.DoOutput(Abort);
+    Exit;
+  end;
   // No exceptions Here
   Result:=False;
   if not Active then Exit;
@@ -115,12 +212,22 @@ begin
     raise EAcsException.Create(strStreamObjectnotassigned);
   inherited Init();
   FPosition:=FStream.Position;
+  if Assigned(Decoder) then
+  begin
+    Decoder.InStream:=FStream;
+    Decoder.Buffer:=FAudioBuffer;
+    Decoder.Init();
+  end;
   //FSize:=FStream.Size;
 end;
 
 procedure TAcsStreamIn.Done();
 begin
   //FStream.Position := 0;
+  if Assigned(Decoder) then
+  begin
+    Decoder.Done();
+  end;
   inherited Done();
 end;
 

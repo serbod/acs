@@ -28,9 +28,6 @@ uses
   baseunix,
 {$ENDIF}
 
-{$IFDEF WIN32}
-  Windows, Dialogs,
-{$ENDIF}
   ACS_File, Classes, SysUtils, ACS_Classes, ogg, vorbiscodec, VorbisFile, VorbisEnc,
   ACS_Strings, acs_tags, acs_types;
 

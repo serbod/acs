@@ -136,7 +136,7 @@ begin
   {$R+}
 
   ComplexFFT(pCA, SamplesCount, 1);
-  LgMagnitude(pCA, pSample, SamplesCount, 0);
+  //LgMagnitude(pCA, pSample, SamplesCount, 0);
 
   // dispose ComplexArr
   Freemem(pCA);

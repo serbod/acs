@@ -138,9 +138,11 @@ type
     property BufferSize: Integer read GetBufferSize write SetBufferSize;
     { Read-ahead data into buffer, prevent buffer underrun. Suitable for file input }
     property PrefetchMode: TAcsPrefetchMode read GetPrefetchMode write SetPrefetchMode;
+    { Output driver object }
+    property Driver: TAcsAudioOutDriver read FOutputDriver stored False;
     { use this property to set an driver, on create of this component the driver
       with lowest latency is used for default }
-    property Driver: string read FDriverName write SetDriver;
+    property DriverName: string read FDriverName write SetDriver;
     { Use this property to set the output device }
     property Device: Integer read FBaseChannel write SetDevice;
     property Volume: Byte read FVolume write FVolume;
@@ -159,7 +161,7 @@ type
 
   TAcsAudioIn = class(TAcsCustomInput)
   private
-    FInput: TAcsAudioInDriver;
+    FInputDriver: TAcsAudioInDriver;
     FDriverName: string;
   protected
     FBPS: Integer;
@@ -199,9 +201,11 @@ type
       just use DriversCount as index it returns the DriverName }
     property Drivers[idx: Integer]: string read GetDriverName;
   published
+    { Input driver object }
+    property Driver: TAcsAudioInDriver read FInputDriver stored False;
     { use this property to set an driver, on create of this component the driver
       with lowest latency is used for default }
-    property Driver: string read FDriverName write SetDriver stored True;
+    property DriverName: string read FDriverName write SetDriver;
     { Use this property to set the input device }
     property Device: Integer read FBaseChannel write SetDevice stored True;
     { Use this property to set the number of bits per sample for the input audio stream.
@@ -535,7 +539,7 @@ var
 begin
   if ADriver = '' then
   begin
-    // get default driver
+    // get default DriverName
     Exit;
   end;
   if Assigned(FOutputDriver) then FreeAndNil(FOutputDriver);
@@ -553,7 +557,9 @@ begin
       FLatency:=OutDriverInfos[i].Latency;
       if Assigned(FInput) then FOutputDriver.Input:=FInput;
       FOutputDriver.OnDone:=OutputDone;
-      FOutputDriver.OnProgress:=OutputProgress;
+      FOutputDriver.OnProgress:=nil;
+      if Assigned(FOnProgress) then
+        FOutputDriver.OnProgress:=OutputProgress;
       FOutputDriver.OnThreadException:=ThreadException;
       if FBufferSize > 0 then FOutputDriver.BufferSize:=FBufferSize;
       //FOutputDriver.Prefetch:=FPrefetch;
@@ -656,20 +662,20 @@ end;
 
 function TAcsAudioIn.GetBPS(): Integer;
 begin
-  if Assigned(FInput) then Result:=FInput.GetBPS
+  if Assigned(FInputDriver) then Result:=FInputDriver.GetBPS
   else Result:=inherited GetBPS();
 end;
 
 function TAcsAudioIn.GetCh: Integer;
 begin
-  if Assigned(FInput) then Result:=FInput.GetCh
+  if Assigned(FInputDriver) then Result:=FInputDriver.GetCh
   else Result:=inherited GetCh();
   //  raise EAcsException.Create(strNoDriverselected);
 end;
 
 function TAcsAudioIn.GetSR(): Integer;
 begin
-  if Assigned(FInput) then Result:=FInput.GetSR
+  if Assigned(FInputDriver) then Result:=FInputDriver.GetSR
   else Result:=inherited GetSR();
   //  raise EAcsException.Create(strNoDriverselected);
 end;
@@ -686,8 +692,8 @@ end;
 function TAcsAudioIn.GetDeviceCount(): Integer;
 begin
   Result:=0;
-  if not Assigned(FInput) then Exit;
-  Result:=FInput.GetDeviceCount;
+  if not Assigned(FInputDriver) then Exit;
+  Result:=FInputDriver.GetDeviceCount;
 end;
 
 function TAcsAudioIn.GetDeviceInfo(ADeviceNumber: Integer): TAcsDeviceInfo;
@@ -696,13 +702,13 @@ begin
   Result.DrvVersion:=0;
   Result.Formats:=[];
   Result.Stereo:=False;
-  if not Assigned(FInput) then Exit;
-  Result:=FInput.GetDeviceInfo(ADeviceNumber);
+  if not Assigned(FInputDriver) then Exit;
+  Result:=FInputDriver.GetDeviceInfo(ADeviceNumber);
 end;
 
 procedure TAcsAudioIn.SetDevice(Ch: Integer);
 begin
-  if Assigned(FInput) then FInput.SetDevice(Ch);
+  if Assigned(FInputDriver) then FInputDriver.SetDevice(Ch);
   //  raise EAcsException.Create(strNoDriverselected);
 end;
 
@@ -722,14 +728,14 @@ procedure TAcsAudioIn.SetDriver(Driver: string);
 var
   i: Integer;
 begin
-  if Assigned(FInput) then FreeAndNil(FInput);
+  if Assigned(FInputDriver) then FreeAndNil(FInputDriver);
   for i:=0 to Length(InDriverInfos)-1 do
   begin
     if InDriverInfos[i].DriverName = Driver then
     begin
       FDriverName:=InDriverInfos[i].DriverName;
-      FInput:=InDriverInfos[i].DrvClass.Create(nil);
-      FInput.SetDevice(FBaseChannel);
+      FInputDriver:=InDriverInfos[i].DrvClass.Create(nil);
+      FInputDriver.SetDevice(FBaseChannel);
       Exit;
     end;
   end;
@@ -745,7 +751,7 @@ label retry;
 }
 begin
   inherited Create(AOwner);
-  FInput:=nil;
+  FInputDriver:=nil;
   FDriverName:='';
   { // serbod 2014-10-05
     // dangerous code for constructor
@@ -783,18 +789,18 @@ end;
 function TAcsAudioIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 begin
   Result:=0;
-  if Assigned(FInput) then Result:=FInput.GetData(ABuffer,ABufferSize);
+  if Assigned(FInputDriver) then Result:=FInputDriver.GetData(ABuffer,ABufferSize);
     //raise EAcsException.Create(strNoDriverselected);
 end;
 
 procedure TAcsAudioIn.Init();
 begin
-  if Assigned(FInput) then FInput.Init;
+  if Assigned(FInputDriver) then FInputDriver.Init;
 end;
 
 procedure TAcsAudioIn.Done();
 begin
-  if not Assigned(FInput) then FInput.Done();
+  if not Assigned(FInputDriver) then FInputDriver.Done();
 end;
 
 function TAcsAudioIn.GetDriversList(AValue: TStrings): Boolean;

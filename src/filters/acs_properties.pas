@@ -26,9 +26,9 @@ type
     function GetComponent: TPersistent; virtual;
   end;
 
-  { TAcsAudioInDriverPropertyEditor }
-  { Property editor for TAcsAudioIn.Driver property }
-  TAcsAudioInDriverPropertyEditor = class(TAcsStringProperty)
+  { TAcsAudioInDriverNamePropertyEditor }
+  { Property editor for TAcsAudioIn.DriverName property }
+  TAcsAudioInDriverNamePropertyEditor = class(TAcsStringProperty)
   public
     { Selected string value }
     function GetValue: string; override;
@@ -38,9 +38,9 @@ type
     procedure GetValueList(List: TStrings); override;
   end;
 
-  { TAcsAudioOutDriverPropertyEditor }
-  { Property editor for TAcsAudioIn.Driver property }
-  TAcsAudioOutDriverPropertyEditor = class(TAcsStringProperty)
+  { TAcsAudioOutDriverNamePropertyEditor }
+  { Property editor for TAcsAudioIn.DriverName property }
+  TAcsAudioOutDriverNamePropertyEditor = class(TAcsStringProperty)
   public
     { Selected string value }
     function GetValue: string; override;
@@ -53,19 +53,19 @@ type
 
 implementation
 
-{ TAcsAudioOutDriverPropertyEditor }
+{ TAcsAudioOutDriverNamePropertyEditor }
 
-function TAcsAudioOutDriverPropertyEditor.GetValue: string;
+function TAcsAudioOutDriverNamePropertyEditor.GetValue: string;
 begin
   Result:=GetStrValue;
 end;
 
-procedure TAcsAudioOutDriverPropertyEditor.SetValue(const Value: string);
+procedure TAcsAudioOutDriverNamePropertyEditor.SetValue(const Value: string);
 begin
   SetStrValue(Value);
 end;
 
-procedure TAcsAudioOutDriverPropertyEditor.GetValueList(List: TStrings);
+procedure TAcsAudioOutDriverNamePropertyEditor.GetValueList(List: TStrings);
 var
   i: Integer;
 begin
@@ -75,19 +75,19 @@ begin
   end;
 end;
 
-{ TAcsAudioInDriverPropertyEditor }
+{ TAcsAudioInDriverNamePropertyEditor }
 
-function TAcsAudioInDriverPropertyEditor.GetValue: string;
+function TAcsAudioInDriverNamePropertyEditor.GetValue: string;
 begin
   Result:=GetStrValue;
 end;
 
-procedure TAcsAudioInDriverPropertyEditor.SetValue(const Value: string);
+procedure TAcsAudioInDriverNamePropertyEditor.SetValue(const Value: string);
 begin
   SetStrValue(Value);
 end;
 
-procedure TAcsAudioInDriverPropertyEditor.GetValueList(List: TStrings);
+procedure TAcsAudioInDriverNamePropertyEditor.GetValueList(List: TStrings);
 var
   i: Integer;
 begin

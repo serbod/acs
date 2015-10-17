@@ -19,7 +19,7 @@ unit acs_file;
 interface
 
 uses
-  Classes, ACS_Classes, Dialogs, SysUtils, ACS_Strings;
+  Classes, acs_classes, SysUtils, ACS_Strings;
 
 type
   TAcsFileInClass = class of TAcsCustomFileIn;
@@ -66,7 +66,7 @@ type
     FFileName: string;
     FInput: TAcsCustomInput;
     FOutput: TAcsCustomFileOut;
-    FDialog: TSaveDialog;
+    //FDialog: TSaveDialog;
   protected
     //FBaseChannel: Integer;
     function GetDelay(): Integer; override;
@@ -122,7 +122,7 @@ type
   TAcsFileIn = class(TAcsCustomFileIn)
   private
     FInput: TAcsCustomFileIn;
-    FDialog: TOpenDialog;
+    //FDialog: TOpenDialog;
     //FTotalSamples: Integer;
   protected
     function GetBPS(): Integer; override;
@@ -158,6 +158,7 @@ var
   FileFormats: TAcsFileFormatsList;
 
 implementation
+
 
 { TAcsFileIn }
 
@@ -249,14 +250,16 @@ var
   desc: string;
 begin
   desc:='';
-  FDialog:=TOpenDialog.Create(nil);
   FileFormats.BuildFilterStrings(desc, [fcLoad]);
+  {
+  FDialog:=TOpenDialog.Create(nil);
   FDialog.Filter:=desc;
   if FDialog.Execute then
   begin
     SetFileName(FDialog.FileName);
   end;
   FDialog.Free;
+  }
 end;
 
 procedure TAcsFileIn.Done();
@@ -518,14 +521,16 @@ var
   desc: string;
 begin
   desc:='';
-  FDialog:=TSaveDialog.Create(nil);
   FileFormats.BuildFilterStrings(desc, [fcSave]);
+  {
+  FDialog:=TSaveDialog.Create(nil);
   FDialog.Filter:=desc;
   if FDialog.Execute then
   begin
     SetFileName(FDialog.FileName);
   end;
   FreeAndNil(FDialog);
+  }
 end;
 
 procedure TAcsFileOut.Pause();

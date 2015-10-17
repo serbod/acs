@@ -24,7 +24,7 @@ interface
 {$DEFINE USE_EXTENDED_SPEC_FOR_24_BPS }
 
 uses
-  ACS_Audio, SysUtils, Classes, Forms, ACS_Types, ACS_Classes, Windows,
+  ACS_Audio, SysUtils, Classes, ACS_Types, ACS_Classes, Windows,
   DSWrapper, ACS_Strings, DirectSound, mmsystem;
 
 const
@@ -328,9 +328,6 @@ begin
     raise EAcsException.Create(strFailedtoCreateDSdev+': '+DSErrToString(Res));
   DSW_Initialized:=True;
 
-  Wnd:=0;
-  if (Owner is TForm) then Wnd:=(Owner as TForm).Handle;
-
   // align buffer size to sample size
   Self.SetBufferSize(FBufferSize - (FBufferSize mod FSampleSize));
   //Self.SetBufferSize(FFramesInBuffer * (BPS div 8) * Chan);
@@ -372,6 +369,9 @@ begin
   //FormatExt.wSamplesPerBlock:=0;
   //FormatExt.wReserved:=0;
   //FormatExt.SubFormat:=1;
+
+  Wnd:=0;
+  //if (Owner is TControl) then Wnd:=(Owner as TControl).Handle;
 
   Res:=DSW_InitOutputBufferEx(DSW, Wnd, FormatExt, FBuffer.Size);
   if Res <> 0 then
