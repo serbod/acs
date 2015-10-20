@@ -169,8 +169,19 @@ begin
 end;
 
 procedure TfMain.OpenClick(Sender: TObject);
+var
+  OpenDialog: TOpenDialog;
 begin
-  FileIn1.Open();
+  OpenDialog := TOpenDialog.Create(Self);
+  try
+    OpenDialog.Filter := FileIn1.GetFileOpenFilterString();
+    if not OpenDialog.Execute() then
+      Exit;
+    FileIn1.FileName := OpenDialog.FileName;
+  finally
+    FreeAndNil(OpenDialog);
+  end;
+
   if FileIn1.Valid then
   begin
     lFilename.Caption := Format('File: %s', [ExtractFileName(FileIn1.FileName)]);

@@ -22,9 +22,9 @@ unit acs_stdaudio;
 interface
 
 uses
-  Classes, SysUtils, ACS_Types, ACS_Classes, ACS_Audio, ACS_Strings
+  Classes, SysUtils, syncobjs, ACS_Types, ACS_Classes, ACS_Audio, ACS_Strings
 {$IFDEF MSWINDOWS}
-  , syncobjs, MMSystem
+  , MMSystem
 {$ELSE}
   , baseunix, Soundcard
 {$ENDIF}

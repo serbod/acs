@@ -148,6 +148,7 @@ type
     procedure Jump(Offs: Real); override;
     { Fill AValue by available drivers names }
     function GetDriversList(AValue: TStrings): Boolean;
+    function GetFileOpenFilterString(): string;
     property Input: TAcsCustomFileIn read FInput;
   published
     property FileName;
@@ -320,6 +321,11 @@ begin
       AValue.AddObject(Item.Description+' ('+Item.Extension+')', Item);
   end;
   Result:=True;
+end;
+
+function TAcsFileIn.GetFileOpenFilterString(): string;
+begin
+  FileFormats.BuildFilterStrings(Result, [fcLoad]);
 end;
 
 { TAcsFileOut }
