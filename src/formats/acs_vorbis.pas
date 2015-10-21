@@ -560,7 +560,7 @@ begin
         else if CN = _vorbis_Genre  then FTags.Genre := UTF8Decode(CV)
         else if CN = _vorbis_Track  then FTags.Track := UTF8Decode(CV);
 
-        Inc(LongWord(PComment), 4);  // !!! non-crossplatform
+        Inc(PtrUInt(PComment), SizeOf(PVComm.user_comments));
         Comment:=PComment^;
       end;
       //FVendor:=PVComm.vendor;

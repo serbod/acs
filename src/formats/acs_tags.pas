@@ -1640,7 +1640,7 @@ begin
         else
           read_frames_old(tags_info);
       finally
-        FileSeek(InFile, file_pos + get_tags_size(tags_info), FILE_BEGIN);
+        FileSeek(InFile, Int64(file_pos + get_tags_size(tags_info)), FILE_BEGIN);
       end;
   end;
 end;

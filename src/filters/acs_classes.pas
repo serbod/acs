@@ -200,7 +200,7 @@ type
     function Write(const Buffer; Count: Longint): Longint; override;
     { If Origin = soCurrent, then changed ReadPosition, otherwise changed WritePosition }
     function Seek(const Offset: Int64; Origin: TSeekOrigin): Int64; override;
-    procedure SetSize(NewSize: PtrInt); override;
+    procedure SetSize({$ifdef CPU64}const {$endif CPU64}NewSize: PtrInt); override;
   end;
 
 
@@ -741,7 +741,7 @@ begin
     FWritePos:=Offset;
 end;
 
-procedure TAcsCircularAudioBuffer.SetSize(NewSize: PtrInt);
+procedure TAcsCircularAudioBuffer.SetSize({$ifdef CPU64}const {$endif CPU64}NewSize: PtrInt);
 begin
   inherited SetSize(NewSize);
   if NewSize < FReadPos then FReadPos:=NewSize;
