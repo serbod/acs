@@ -12,6 +12,11 @@
         <OtherUnitFiles Value="..\src\filters"/>
         <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
+      <Parsing>
+        <SyntaxOptions>
+          <SyntaxMode Value="Delphi"/>
+        </SyntaxOptions>
+      </Parsing>
     </CompilerOptions>
     <Files Count="3">
       <Item1>
@@ -24,16 +29,23 @@
       </Item2>
       <Item3>
         <Filename Value="acs_reg.pas"/>
+        <HasRegisterProc Value="True"/>
         <UnitName Value="acs_reg"/>
       </Item3>
     </Files>
-    <RequiredPkgs Count="2">
+    <RequiredPkgs Count="4">
       <Item1>
-        <PackageName Value="laz_acs"/>
+        <PackageName Value="IDEIntf"/>
       </Item1>
       <Item2>
-        <PackageName Value="FCL"/>
+        <PackageName Value="LCL"/>
       </Item2>
+      <Item3>
+        <PackageName Value="laz_acs"/>
+      </Item3>
+      <Item4>
+        <PackageName Value="FCL"/>
+      </Item4>
     </RequiredPkgs>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>

@@ -895,7 +895,7 @@ end;
 
 procedure TAcsVerySmallThread.Execute();
 begin
- Synchronize(CallOnDone);
+  Synchronize(CallOnDone);
 end;
 
 { TAcsOutThread }
