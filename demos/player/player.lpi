@@ -34,11 +34,11 @@
         <PackageName Value="laz_acs"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="109">
+    <Units Count="111">
       <Unit0>
         <Filename Value="player.lpr"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="1"/>
+        <EditorIndex Value="3"/>
         <CursorPos X="19" Y="16"/>
         <UsageCount Value="65"/>
         <Loaded Value="True"/>
@@ -51,9 +51,8 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="uMain"/>
-        <IsVisibleTab Value="True"/>
-        <TopLine Value="170"/>
-        <CursorPos Y="187"/>
+        <TopLine Value="231"/>
+        <CursorPos X="7" Y="233"/>
         <UsageCount Value="65"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -218,9 +217,16 @@
         <Filename Value="uvis.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="fVizu"/>
-        <TopLine Value="58"/>
-        <CursorPos X="34" Y="9"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="40"/>
+        <CursorPos X="20" Y="64"/>
         <UsageCount Value="42"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit26>
       <Unit27>
         <Filename Value="..\..\Src\classes\ACS_Indicator.pas"/>
@@ -729,8 +735,25 @@
         <UsageCount Value="10"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit108>
+      <Unit109>
+        <Filename Value="..\..\src\devices\acs_dxaudio.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="297"/>
+        <CursorPos X="51" Y="307"/>
+        <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit109>
+      <Unit110>
+        <Filename Value="..\..\src\filters\acs_indicator.pas"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="199"/>
+        <CursorPos Y="218"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit110>
     </Units>
-    <JumpHistory Count="4" HistoryIndex="3">
+    <JumpHistory Count="7" HistoryIndex="6">
       <Position1>
         <Filename Value="umain.pas"/>
         <Caret Line="20" Column="11"/>
@@ -747,6 +770,18 @@
         <Filename Value="player.lpr"/>
         <Caret Line="16" Column="19"/>
       </Position4>
+      <Position5>
+        <Filename Value="umain.pas"/>
+        <Caret Line="187" TopLine="170"/>
+      </Position5>
+      <Position6>
+        <Filename Value="umain.pas"/>
+        <Caret Line="187" TopLine="170"/>
+      </Position6>
+      <Position7>
+        <Filename Value="umain.pas"/>
+        <Caret Line="233" Column="7" TopLine="231"/>
+      </Position7>
     </JumpHistory>
   </ProjectOptions>
   <CompilerOptions>
