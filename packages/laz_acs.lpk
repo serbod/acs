@@ -59,7 +59,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."/>
     <Version Major="3"/>
-    <Files Count="25">
+    <Files Count="26">
       <Item1>
         <Filename Value="..\src\filters\acs_audio.pas"/>
         <UnitName Value="acs_audio"/>
@@ -160,6 +160,10 @@ SOFTWARE."/>
         <Filename Value="..\src\devices\acs_alsaaudio.pas"/>
         <UnitName Value="acs_alsaaudio"/>
       </Item25>
+      <Item26>
+        <Filename Value="..\src\filters\acs_volumequery.pas"/>
+        <UnitName Value="acs_volumequery"/>
+      </Item26>
     </Files>
     <RequiredPkgs Count="1">
       <Item1>

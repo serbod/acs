@@ -156,6 +156,8 @@ end;
 
 function TAcsVolumeQuery.volLeft(): Word;
 begin
+  Result := 0;
+  if Length(FLeft)=0 then exit;
   Lock:=True;
   if Active then
     Result:=FLeft[0]
@@ -166,6 +168,8 @@ end;
 
 function TAcsVolumeQuery.volRight(): Word;
 begin
+  Result := 0;
+  if Length(FRight)=0 then exit;
   Lock:=True;
   if Active then
     Result:=FRight[0]
@@ -176,6 +180,8 @@ end;
 
 function TAcsVolumeQuery.dbLeft(): Single;
 begin
+  Result := 0;
+  if Length(FLeft)=0 then exit;
   Lock:=True;
   if Active then
     Result:=10 * Log10((FLeft[0]+1)/32768)
@@ -186,6 +192,8 @@ end;
 
 function TAcsVolumeQuery.dbRight(): Single;
 begin
+  Result := 0;
+  if Length(FRight)=0 then exit;
   Lock:=True;
   if Active then
     Result:=10 * Log10((FRight[0]+1)/32768)
