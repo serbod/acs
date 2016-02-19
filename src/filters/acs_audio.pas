@@ -794,7 +794,7 @@ end;
 
 procedure TAcsAudioIn.Done();
 begin
-  if not Assigned(FInput) then FInput.Done();
+  if Assigned(FInput) then FInput.Done();
 end;
 
 function TAcsAudioIn.GetDriversList(AValue: TStrings): Boolean;
