@@ -12,7 +12,7 @@ object fMain: TfMain
   ClientWidth = 201
   OnClose = FormClose
   OnCreate = FormCreate
-  LCLVersion = '1.3'
+  LCLVersion = '1.4.4.0'
   object Panel1: TPanel
     Left = 4
     Height = 64
@@ -27,7 +27,7 @@ object fMain: TfMain
       Left = 1
       Height = 30
       Top = 24
-      Width = 112
+      Width = 102
       Caption = '00:00:00'
       Font.Height = -25
       ParentColor = False
@@ -35,7 +35,7 @@ object fMain: TfMain
     end
     object lFilename: TLabel
       Left = 1
-      Height = 12
+      Height = 11
       Top = 1
       Width = 190
       Align = alTop
@@ -47,9 +47,9 @@ object fMain: TfMain
     end
     object lTime1: TLabel
       Left = 1
-      Height = 12
+      Height = 11
       Top = 20
-      Width = 61
+      Width = 52
       Caption = 'Time remain'
       Font.Height = -9
       ParentColor = False
@@ -58,9 +58,9 @@ object fMain: TfMain
     end
     object lTime2: TLabel
       Left = 116
-      Height = 12
+      Height = 11
       Top = 20
-      Width = 16
+      Width = 13
       Caption = 'left'
       Font.Height = -9
       ParentColor = False
@@ -68,9 +68,9 @@ object fMain: TfMain
     end
     object lLeft: TLabel
       Left = 116
-      Height = 15
+      Height = 14
       Top = 28
-      Width = 56
+      Width = 50
       Caption = '00:00:00'
       Font.Height = -12
       ParentColor = False
@@ -411,10 +411,10 @@ object fMain: TfMain
     OnClick = btVizuClick
     TabOrder = 8
   end
-  object FileIn1: TACSFileIn
+  object FileIn1: TAcsFileIn
+    StartSample = 0
     EndSample = -1
     Loop = False
-    StartSample = 0
     left = 172
     top = 36
   end
@@ -425,22 +425,26 @@ object fMain: TfMain
     left = 140
     top = 36
   end
-  object AudioOut1: TACSAudioOut
-    Buffersize = -1
-    Driver = 'No Driver'
-    Device = 0
-    Volume = 0
+  object AudioOut1: TAcsAudioOut
     Input = SoundIndicator
-    Delay = -1
-    SuspendWhenIdle = True
     OnDone = AudioOut1Done
     OnThreadException = AudioOut1ThreadException
+    BufferSize = 16384
+    PrefetchMode = pmAuto
+    Device = 0
+    Volume = 0
+    Delay = -1
     left = 140
     top = 4
   end
-  object SoundIndicator: TACSSoundIndicator
+  object SoundIndicator: TAcsSoundIndicator
     Input = FileIn1
+    ValuesCount = 32
     left = 172
+    top = 4
+  end
+  object OpenDialog1: TOpenDialog
+    left = 104
     top = 4
   end
 end

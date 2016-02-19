@@ -291,7 +291,7 @@ end;
 
 procedure LgMagnitude(InData: PAcsComplexArray; OutData: PAcsDoubleArray;
   DataSize, Shift: Integer);
-{$ifdef CPU386}
+{$ifndef CPU386}
 var
   LogBase, num: Double;
   pIn: PACSComplex;
