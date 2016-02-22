@@ -522,6 +522,7 @@ end;
 
 function TAcsAudioOut.GetDeviceCount(): Integer;
 begin
+  if not Assigned(FOutputDriver) then SetDefaultDriver();
   if Assigned(FOutputDriver) then
     Result:=FOutputDriver.GetDeviceCount
   else
