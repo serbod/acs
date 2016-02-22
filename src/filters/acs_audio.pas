@@ -179,6 +179,7 @@ type
     function GetDeviceCount: Integer; virtual;
     function GetDeviceInfo(ADeviceNumber: Integer): TAcsDeviceInfo; virtual;
     procedure SetDevice(Ch: Integer);
+    procedure SetDefaultDriver();
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
@@ -337,44 +338,11 @@ implementation
 { TAudioOut }
 
 constructor TAcsAudioOut.Create(AOwner: TComponent);
-//var
-  //lowestindex, lowest, minlat, i: Integer;
-  //exc: Boolean;
-//label retry;
 begin
   inherited Create(AOwner);
   FDriverName:='';
   FOutputDriver:=nil;
   FInput:=nil;
-  { // serbod 2014-10-05
-    // dangerous code for constructor
-  minlat:=0;
-retry:
-  lowest:=99999;
-  for i:=0 to Length(OutDriverInfos)-1 do
-  begin
-    if (OutDriverInfos[i].Latency < lowest) and (OutDriverInfos[i].Latency > minlat) then
-    begin
-      lowest:=OutDriverInfos[i].Latency;
-      lowestindex:=i;
-    end;
-  end;
-
-  if lowest < 99999 then
-  begin
-    try
-      SetDriver(OutDriverInfos[lowestindex].DriverName);
-      exc:=false;
-    except
-      minlat:=lowest+1;
-      exc:=true;
-    end;
-    if exc then
-      goto retry;
-  end
-  else
-    FDriverName := 'No Driver';
-  }
 end;
 
 destructor TAcsAudioOut.Destroy();
@@ -505,12 +473,14 @@ end;
 
 procedure TAcsAudioOut.SetInput(Input: TAcsCustomInput);
 begin
+  if not Assigned(FOutputDriver) then SetDefaultDriver();
   FInput:=Input;
   if Assigned(FOutputDriver) then FOutputDriver.Input:=Input;
 end;
 
 procedure TAcsAudioOut.SetDevice(Ch: Integer);
 begin
+  if not Assigned(FOutputDriver) then SetDefaultDriver();
   FBaseChannel:=Ch;
   if Assigned(FOutputDriver) then FOutputDriver.SetDevice(Ch);
 end;
@@ -687,6 +657,7 @@ end;
 function TAcsAudioIn.GetDeviceCount(): Integer;
 begin
   Result:=0;
+  if not Assigned(FInput) then SetDefaultDriver();
   if not Assigned(FInput) then Exit;
   Result:=FInput.GetDeviceCount;
 end;
@@ -703,8 +674,42 @@ end;
 
 procedure TAcsAudioIn.SetDevice(Ch: Integer);
 begin
+  if not Assigned(FInput) then SetDefaultDriver();
   if Assigned(FInput) then FInput.SetDevice(Ch);
-  //  raise EAcsException.Create(strNoDriverselected);
+end;
+
+procedure TAcsAudioIn.SetDefaultDriver;
+var
+  lowestindex, lowest, minlat, i: Integer;
+  Done: Boolean;
+begin
+  minlat:=0;
+  Done:=False;
+
+  FDriverName := 'No Driver';
+  while not Done do
+  begin
+    lowest:=99999;
+    for i:=0 to Length(OutDriverInfos)-1 do
+    begin
+      if (OutDriverInfos[i].Latency < lowest) and (OutDriverInfos[i].Latency > minlat) then
+      begin
+        lowest:=OutDriverInfos[i].Latency;
+        lowestindex:=i;
+      end;
+    end;
+
+    Done:=True;
+    if lowest < 99999 then
+    begin
+      try
+        SetDriver(OutDriverInfos[lowestindex].DriverName);
+      except
+        minlat:=lowest+1;
+        Done:=False;
+      end;
+    end;
+  end;
 end;
 
 function TAcsAudioIn.GetDriverName(idx: Integer): string;
@@ -737,43 +742,10 @@ begin
 end;
 
 constructor TAcsAudioIn.Create(AOwner: TComponent);
-{
-var
-  lowestindex, lowest, i: Integer;
-  minlat: Integer;
-  exc: Boolean;
-label retry;
-}
 begin
   inherited Create(AOwner);
   FInput:=nil;
   FDriverName:='';
-  { // serbod 2014-10-05
-    // dangerous code for constructor
-  minlat:=0;
-retry:
-  lowest := 99999;
-  for i := 0 to length(InDriverInfos)-1 do
-    if (InDriverInfos[i].Latency < lowest) and (InDriverInfos[i].Latency > minlat) then
-    begin
-      lowest := InDriverInfos[i].Latency;
-      lowestindex := i;
-    end;
-  if lowest < 99999 then
-  begin
-    try
-      SetDriver(InDriverInfos[lowestindex].DriverName);
-      exc := false;
-    except
-      minlat := lowest+1;
-      exc := true;
-    end;
-    if exc then
-      goto retry;
-  end
-  else
-    FDriverName := 'No Driver';
-  }
 end;
 
 destructor TAcsAudioIn.Destroy();
@@ -785,11 +757,11 @@ function TAcsAudioIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 begin
   Result:=0;
   if Assigned(FInput) then Result:=FInput.GetData(ABuffer,ABufferSize);
-    //raise EAcsException.Create(strNoDriverselected);
 end;
 
 procedure TAcsAudioIn.Init();
 begin
+  if not Assigned(FInput) then SetDefaultDriver();
   if Assigned(FInput) then FInput.Init;
 end;
 
