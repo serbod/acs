@@ -50,9 +50,10 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="uMain"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="4"/>
-        <TopLine Value="69"/>
-        <CursorPos X="5" Y="88"/>
+        <TopLine Value="170"/>
+        <CursorPos Y="189"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -832,6 +833,7 @@
       </Unit102>
       <Unit103>
         <Filename Value="..\..\src\filters\acs_classes.pas"/>
+        <UnitName Value="acs_classes"/>
         <EditorIndex Value="1"/>
         <TopLine Value="1228"/>
         <CursorPos X="30" Y="1240"/>
@@ -895,28 +897,29 @@
       </Unit110>
       <Unit111>
         <Filename Value="..\..\src\devices\acs_stdaudio.pas"/>
+        <UnitName Value="acs_stdaudio"/>
         <EditorIndex Value="6"/>
-        <TopLine Value="68"/>
-        <CursorPos X="17" Y="82"/>
+        <TopLine Value="15"/>
+        <CursorPos X="3" Y="27"/>
         <UsageCount Value="57"/>
         <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit111>
       <Unit112>
         <Filename Value="..\..\src\devices\win32\acs_audio.inc"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="7"/>
-        <TopLine Value="110"/>
-        <CursorPos Y="142"/>
+        <TopLine Value="252"/>
+        <CursorPos X="151" Y="264"/>
         <UsageCount Value="54"/>
         <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit112>
       <Unit113>
         <Filename Value="..\..\src\formats\acs_flac.pas"/>
+        <UnitName Value="acs_flac"/>
         <EditorIndex Value="9"/>
-        <TopLine Value="7"/>
-        <CursorPos X="17" Y="19"/>
+        <TopLine Value="568"/>
+        <CursorPos Y="581"/>
         <UsageCount Value="92"/>
         <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
@@ -939,6 +942,7 @@
       </Unit115>
       <Unit116>
         <Filename Value="..\..\src\formats\acs_vorbis.pas"/>
+        <UnitName Value="acs_vorbis"/>
         <EditorIndex Value="11"/>
         <CursorPos Y="630"/>
         <UsageCount Value="58"/>
@@ -947,7 +951,8 @@
       </Unit116>
       <Unit117>
         <Filename Value="..\..\src\formats\acs_wave.pas"/>
-        <TopLine Value="1259"/>
+        <UnitName Value="acs_wave"/>
+        <TopLine Value="1261"/>
         <CursorPos X="5" Y="332"/>
         <UsageCount Value="84"/>
         <Loaded Value="True"/>
@@ -955,6 +960,7 @@
       </Unit117>
       <Unit118>
         <Filename Value="..\..\src\devices\acs_dxaudio.pas"/>
+        <UnitName Value="acs_dxaudio"/>
         <EditorIndex Value="2"/>
         <TopLine Value="382"/>
         <CursorPos Y="395"/>
@@ -1001,6 +1007,7 @@
       </Unit123>
       <Unit124>
         <Filename Value="..\..\src\formats\acs_allformats.pas"/>
+        <UnitName Value="acs_allformats"/>
         <EditorIndex Value="8"/>
         <CursorPos X="8" Y="11"/>
         <UsageCount Value="82"/>
@@ -1017,9 +1024,10 @@
       </Unit125>
       <Unit126>
         <Filename Value="..\..\src\filters\acs_file.pas"/>
+        <UnitName Value="acs_file"/>
         <EditorIndex Value="12"/>
-        <TopLine Value="244"/>
-        <CursorPos Y="257"/>
+        <TopLine Value="144"/>
+        <CursorPos X="14" Y="151"/>
         <UsageCount Value="88"/>
         <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
@@ -1042,8 +1050,8 @@
       <Unit129>
         <Filename Value="..\..\src\devices\acs_alsaaudio.pas"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="324"/>
-        <CursorPos X="20" Y="11"/>
+        <TopLine Value="362"/>
+        <CursorPos Y="372"/>
         <UsageCount Value="43"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit129>
@@ -1057,8 +1065,9 @@
       </Unit130>
       <Unit131>
         <Filename Value="..\..\src\filters\acs_procs.pas"/>
+        <UnitName Value="acs_procs"/>
         <EditorIndex Value="5"/>
-        <TopLine Value="285"/>
+        <TopLine Value="286"/>
         <CursorPos X="5" Y="309"/>
         <UsageCount Value="62"/>
         <Loaded Value="True"/>
@@ -1066,15 +1075,17 @@
       </Unit131>
       <Unit132>
         <Filename Value="..\..\src\formats\general\flac.pas"/>
+        <UnitName Value="flac"/>
         <EditorIndex Value="10"/>
-        <TopLine Value="353"/>
-        <CursorPos X="23" Y="367"/>
+        <TopLine Value="28"/>
+        <CursorPos Y="35"/>
         <UsageCount Value="20"/>
         <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit132>
       <Unit133>
         <Filename Value="..\..\src\formats\acs_mpeg.pas"/>
+        <UnitName Value="acs_mpeg"/>
         <EditorIndex Value="13"/>
         <CursorPos X="3" Y="5"/>
         <UsageCount Value="18"/>
@@ -1083,6 +1094,7 @@
       </Unit133>
       <Unit134>
         <Filename Value="..\..\src\formats\general\smpeg.pas"/>
+        <UnitName Value="smpeg"/>
         <EditorIndex Value="14"/>
         <TopLine Value="13"/>
         <CursorPos X="28" Y="42"/>
@@ -1132,8 +1144,9 @@
       </Unit139>
       <Unit140>
         <Filename Value="..\..\src\filters\acs_indicator.pas"/>
+        <UnitName Value="acs_indicator"/>
         <EditorIndex Value="3"/>
-        <TopLine Value="23"/>
+        <TopLine Value="152"/>
         <CursorPos Y="172"/>
         <UsageCount Value="74"/>
         <Loaded Value="True"/>
@@ -1435,123 +1448,123 @@
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
         <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="590" TopLine="572"/>
+        <Caret Line="594" TopLine="581"/>
       </Position1>
       <Position2>
         <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="591" TopLine="581"/>
+        <Caret Line="595" TopLine="581"/>
       </Position2>
       <Position3>
         <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="592" TopLine="581"/>
+        <Caret Line="596" TopLine="581"/>
       </Position3>
       <Position4>
         <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="594" TopLine="581"/>
+        <Caret Line="597" TopLine="581"/>
       </Position4>
       <Position5>
         <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="595" TopLine="581"/>
+        <Caret Line="594" TopLine="581"/>
       </Position5>
       <Position6>
         <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="596" TopLine="581"/>
+        <Caret Line="595" TopLine="581"/>
       </Position6>
       <Position7>
         <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="597" TopLine="581"/>
+        <Caret Line="577" TopLine="565"/>
       </Position7>
       <Position8>
-        <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="594" TopLine="581"/>
+        <Filename Value="..\..\src\formats\general\flac.pas"/>
+        <Caret Line="35" Column="7" TopLine="18"/>
       </Position8>
       <Position9>
         <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="595" TopLine="581"/>
+        <Caret Line="577" TopLine="565"/>
       </Position9>
       <Position10>
         <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="596" TopLine="581"/>
+        <Caret Line="590" TopLine="578"/>
       </Position10>
       <Position11>
         <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="597" TopLine="581"/>
+        <Caret Line="577" TopLine="565"/>
       </Position11>
       <Position12>
-        <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="594" TopLine="581"/>
+        <Filename Value="umain.pas"/>
+        <Caret Line="16" Column="58"/>
       </Position12>
       <Position13>
-        <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="595" TopLine="581"/>
+        <Filename Value="..\..\src\filters\acs_procs.pas"/>
+        <Caret Line="309" Column="5" TopLine="286"/>
       </Position13>
       <Position14>
         <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="596" TopLine="581"/>
+        <Caret Line="580" TopLine="570"/>
       </Position14>
       <Position15>
         <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="597" TopLine="581"/>
+        <Caret Line="580" TopLine="573"/>
       </Position15>
       <Position16>
-        <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="594" TopLine="581"/>
+        <Filename Value="..\..\src\formats\general\flac.pas"/>
+        <Caret Line="38" Column="9" TopLine="28"/>
       </Position16>
       <Position17>
-        <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="595" TopLine="581"/>
+        <Filename Value="..\..\src\formats\general\flac.pas"/>
+        <Caret Line="39" Column="7" TopLine="28"/>
       </Position17>
       <Position18>
-        <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="577" TopLine="565"/>
+        <Filename Value="..\..\src\formats\general\flac.pas"/>
+        <Caret Line="40" Column="22" TopLine="28"/>
       </Position18>
       <Position19>
         <Filename Value="..\..\src\formats\general\flac.pas"/>
-        <Caret Line="35" Column="7" TopLine="18"/>
+        <Caret Line="41" Column="8" TopLine="28"/>
       </Position19>
       <Position20>
-        <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="577" TopLine="565"/>
+        <Filename Value="..\..\src\formats\general\flac.pas"/>
+        <Caret Line="26" Column="12" TopLine="16"/>
       </Position20>
       <Position21>
-        <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="590" TopLine="578"/>
+        <Filename Value="..\..\src\formats\general\flac.pas"/>
+        <Caret Line="40" Column="22" TopLine="28"/>
       </Position21>
       <Position22>
         <Filename Value="..\..\src\formats\acs_flac.pas"/>
-        <Caret Line="577" TopLine="565"/>
+        <Caret Line="586" TopLine="568"/>
       </Position22>
       <Position23>
-        <Filename Value="umain.pas"/>
-        <Caret Line="16" Column="58"/>
+        <Filename Value="..\..\src\formats\general\flac.pas"/>
+        <Caret Line="35" TopLine="28"/>
       </Position23>
       <Position24>
-        <Filename Value="umain.pas"/>
-        <Caret Line="173" Column="3" TopLine="154"/>
+        <Filename Value="..\..\src\formats\acs_flac.pas"/>
+        <Caret Line="581" TopLine="568"/>
       </Position24>
       <Position25>
-        <Filename Value="umain.pas"/>
-        <Caret Line="176" Column="45" TopLine="155"/>
+        <Filename Value="..\..\src\devices\acs_stdaudio.pas"/>
+        <Caret Line="82" Column="17" TopLine="68"/>
       </Position25>
       <Position26>
-        <Filename Value="..\..\src\devices\win32\acs_audio.inc"/>
-        <Caret Line="139" Column="27" TopLine="107"/>
+        <Filename Value="umain.pas"/>
+        <Caret Line="176" Column="32" TopLine="165"/>
       </Position26>
       <Position27>
         <Filename Value="umain.pas"/>
-        <Caret Line="176" Column="45" TopLine="155"/>
+        <Caret Line="42" Column="5" TopLine="33"/>
       </Position27>
       <Position28>
-        <Filename Value="umain.pas"/>
-        <Caret Line="175" Column="45" TopLine="154"/>
+        <Filename Value="..\..\src\filters\acs_file.pas"/>
+        <Caret Line="151" Column="26" TopLine="151"/>
       </Position28>
       <Position29>
-        <Filename Value="umain.pas"/>
-        <Caret Line="176" Column="45" TopLine="155"/>
+        <Filename Value="..\..\src\filters\acs_file.pas"/>
+        <Caret Line="278" Column="27" TopLine="272"/>
       </Position29>
       <Position30>
-        <Filename Value="umain.pas"/>
-        <Caret Line="88" Column="5" TopLine="69"/>
+        <Filename Value="..\..\src\filters\acs_file.pas"/>
+        <Caret Line="326" Column="34" TopLine="316"/>
       </Position30>
     </JumpHistory>
   </ProjectOptions>
@@ -1573,15 +1586,6 @@
     </Linking>
   </CompilerOptions>
   <Debugging>
-    <BreakPoints Count="1">
-      <Item1>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsLocal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="..\..\src\formats\acs_flac.pas"/>
-        <Line Value="580"/>
-      </Item1>
-    </BreakPoints>
     <Watches Count="1">
       <Item1>
         <Expression Value="InPos-8"/>

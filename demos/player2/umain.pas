@@ -29,9 +29,8 @@ type
   { TfMain }
 
   TfMain = class(TForm)
-    AudioOut1: TAcsAudioOut;
-    OpenDialog1: TOpenDialog;
     SoundIndicator: TACSSoundIndicator;
+    AudioOut1: TACSAudioOut;
     btVizu: TBitBtn;
     btPlaylist: TBitBtn;
     btPause: TBitBtn;
@@ -170,19 +169,27 @@ begin
 end;
 
 procedure TfMain.OpenClick(Sender: TObject);
+var
+  OpenDialog: TOpenDialog;
 begin
-  if OpenDialog1.Execute then
-    begin
-      FileIn1.FileName:=OpenDialog1.FileName;
-      if FileIn1.Valid then
-      begin
-        lFilename.Caption := Format('File: %s', [ExtractFileName(FileIn1.FileName)]);
-        btPlay.Enabled := True;
-        Timer1Timer(Self);
-      end
-      else
-        ResetDisplay();
-    end;
+  OpenDialog := TOpenDialog.Create(Self);
+  try
+    OpenDialog.Filter := FileIn1.GetFileOpenFilterString();
+    if not OpenDialog.Execute() then
+      Exit;
+    FileIn1.FileName := OpenDialog.FileName;
+  finally
+    FreeAndNil(OpenDialog);
+  end;
+
+  if FileIn1.Valid then
+  begin
+    lFilename.Caption := Format('File: %s', [ExtractFileName(FileIn1.FileName)]);
+    btPlay.Enabled := True;
+    Timer1Timer(Self);
+  end
+  else
+    ResetDisplay();
 end;
 
 procedure TfMain.Timer1Timer(Sender: TObject);

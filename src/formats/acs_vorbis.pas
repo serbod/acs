@@ -28,9 +28,6 @@ uses
   baseunix,
 {$ENDIF}
 
-{$IFDEF WIN32}
-  Windows,
-{$ENDIF}
   ACS_File, Classes, SysUtils, ACS_Classes, ogg, vorbiscodec, VorbisFile, VorbisEnc,
   ACS_Strings, acs_tags, acs_types;
 
@@ -563,7 +560,7 @@ begin
         else if CN = _vorbis_Genre  then FTags.Genre := UTF8Decode(CV)
         else if CN = _vorbis_Track  then FTags.Track := UTF8Decode(CV);
 
-        Inc(LongWord(PComment), 4);  // !!! non-crossplatform
+        Inc(PtrUInt(PComment), SizeOf(PVComm.user_comments));
         Comment:=PComment^;
       end;
       //FVendor:=PVComm.vendor;

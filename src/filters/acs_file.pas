@@ -19,7 +19,7 @@ unit acs_file;
 interface
 
 uses
-  Classes, ACS_Classes, SysUtils, ACS_Strings;
+  Classes, acs_classes, SysUtils, ACS_Strings;
 
 type
   TAcsFileInClass = class of TAcsCustomFileIn;
@@ -95,6 +95,7 @@ type
     procedure Init(); override;
     procedure Done(); override;
     function DoOutput(Abort: Boolean): Boolean; override;
+    procedure Open();
     procedure Pause(); override;
     procedure Resume(); override;
     procedure Run(); override;
@@ -136,6 +137,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure Open();
     procedure Done(); override;
     procedure Init(); override;
     procedure Reset(); override;
@@ -146,6 +148,7 @@ type
     procedure Jump(Offs: Real); override;
     { Fill AValue by available drivers names }
     function GetDriversList(AValue: TStrings): Boolean;
+    function GetFileOpenFilterString(): string;
     property Input: TAcsCustomFileIn read FInput;
   published
     property FileName;
@@ -156,6 +159,7 @@ var
   FileFormats: TAcsFileFormatsList;
 
 implementation
+
 
 { TAcsFileIn }
 
@@ -242,6 +246,23 @@ begin
   inherited Destroy;
 end;
 
+procedure TAcsFileIn.Open();
+var
+  desc: string;
+begin
+  desc:='';
+  FileFormats.BuildFilterStrings(desc, [fcLoad]);
+  {
+  FDialog:=TOpenDialog.Create(nil);
+  FDialog.Filter:=desc;
+  if FDialog.Execute then
+  begin
+    SetFileName(FDialog.FileName);
+  end;
+  FDialog.Free;
+  }
+end;
+
 procedure TAcsFileIn.Done();
 begin
   if Assigned(FInput) then FInput.Done();
@@ -300,6 +321,11 @@ begin
       AValue.AddObject(Item.Description+' ('+Item.Extension+')', Item);
   end;
   Result:=True;
+end;
+
+function TAcsFileIn.GetFileOpenFilterString(): string;
+begin
+  FileFormats.BuildFilterStrings(Result, [fcLoad]);
 end;
 
 { TAcsFileOut }
@@ -494,6 +520,23 @@ begin
     FFileMode:=AMode;
     if Assigned(FOutput) then FOutput.FileMode:=AMode;
   end;
+end;
+
+procedure TAcsFileOut.Open();
+var
+  desc: string;
+begin
+  desc:='';
+  FileFormats.BuildFilterStrings(desc, [fcSave]);
+  {
+  FDialog:=TSaveDialog.Create(nil);
+  FDialog.Filter:=desc;
+  if FDialog.Execute then
+  begin
+    SetFileName(FDialog.FileName);
+  end;
+  FreeAndNil(FDialog);
+  }
 end;
 
 procedure TAcsFileOut.Pause();

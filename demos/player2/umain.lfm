@@ -5,14 +5,14 @@ object fMain: TfMain
   Width = 201
   HorzScrollBar.Page = 203
   VertScrollBar.Page = 98
-  ActiveControl = btOpen
+  ActiveControl = Panel1
   BorderStyle = bsToolWindow
   Caption = 'Audioplayer'
   ClientHeight = 99
   ClientWidth = 201
   OnClose = FormClose
   OnCreate = FormCreate
-  LCLVersion = '1.4.4.0'
+  LCLVersion = '1.4.0.4'
   object Panel1: TPanel
     Left = 4
     Height = 64
@@ -25,9 +25,9 @@ object fMain: TfMain
     TabOrder = 0
     object lTime: TLabel
       Left = 1
-      Height = 30
+      Height = 29
       Top = 24
-      Width = 102
+      Width = 96
       Caption = '00:00:00'
       Font.Height = -25
       ParentColor = False
@@ -49,7 +49,7 @@ object fMain: TfMain
       Left = 1
       Height = 11
       Top = 20
-      Width = 52
+      Width = 50
       Caption = 'Time remain'
       Font.Height = -9
       ParentColor = False
@@ -60,7 +60,7 @@ object fMain: TfMain
       Left = 116
       Height = 11
       Top = 20
-      Width = 13
+      Width = 14
       Caption = 'left'
       Font.Height = -9
       ParentColor = False
@@ -68,9 +68,9 @@ object fMain: TfMain
     end
     object lLeft: TLabel
       Left = 116
-      Height = 14
+      Height = 15
       Top = 28
-      Width = 50
+      Width = 48
       Caption = '00:00:00'
       Font.Height = -12
       ParentColor = False
@@ -424,25 +424,22 @@ object fMain: TfMain
     left = 140
     top = 36
   end
+  object AudioOut1: TAcsAudioOut
+    Input = SoundIndicator
+    OnDone = AudioOut1Done
+    OnThreadException = AudioOut1ThreadException
+    BufferSize = 16384
+    PrefetchMode = pmAuto
+    Device = 0
+    Volume = 0
+    Delay = -1
+    left = 152
+    top = 8
+  end
   object SoundIndicator: TAcsSoundIndicator
     Input = FileIn1
     ValuesCount = 32
-    left = 56
-    top = 8
-  end
-  object OpenDialog1: TOpenDialog
-    left = 104
-    top = 10
-  end
-  object AudioOut1: TAcsAudioOut
-    Input = SoundIndicator
-    BufferSize = 16384
-    PrefetchMode = pmAuto
-    Driver = 'DirectSound'
-    Device = 0
-    Volume = 0
-    Delay = 10
-    left = 160
-    top = 8
+    left = 87
+    top = 50
   end
 end

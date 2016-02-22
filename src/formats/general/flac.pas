@@ -35,7 +35,8 @@ type
     //{$PackRecords NORMAL}
   {$else}
     {$ifdef LINUX}
-      {$PackRecords C}
+      //{$PackRecords C}
+      {$PackRecords 2}
     {$endif}
   {$endif}
   unsigned = LongWord;

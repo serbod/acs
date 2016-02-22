@@ -22,9 +22,9 @@ unit acs_stdaudio;
 interface
 
 uses
-  Classes, SysUtils, ACS_Types, ACS_Classes, ACS_Audio, ACS_Strings
+  Classes, SysUtils, syncobjs, ACS_Types, ACS_Classes, ACS_Audio, ACS_Strings
 {$IFDEF MSWINDOWS}
-  , Windows, MMSystem
+  , MMSystem
 {$ELSE}
   , baseunix, Soundcard
 {$ENDIF}
@@ -129,7 +129,7 @@ function GetAudioDeviceInfo(DevID: Integer; OutputDev: Boolean): TAcsDeviceInfo;
 implementation
 
 var
-  CrSecI, CrSecO: TRTLCriticalSection;
+  CrSecI, CrSecO: TCriticalSection;
   
 {$IFDEF MSWINDOWS}
   {$I win32\acs_audio.inc}
@@ -198,8 +198,8 @@ end;
 
 initialization
   {$IFDEF MSWINDOWS}
-  InitializeCriticalSection(CrSecI);
-  InitializeCriticalSection(CrSecO);
+  CrSecI := TCriticalSection.Create();
+  CrSecO := TCriticalSection.Create();
   {$ENDIF}
   CountChannels();
   if OutputChannelsCount > 0 then
@@ -209,8 +209,8 @@ initialization
 
 finalization
   {$IFDEF MSWINDOWS}
-  DeleteCriticalSection(CrSecI);
-  DeleteCriticalSection(CrSecO);
+  FreeAndNil(CrSecO);
+  FreeAndNil(CrSecI);
   {$ENDIF}
 
 end.

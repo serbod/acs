@@ -597,7 +597,7 @@ begin
       SetLength(S, Entry.length);
       Move(Entry.entry^, S[1], Length(S));
       SL.Add(String(S));
-      Inc(LongWord(Entry), SizeOf(FLAC__StreamMetadata_VorbisComment_Entry));
+      Inc(PtrUInt(Entry), SizeOf(FLAC__StreamMetadata_VorbisComment_Entry));
     end;
 
     FLACIn.FComments.Title:=Utf8ToWideStr(SL.Values[AnsiUpperCase(_vorbis_Title)]);

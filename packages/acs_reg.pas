@@ -24,8 +24,8 @@ begin
   TACSMSConverter, TACSAudioProcessor, TACSBWFilter, TACSSincFilter, TACSSoundIndicator, TACSStereoBalance, TACSConvolver, TACSVolumeQuery]);
 
   { serbod@ }
-  RegisterPropertyEditor(TypeInfo(string), TAcsAudioIn, 'Driver', TAcsAudioInDriverPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TAcsAudioOut, 'Driver', TAcsAudioOutDriverPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TAcsAudioIn, 'DriverName', TAcsAudioInDriverNamePropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TAcsAudioOut, 'DriverName', TAcsAudioOutDriverNamePropertyEditor);
 end;
 
 initialization

@@ -15,14 +15,7 @@ unit acs_lame;
 interface
 
 uses
-  ACS_File,Classes, SysUtils, ACS_Classes, lame,
-{$IFDEF LINUX}
-  baseunix;
-{$ENDIF}
-
-{$IFDEF WIN32}
-  Windows;
-{$ENDIF}
+  ACS_File,Classes, SysUtils, ACS_Classes, lame;
 
 type
 

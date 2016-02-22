@@ -22,10 +22,7 @@ interface
 
 uses
 
-{$IFDEF MSWINDOWS}
-  Windows,
-{$ENDIF}
-  acs_strings, Classes, SysUtils, syncobjs;
+acs_strings, Classes, SysUtils, syncobjs;
 
 const
 
@@ -113,10 +110,8 @@ type
     BlockEventName: string;
     //LockEventName: string;
     FBytesRead: Integer;
-    {$IFDEF MSWINDOWS}
-    BlockEvent: THandle;
-    CS: TRTLCriticalSection;
-    {$ENDIF}
+    CS: TCriticalSection;
+    BlockEvent: TEvent;
   public
     constructor Create();
     destructor Destroy; override;
@@ -205,7 +200,7 @@ type
     function Write(const Buffer; Count: Longint): Longint; override;
     { If Origin = soCurrent, then changed ReadPosition, otherwise changed WritePosition }
     function Seek(const Offset: Int64; Origin: TSeekOrigin): Int64; override;
-    procedure SetSize(NewSize: PtrInt); override;
+    procedure SetSize({$ifdef CPU64}const {$endif CPU64}NewSize: PtrInt); override;
   end;
 
 
@@ -746,7 +741,7 @@ begin
     FWritePos:=Offset;
 end;
 
-procedure TAcsCircularAudioBuffer.SetSize(NewSize: PtrInt);
+procedure TAcsCircularAudioBuffer.SetSize({$ifdef CPU64}const {$endif CPU64}NewSize: PtrInt);
 begin
   inherited SetSize(NewSize);
   if NewSize < FReadPos then FReadPos:=NewSize;
@@ -895,7 +890,7 @@ end;
 
 procedure TAcsVerySmallThread.Execute();
 begin
-  Synchronize(CallOnDone);
+ Synchronize(CallOnDone);
 end;
 
 { TAcsOutThread }
@@ -961,7 +956,8 @@ begin
       Res:=ParentComponent.DoOutput(False);
       if (not Res) then Terminate()
       else
-        if Assigned(ParentComponent.OnProgress) then Synchronize(CallOnProgress);
+        if Assigned(ParentComponent.OnProgress) then
+          Synchronize(CallOnProgress);
     except
       on E: Exception do
       begin
@@ -1667,34 +1663,29 @@ end;
 constructor TAcsCircularBuffer.Create();
 begin
   inherited Create;
-  {$IFDEF MSWINDOWS}
   BlockEventName:='Block'+IntToStr(LongWord(Self)); // this way we guarantee that the name is unique
-  BlockEvent:=CreateEvent(nil, True, False, @BlockEventName[1]);
-  InitializeCriticalSection(CS);
-  {$ENDIF}
+  BlockEvent:= TEvent.Create(nil, True, False, BlockEventName);
+  CS := TCriticalSection.Create();
 end;
 
 destructor TAcsCircularBuffer.Destroy();
 begin
-  {$IFDEF MSWINDOWS}
-  DeleteCriticalSection(CS);
-  CloseHandle(BlockEvent);
-  {$ENDIF}
+  FreeAndNil(CS);
+  FreeAndNil(BlockEvent);
   inherited Destroy;
 end;
 
 procedure TAcsCircularBuffer.Reset();
 begin
-  {$IFDEF MSWINDOWS}
-  EnterCriticalSection(CS);
-  {$ENDIF}
-  ReadCur:=0;
-  WriteCur:=0;
-  FBytesRead:=0;
-  {$IFDEF MSWINDOWS}
-  SetEvent(BlockEvent);
-  LeaveCriticalSection(CS);
- {$ENDIF}
+  CS.Enter();
+  try
+    ReadCur:=0;
+    WriteCur:=0;
+    FBytesRead:=0;
+    BlockEvent.SetEvent();
+  finally
+    CS.Leave();
+  end;
 end;
 
 function TAcsCircularBuffer.Write(const Buffer; Count: Longint): Longint;
@@ -1704,9 +1695,7 @@ var
 begin
   if WriteCur >= ReadCur then
   begin
-    {$IFDEF MSWINDOWS}
-    EnterCriticalSection(CS);
-    {$ENDIF}
+    CS.Enter();
     S1:=STREAM_BUFFER_SIZE-WriteCur;
     if (Count <= S1) then
     begin
@@ -1738,11 +1727,10 @@ begin
     Inc(FBytesInBuffer, S2);
     Result:=S2;
   end;
-  {$IFDEF MSWINDOWS}
   if Result <> 0 then
-  if FBufferMode = bmBlock then PulseEvent(BlockEvent);
-  LeaveCriticalSection(CS);
-  {$ENDIF}
+    if FBufferMode = bmBlock then
+      BlockEvent.SetEvent();
+  CS.Leave();
 end;
 
 function TAcsCircularBuffer.Read(var Buffer; Count: Integer): Integer;
@@ -1750,14 +1738,12 @@ var
   addr: Pointer;
   S1, S2: Integer;
 begin
-  {$IFDEF MSWINDOWS}
   if (ReadCur = WriteCur) and (FBufferMode = bmBlock) then
   begin
-    WaitForSingleObject(BlockEvent, INFINITE);
-    ResetEvent(BlockEvent);
+    BlockEvent.WaitFor(INFINITE);
+    BlockEvent.ResetEvent();
   end;
-  EnterCriticalSection(CS);
-  {$ENDIF}
+  CS.Enter();
   if ReadCur <= WriteCur then
   begin
     S2:=WriteCur-ReadCur;
@@ -1792,9 +1778,7 @@ begin
     end;
   end;
   Inc(FBytesRead, Result);
-  {$IFDEF MSWINDOWS}
-  LeaveCriticalSection(CS);
-  {$ENDIF}
+  CS.Leave();
 end;
 
 // the following property is implemented 'cause tstreams position property uses them
