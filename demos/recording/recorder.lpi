@@ -51,9 +51,10 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="uMain"/>
+        <IsVisibleTab Value="True"/>
         <WindowIndex Value="1"/>
         <TopLine Value="15"/>
-        <CursorPos X="20" Y="16"/>
+        <CursorPos X="33" Y="31"/>
         <UsageCount Value="26"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -189,18 +190,17 @@
       </Unit21>
       <Unit22>
         <Filename Value="../../../../../../../Programme/lazarus/lcl/include/control.inc"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="-1"/>
         <WindowIndex Value="1"/>
         <TopLine Value="3633"/>
         <CursorPos X="24" Y="3660"/>
         <UsageCount Value="10"/>
-        <Loaded Value="True"/>
       </Unit22>
       <Unit23>
         <Filename Value="../../src/filters/acs_audio.pas"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="1"/>
-        <TopLine Value="778"/>
+        <TopLine Value="697"/>
         <CursorPos X="6" Y="797"/>
         <UsageCount Value="10"/>
         <Loaded Value="True"/>
@@ -208,7 +208,6 @@
       </Unit23>
       <Unit24>
         <Filename Value="../../src/filters/acs_classes.pas"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="2"/>
         <WindowIndex Value="1"/>
         <TopLine Value="939"/>

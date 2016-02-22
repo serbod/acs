@@ -383,9 +383,9 @@ LazarusResources.Add('TfMain','FORMDATA',[
   +'abled'#8#8'Interval'#2'2'#7'OnTimer'#7#11'Timer1Timer'#4'left'#3#140#0#3'to'
   +'p'#2'$'#0#0#12'TAcsAudioOut'#9'AudioOut1'#5'Input'#7#14'SoundIndicator'#6'O'
   +'nDone'#7#13'AudioOut1Done'#17'OnThreadException'#7#24'AudioOut1ThreadExcept'
-  +'ion'#10'BufferSize'#3#0'@'#12'PrefetchMode'#7#6'pmAuto'#6'Device'#2#0#6'Vol'
-  +'ume'#2#0#5'Delay'#2#255#4'left'#3#140#0#3'top'#2#4#0#0#18'TAcsSoundIndicato'
-  ,'r'#14'SoundIndicator'#5'Input'#7#7'FileIn1'#11'ValuesCount'#2' '#4'left'#3
-  +#172#0#3'top'#2#4#0#0#11'TOpenDialog'#11'OpenDialog1'#4'left'#2'h'#3'top'#2#4
-  +#0#0#0
+  +'ion'#10'BufferSize'#3#0'@'#12'PrefetchMode'#7#6'pmAuto'#6'Driver'#6#10'Wave'
+  +'mapper'#6'Device'#2#0#6'Volume'#2#0#5'Delay'#2#6#4'left'#3#140#0#3'top'#2#4
+  ,#0#0#18'TAcsSoundIndicator'#14'SoundIndicator'#5'Input'#7#7'FileIn1'#11'Valu'
+  +'esCount'#2' '#4'left'#3#172#0#3'top'#2#4#0#0#11'TOpenDialog'#11'OpenDialog1'
+  +#4'left'#2'h'#3'top'#2#4#0#0#0
 ]);

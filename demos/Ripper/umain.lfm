@@ -1,35 +1,37 @@
 object fMain: TfMain
+  Left = 306
+  Height = 300
+  Top = 151
+  Width = 400
+  HorzScrollBar.Page = 399
+  VertScrollBar.Page = 299
   ActiveControl = lvTracks
   Caption = 'CD Ripper'
   ClientHeight = 300
   ClientWidth = 400
   OnCreate = FormCreate
-  PixelsPerInch = 75
-  HorzScrollBar.Page = 399
-  VertScrollBar.Page = 299
-  Left = 271
-  Height = 300
-  Top = 150
-  Width = 400
+  LCLVersion = '1.4.4.0'
   object Label1: TLabel
-    Caption = 'Drive'
-    Color = clNone
-    ParentColor = False
     Left = 8
     Height = 13
     Top = 7
-    Width = 31
+    Width = 25
+    Caption = 'Drive'
+    ParentColor = False
   end
   object Label2: TLabel
-    Caption = 'Output Format'
-    Color = clNone
-    ParentColor = False
     Left = 265
     Height = 13
     Top = 7
-    Width = 80
+    Width = 71
+    Caption = 'Output Format'
+    ParentColor = False
   end
   object lvTracks: TListView
+    Left = 0
+    Height = 250
+    Top = 34
+    Width = 400
     Anchors = [akTop, akLeft, akRight, akBottom]
     Columns = <    
       item
@@ -46,53 +48,52 @@ object fMain: TfMain
       end>
     MultiSelect = True
     RowSelect = True
+    TabOrder = 0
     ViewStyle = vsReport
-    Height = 250
-    Top = 34
-    Width = 400
   end
   object cbDrives: TComboBox
-    MaxLength = 0
-    OnChange = cbDrivesChange
-    Style = csDropDownList
-    TabOrder = 1
     Left = 40
     Height = 21
     Top = 4
     Width = 132
+    ItemHeight = 13
+    OnChange = cbDrivesChange
+    Style = csDropDownList
+    TabOrder = 1
   end
   object bRip: TButton
-    BorderSpacing.InnerBorder = 2
-    Caption = 'Rip selected'
-    OnClick = Button1Click
-    TabOrder = 2
     Left = 184
     Height = 21
     Top = 4
     Width = 75
+    BorderSpacing.InnerBorder = 2
+    Caption = 'Rip selected'
+    OnClick = Button1Click
+    TabOrder = 2
   end
   object cbFormat: TComboBox
+    Left = 340
+    Height = 21
+    Top = 4
+    Width = 61
+    ItemHeight = 13
     ItemIndex = 2
     Items.Strings = (
       'ogg'
       'mp3'
       'wav'
     )
-    MaxLength = 0
     Style = csDropDownList
     TabOrder = 3
     Text = 'wav'
-    Left = 340
-    Height = 21
-    Top = 4
-    Width = 61
   end
   object ProgressBar: TProgressBar
-    Align = alBottom
-    Max = 100
+    Left = 0
     Height = 12
     Top = 288
     Width = 400
+    Align = alBottom
+    TabOrder = 4
   end
   object Timer: TTimer
     OnTimer = TimerTimer
@@ -102,18 +103,15 @@ object fMain: TfMain
   object SelectDirectoryDialog: TSelectDirectoryDialog
     Title = 'Select Directory'
     FilterIndex = 0
-    Title = 'Select Directory'
     left = 144
     top = 4
   end
-  object FileOut: TACSFileOut
-    Input = CDIn
+  object FileOut: TAcsFileOut
     OnDone = FileOutDone
+    BufferSize = 0
+    PrefetchMode = pmAuto
+    FileMode = foRewrite
     left = 112
-    top = 4
-  end
-  object CDIn: TACSCDIn
-    left = 44
     top = 4
   end
 end
