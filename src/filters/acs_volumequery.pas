@@ -113,7 +113,8 @@ begin
   //
   LMax:=0;
   RMax:=0;
-  for i:=0 to NumSamples-1 do
+  i := 0;
+  //for i:=0 to NumSamples-1 do
   begin
     if FBPS = 8 then
     begin
