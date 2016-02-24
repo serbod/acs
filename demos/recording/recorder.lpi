@@ -53,8 +53,8 @@
         <UnitName Value="uMain"/>
         <IsVisibleTab Value="True"/>
         <WindowIndex Value="1"/>
-        <TopLine Value="15"/>
-        <CursorPos X="33" Y="31"/>
+        <TopLine Value="21"/>
+        <CursorPos X="31" Y="48"/>
         <UsageCount Value="26"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -227,7 +227,7 @@
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit25>
     </Units>
-    <JumpHistory Count="19" HistoryIndex="18">
+    <JumpHistory Count="21" HistoryIndex="20">
       <Position1>
         <Filename Value="recorder.lpr"/>
         <Caret Line="20"/>
@@ -304,6 +304,14 @@
         <Filename Value="../../src/filters/acs_audio.pas"/>
         <Caret Line="797" Column="6" TopLine="778"/>
       </Position19>
+      <Position20>
+        <Filename Value="umain.pas"/>
+        <Caret Line="31" Column="33" TopLine="15"/>
+      </Position20>
+      <Position21>
+        <Filename Value="umain.pas"/>
+        <Caret Line="33" Column="33" TopLine="15"/>
+      </Position21>
     </JumpHistory>
   </ProjectOptions>
   <CompilerOptions>
