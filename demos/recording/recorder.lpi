@@ -38,9 +38,10 @@
         <Filename Value="recorder.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="player"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="4"/>
         <WindowIndex Value="1"/>
-        <CursorPos Y="20"/>
+        <CursorPos X="11" Y="10"/>
         <UsageCount Value="26"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -51,10 +52,9 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="uMain"/>
-        <IsVisibleTab Value="True"/>
         <WindowIndex Value="1"/>
-        <TopLine Value="21"/>
-        <CursorPos X="31" Y="48"/>
+        <TopLine Value="23"/>
+        <CursorPos X="36" Y="34"/>
         <UsageCount Value="26"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -200,8 +200,8 @@
         <Filename Value="../../src/filters/acs_audio.pas"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="1"/>
-        <TopLine Value="697"/>
-        <CursorPos X="6" Y="797"/>
+        <TopLine Value="686"/>
+        <CursorPos X="32" Y="706"/>
         <UsageCount Value="10"/>
         <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
@@ -227,7 +227,7 @@
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit25>
     </Units>
-    <JumpHistory Count="21" HistoryIndex="20">
+    <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
         <Filename Value="recorder.lpr"/>
         <Caret Line="20"/>
@@ -312,6 +312,42 @@
         <Filename Value="umain.pas"/>
         <Caret Line="33" Column="33" TopLine="15"/>
       </Position21>
+      <Position22>
+        <Filename Value="umain.pas"/>
+        <Caret Line="48" Column="31" TopLine="21"/>
+      </Position22>
+      <Position23>
+        <Filename Value="../../src/filters/acs_audio.pas"/>
+        <Caret Line="758" Column="3" TopLine="756"/>
+      </Position23>
+      <Position24>
+        <Filename Value="../../src/filters/acs_audio.pas"/>
+        <Caret Line="759" TopLine="752"/>
+      </Position24>
+      <Position25>
+        <Filename Value="../../src/filters/acs_audio.pas"/>
+        <Caret Line="760" TopLine="752"/>
+      </Position25>
+      <Position26>
+        <Filename Value="../../src/filters/acs_audio.pas"/>
+        <Caret Line="764" TopLine="752"/>
+      </Position26>
+      <Position27>
+        <Filename Value="../../src/filters/acs_audio.pas"/>
+        <Caret Line="686" TopLine="667"/>
+      </Position27>
+      <Position28>
+        <Filename Value="../../src/filters/acs_audio.pas"/>
+        <Caret Line="687" TopLine="667"/>
+      </Position28>
+      <Position29>
+        <Filename Value="../../src/filters/acs_audio.pas"/>
+        <Caret Line="689" TopLine="667"/>
+      </Position29>
+      <Position30>
+        <Filename Value="../../src/filters/acs_audio.pas"/>
+        <Caret Line="690" TopLine="673"/>
+      </Position30>
     </JumpHistory>
   </ProjectOptions>
   <CompilerOptions>
@@ -333,7 +369,7 @@
     </Linking>
   </CompilerOptions>
   <Debugging>
-    <BreakPoints Count="1">
+    <BreakPoints Count="3">
       <Item1>
         <Kind Value="bpkSource"/>
         <WatchScope Value="wpsGlobal"/>
@@ -341,6 +377,20 @@
         <Source Value="D:/Worldspace/Src/gstdintf/home/z0m3ie/lazarus/components/turbopower_ipro/iphtml.pas"/>
         <Line Value="17239"/>
       </Item1>
+      <Item2>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="../../src/filters/acs_audio.pas"/>
+        <Line Value="759"/>
+      </Item2>
+      <Item3>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="../../src/filters/acs_audio.pas"/>
+        <Line Value="764"/>
+      </Item3>
     </BreakPoints>
     <Watches Count="1">
       <Item1>

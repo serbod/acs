@@ -690,11 +690,11 @@ begin
   while not Done do
   begin
     lowest:=99999;
-    for i:=0 to Length(OutDriverInfos)-1 do
+    for i:=0 to Length(InDriverInfos)-1 do
     begin
-      if (OutDriverInfos[i].Latency < lowest) and (OutDriverInfos[i].Latency > minlat) then
+      if (InDriverInfos[i].Latency < lowest) and (InDriverInfos[i].Latency > minlat) then
       begin
-        lowest:=OutDriverInfos[i].Latency;
+        lowest:=InDriverInfos[i].Latency;
         lowestindex:=i;
       end;
     end;
@@ -703,7 +703,7 @@ begin
     if lowest < 99999 then
     begin
       try
-        SetDriver(OutDriverInfos[lowestindex].DriverName);
+        SetDriver(InDriverInfos[lowestindex].DriverName);
       except
         minlat:=lowest+1;
         Done:=False;

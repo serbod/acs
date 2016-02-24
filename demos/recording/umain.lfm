@@ -20,7 +20,7 @@ object fMain: TfMain
     ParentColor = False
   end
   object Label2: TLabel
-    Left = 192
+    Left = 255
     Height = 13
     Top = 36
     Width = 25
@@ -53,7 +53,7 @@ object fMain: TfMain
     TabOrder = 1
   end
   object AudioIn1: TAcsAudioIn
-    Driver = 'Wavemapper'
+    Driver = 'DirectSound'
     Device = 0
     InBitsPerSample = 8
     InChannels = 1
@@ -66,7 +66,7 @@ object fMain: TfMain
     Input = VolumeQuery
     BufferSize = 0
     PrefetchMode = pmAuto
-    left = 200
+    left = 192
     top = 8
   end
   object VolumeQuery: TAcsVolumeQuery
