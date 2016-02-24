@@ -53,7 +53,7 @@ object fMain: TfMain
     TabOrder = 1
   end
   object AudioIn1: TAcsAudioIn
-    Driver = 'DirectSound'
+    Driver = 'Wavemapper'
     Device = 0
     InBitsPerSample = 8
     InChannels = 1

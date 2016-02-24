@@ -33,13 +33,12 @@
         <MinVersion Major="2" Minor="4" Valid="True"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="26">
+    <Units Count="28">
       <Unit0>
         <Filename Value="recorder.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="player"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="6"/>
         <WindowIndex Value="1"/>
         <CursorPos X="11" Y="10"/>
         <UsageCount Value="26"/>
@@ -200,153 +199,174 @@
         <Filename Value="../../src/filters/acs_audio.pas"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="1"/>
-        <TopLine Value="686"/>
-        <CursorPos X="32" Y="706"/>
+        <TopLine Value="744"/>
+        <CursorPos Y="760"/>
         <UsageCount Value="10"/>
         <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit23>
       <Unit24>
         <Filename Value="../../src/filters/acs_classes.pas"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="3"/>
         <WindowIndex Value="1"/>
-        <TopLine Value="939"/>
-        <CursorPos Y="957"/>
+        <TopLine Value="969"/>
+        <CursorPos Y="992"/>
         <UsageCount Value="10"/>
         <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit24>
       <Unit25>
         <Filename Value="../../src/filters/acs_volumequery.pas"/>
-        <EditorIndex Value="3"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="5"/>
         <WindowIndex Value="1"/>
-        <TopLine Value="60"/>
-        <CursorPos Y="79"/>
+        <TopLine Value="128"/>
+        <CursorPos X="20" Y="151"/>
         <UsageCount Value="10"/>
         <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit25>
+      <Unit26>
+        <Filename Value="../../src/devices/acs_dxaudio.pas"/>
+        <EditorIndex Value="2"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="705"/>
+        <CursorPos Y="738"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit26>
+      <Unit27>
+        <Filename Value="../../src/filters/acs_misc.pas"/>
+        <EditorIndex Value="4"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="297"/>
+        <CursorPos Y="316"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit27>
     </Units>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="recorder.lpr"/>
-        <Caret Line="20"/>
+        <Filename Value="../../src/filters/acs_volumequery.pas"/>
+        <Caret Line="97" TopLine="65"/>
       </Position1>
       <Position2>
-        <Filename Value="umain.pas"/>
-        <Caret Line="22" Column="49" TopLine="15"/>
+        <Filename Value="../../src/filters/acs_volumequery.pas"/>
+        <Caret Line="155" TopLine="137"/>
       </Position2>
       <Position3>
-        <Filename Value="umain.pas"/>
-        <Caret Line="16" Column="20" TopLine="15"/>
+        <Filename Value="../../src/filters/acs_classes.pas"/>
+        <Caret Line="1257" TopLine="1237"/>
       </Position3>
       <Position4>
-        <Filename Value="../../src/filters/acs_audio.pas"/>
-        <Caret Line="797" TopLine="778"/>
+        <Filename Value="../../src/filters/acs_classes.pas"/>
+        <Caret Line="1259" TopLine="1237"/>
       </Position4>
       <Position5>
         <Filename Value="../../src/filters/acs_classes.pas"/>
-        <Caret Line="977" TopLine="947"/>
+        <Caret Line="1260" TopLine="1237"/>
       </Position5>
       <Position6>
-        <Filename Value="../../src/filters/acs_classes.pas"/>
-        <Caret Line="957" TopLine="947"/>
+        <Filename Value="../../src/filters/acs_misc.pas"/>
+        <Caret Line="316" TopLine="297"/>
       </Position6>
       <Position7>
         <Filename Value="../../src/filters/acs_classes.pas"/>
-        <Caret Line="959" TopLine="947"/>
+        <Caret Line="957" TopLine="939"/>
       </Position7>
       <Position8>
         <Filename Value="../../src/filters/acs_classes.pas"/>
-        <Caret Line="960" TopLine="947"/>
+        <Caret Line="972" TopLine="941"/>
       </Position8>
       <Position9>
         <Filename Value="../../src/filters/acs_classes.pas"/>
-        <Caret Line="961" TopLine="947"/>
+        <Caret Line="973" TopLine="942"/>
       </Position9>
       <Position10>
         <Filename Value="../../src/filters/acs_classes.pas"/>
-        <Caret Line="962" TopLine="947"/>
+        <Caret Line="982" TopLine="963"/>
       </Position10>
       <Position11>
         <Filename Value="../../src/filters/acs_classes.pas"/>
-        <Caret Line="976" TopLine="947"/>
+        <Caret Line="992" TopLine="969"/>
       </Position11>
       <Position12>
-        <Filename Value="../../src/filters/acs_classes.pas"/>
-        <Caret Line="977" TopLine="947"/>
+        <Filename Value="../../src/filters/acs_audio.pas"/>
+        <Caret Line="764" TopLine="744"/>
       </Position12>
       <Position13>
-        <Filename Value="../../src/filters/acs_classes.pas"/>
-        <Caret Line="1193" TopLine="1173"/>
+        <Filename Value="../../src/filters/acs_audio.pas"/>
+        <Caret Line="759" TopLine="744"/>
       </Position13>
       <Position14>
-        <Filename Value="../../src/filters/acs_classes.pas"/>
-        <Caret Line="1194" TopLine="1173"/>
+        <Filename Value="../../src/devices/acs_dxaudio.pas"/>
+        <Caret Line="685" TopLine="665"/>
       </Position14>
       <Position15>
-        <Filename Value="../../src/filters/acs_classes.pas"/>
-        <Caret Line="1195" TopLine="1173"/>
+        <Filename Value="../../src/devices/acs_dxaudio.pas"/>
+        <Caret Line="686" TopLine="665"/>
       </Position15>
       <Position16>
-        <Filename Value="../../src/filters/acs_classes.pas"/>
-        <Caret Line="1150" TopLine="1131"/>
+        <Filename Value="../../src/devices/acs_dxaudio.pas"/>
+        <Caret Line="687" TopLine="665"/>
       </Position16>
       <Position17>
-        <Filename Value="../../src/filters/acs_volumequery.pas"/>
-        <Caret Line="79" TopLine="60"/>
+        <Filename Value="../../src/devices/acs_dxaudio.pas"/>
+        <Caret Line="690" TopLine="665"/>
       </Position17>
       <Position18>
-        <Filename Value="../../src/filters/acs_classes.pas"/>
-        <Caret Line="1661" TopLine="1642"/>
+        <Filename Value="../../src/devices/acs_dxaudio.pas"/>
+        <Caret Line="738" TopLine="720"/>
       </Position18>
       <Position19>
         <Filename Value="../../src/filters/acs_audio.pas"/>
-        <Caret Line="797" Column="6" TopLine="778"/>
+        <Caret Line="760" TopLine="744"/>
       </Position19>
       <Position20>
-        <Filename Value="umain.pas"/>
-        <Caret Line="31" Column="33" TopLine="15"/>
+        <Filename Value="../../src/filters/acs_audio.pas"/>
+        <Caret Line="759" TopLine="744"/>
       </Position20>
       <Position21>
-        <Filename Value="umain.pas"/>
-        <Caret Line="33" Column="33" TopLine="15"/>
+        <Filename Value="../../src/devices/acs_dxaudio.pas"/>
+        <Caret Line="685" TopLine="665"/>
       </Position21>
       <Position22>
-        <Filename Value="umain.pas"/>
-        <Caret Line="48" Column="31" TopLine="21"/>
+        <Filename Value="../../src/devices/acs_dxaudio.pas"/>
+        <Caret Line="686" TopLine="665"/>
       </Position22>
       <Position23>
-        <Filename Value="../../src/filters/acs_audio.pas"/>
-        <Caret Line="758" Column="3" TopLine="756"/>
+        <Filename Value="../../src/devices/acs_dxaudio.pas"/>
+        <Caret Line="687" TopLine="665"/>
       </Position23>
       <Position24>
-        <Filename Value="../../src/filters/acs_audio.pas"/>
-        <Caret Line="759" TopLine="752"/>
+        <Filename Value="../../src/devices/acs_dxaudio.pas"/>
+        <Caret Line="690" TopLine="680"/>
       </Position24>
       <Position25>
-        <Filename Value="../../src/filters/acs_audio.pas"/>
-        <Caret Line="760" TopLine="752"/>
+        <Filename Value="../../src/devices/acs_dxaudio.pas"/>
+        <Caret Line="738" TopLine="705"/>
       </Position25>
       <Position26>
         <Filename Value="../../src/filters/acs_audio.pas"/>
-        <Caret Line="764" TopLine="752"/>
+        <Caret Line="760" TopLine="744"/>
       </Position26>
       <Position27>
-        <Filename Value="../../src/filters/acs_audio.pas"/>
-        <Caret Line="686" TopLine="667"/>
+        <Filename Value="../../src/filters/acs_volumequery.pas"/>
+        <Caret Line="95" TopLine="75"/>
       </Position27>
       <Position28>
-        <Filename Value="../../src/filters/acs_audio.pas"/>
-        <Caret Line="687" TopLine="667"/>
+        <Filename Value="../../src/filters/acs_volumequery.pas"/>
+        <Caret Line="96" TopLine="75"/>
       </Position28>
       <Position29>
-        <Filename Value="../../src/filters/acs_audio.pas"/>
-        <Caret Line="689" TopLine="667"/>
+        <Filename Value="../../src/filters/acs_volumequery.pas"/>
+        <Caret Line="97" TopLine="75"/>
       </Position29>
       <Position30>
-        <Filename Value="../../src/filters/acs_audio.pas"/>
-        <Caret Line="690" TopLine="673"/>
+        <Filename Value="umain.pas"/>
+        <Caret Line="34" Column="36" TopLine="23"/>
       </Position30>
     </JumpHistory>
   </ProjectOptions>
@@ -369,7 +389,7 @@
     </Linking>
   </CompilerOptions>
   <Debugging>
-    <BreakPoints Count="3">
+    <BreakPoints Count="1">
       <Item1>
         <Kind Value="bpkSource"/>
         <WatchScope Value="wpsGlobal"/>
@@ -377,20 +397,6 @@
         <Source Value="D:/Worldspace/Src/gstdintf/home/z0m3ie/lazarus/components/turbopower_ipro/iphtml.pas"/>
         <Line Value="17239"/>
       </Item1>
-      <Item2>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsLocal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="../../src/filters/acs_audio.pas"/>
-        <Line Value="759"/>
-      </Item2>
-      <Item3>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsLocal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="../../src/filters/acs_audio.pas"/>
-        <Line Value="764"/>
-      </Item3>
     </BreakPoints>
     <Watches Count="1">
       <Item1>

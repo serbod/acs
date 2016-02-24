@@ -149,8 +149,11 @@ begin
     Move(FLeft[1], FLeft[0], FDelay * Sizeof(Word));
     Move(FRight[1], FRight[0], FDelay * Sizeof(Word));
   end;
-  FLeft[FDelay]:=LMax;
-  FRight[FDelay]:=RMax;
+  if length(FLeft)>FDelay then
+    begin
+      FLeft[FDelay]:=LMax;
+      FRight[FDelay]:=RMax;
+    end;
   Lock:=False;
 end;
 
