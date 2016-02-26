@@ -431,10 +431,10 @@ object fMain: TfMain
     OnThreadException = AudioOut1ThreadException
     BufferSize = 16384
     PrefetchMode = pmAuto
-    Driver = 'Wavemapper'
+    Driver = 'DirectSound'
     Device = 0
     Volume = 0
-    Delay = 6
+    Delay = 10
     left = 140
     top = 4
   end
