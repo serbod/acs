@@ -18,6 +18,7 @@ type
     Label1: TLabel;
     Label2: TLabel;
     Label3: TLabel;
+    Label4: TLabel;
     NULLOut1: TACSNULLOut;
     ProgressBar: TProgressBar;
     Timer1: TTimer;
@@ -50,7 +51,8 @@ end;
 
 procedure TfMain.Timer1Timer(Sender: TObject);
 begin
-  ProgressBar.Position := (round((VolumeQuery.dbLeft+VolumeQuery.dbRight)/2)+96);
+  ProgressBar.Position := (round((VolumeQuery.dbLeft+VolumeQuery.dbRight)/2));
+  Label4.Caption:=IntToStr(round((VolumeQuery.dbLeft+VolumeQuery.dbRight)/2));
   if not NULLOut1.Active then Button1.Caption:='Start';
 end;
 
