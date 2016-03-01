@@ -212,7 +212,7 @@ end;
 
 procedure SmallIntArrayToDouble(InData: PSmallInt; OutData: PDouble; DataSize: Integer);
 begin
-  {$IFDEF CPU32}
+  {$ifdef CPU386}
   asm
               MOV EDX, DataSize;
               SHL EDX, 3;
@@ -233,7 +233,7 @@ end;
 
 procedure SmallIntArrayToComplex(InData: PSmallInt; OutData: PAcsComplex; DataSize: Integer);
 begin
-  {$IFDEF CPU32}
+  {$ifdef CPU386}
   asm
               MOV EDX, DataSize;
               SHR EDX, 4;

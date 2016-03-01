@@ -25,7 +25,7 @@ interface
 
 uses
   ACS_Audio, SysUtils, Classes, ACS_Types, ACS_Classes, Windows,
-  DSWrapper, ACS_Strings, DirectSound, mmsystem;
+  DSWrapper, ACS_Strings, DirectSound, mmsystem{$ifdef LCL},Forms{$endif};
 
 const
   LATENCY = 25;
@@ -328,6 +328,11 @@ begin
     raise EAcsException.Create(strFailedtoCreateDSdev+': '+DSErrToString(Res));
   DSW_Initialized:=True;
 
+  Wnd:=0;
+  {$ifdef LCL}
+  if (Owner is TForm) then Wnd:=(Owner as TForm).Handle;
+  {$endif}
+
   // align buffer size to sample size
   Self.SetBufferSize(FBufferSize - (FBufferSize mod FSampleSize));
   //Self.SetBufferSize(FFramesInBuffer * (BPS div 8) * Chan);
@@ -369,9 +374,6 @@ begin
   //FormatExt.wSamplesPerBlock:=0;
   //FormatExt.wReserved:=0;
   //FormatExt.SubFormat:=1;
-
-  Wnd:=0;
-  //if (Owner is TControl) then Wnd:=(Owner as TControl).Handle;
 
   Res:=DSW_InitOutputBufferEx(DSW, Wnd, FormatExt, FBuffer.Size);
   if Res <> 0 then

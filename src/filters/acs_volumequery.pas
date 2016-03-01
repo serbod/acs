@@ -82,8 +82,9 @@ end;
 
 function TAcsVolumeQuery.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
-  LVol, RVol, LMax, RMax: Word;
+  LVol, RVol, LMax, RMax: word;
   i, NumSamples: Integer;
+  tmp: Integer;
 begin
   if not Active then
     raise EACSException.Create(strStreamnotopen);
@@ -113,19 +114,21 @@ begin
   //
   LMax:=0;
   RMax:=0;
+  i := 0;
+  {$R-}
   for i:=0 to NumSamples-1 do
   begin
     if FBPS = 8 then
     begin
       if FCh = 1 then
       begin
-        LVol:=ABS(PACSBuffer8(ABuffer)[i]-127) * 256;
+        LVol:=ABS(PACSBuffer8(ABuffer)^[i]-127) * 256;
         RVol:=LVol;
       end
       else
       begin
-        LVol:=ABS(PACSStereoBuffer8(ABuffer)[i].Left-127) * 256;
-        RVol:=ABS(PACSStereoBuffer8(ABuffer)[i].Right-127) * 256;
+        LVol:=ABS(PACSStereoBuffer8(ABuffer)^[i].Left-127) * 256;
+        RVol:=ABS(PACSStereoBuffer8(ABuffer)^[i].Right-127) * 256;
       end;
     end
     else
@@ -137,25 +140,31 @@ begin
       end
       else
       begin
-        LVol:=ABS(PACSStereoBuffer16(ABuffer)[i].Left);
-        RVol:=ABS(PACSStereoBuffer16(ABuffer)[i].Right);
+        LVol:=ABS(PACSStereoBuffer16(ABuffer)^[i].Left);
+        RVol:=ABS(PACSStereoBuffer16(ABuffer)^[i].Right);
       end;
     end;
     if LVol > LMax then LMax:=LVol;
     if RVol > RMax then RMax:=RVol;
   end;
+  {$R+}
   if FDelay > 0 then
   begin
     Move(FLeft[1], FLeft[0], FDelay * Sizeof(Word));
     Move(FRight[1], FRight[0], FDelay * Sizeof(Word));
   end;
-  FLeft[FDelay]:=LMax;
-  FRight[FDelay]:=RMax;
+  if length(FLeft)>FDelay then
+    begin
+      FLeft[FDelay]:=trunc(LMax);
+      FRight[FDelay]:=trunc(RMax);
+    end;
   Lock:=False;
 end;
 
 function TAcsVolumeQuery.volLeft(): Word;
 begin
+  Result := 0;
+  if Length(FLeft)=0 then exit;
   Lock:=True;
   if Active then
     Result:=FLeft[0]
@@ -166,6 +175,8 @@ end;
 
 function TAcsVolumeQuery.volRight(): Word;
 begin
+  Result := 0;
+  if Length(FRight)=0 then exit;
   Lock:=True;
   if Active then
     Result:=FRight[0]
@@ -176,6 +187,8 @@ end;
 
 function TAcsVolumeQuery.dbLeft(): Single;
 begin
+  Result := 0;
+  if Length(FLeft)=0 then exit;
   Lock:=True;
   if Active then
     Result:=10 * Log10((FLeft[0]+1)/32768)
@@ -186,6 +199,8 @@ end;
 
 function TAcsVolumeQuery.dbRight(): Single;
 begin
+  Result := 0;
+  if Length(FRight)=0 then exit;
   Lock:=True;
   if Active then
     Result:=10 * Log10((FRight[0]+1)/32768)

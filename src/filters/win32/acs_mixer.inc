@@ -10,9 +10,6 @@ begin
   if (DevNum < 0) or (DevNum >= MixersCount) then Exit;
   if mixerGetDevCaps(DevNum, @MixerCaps, SizeOf(TMixerCaps)) <> MMSYSERR_NOERROR then Exit;
   Result:=StrPas(MixerCaps.szPName);
-  {$ifdef fpc}
-  Result:=SysToUtf8(Result);
-  {$endif}
 end;
 
 function GetChannelfromMask(Mask: DWORD): TAcsMixerChannel;
@@ -160,9 +157,6 @@ begin
   error:=mixerGetDevCaps(Num, @FMixerCaps, SizeOf(TMixerCaps));
   if error <> MMSYSERR_NOERROR then Exit;
   FMixerName:=StrPas(FMixerCaps.szPName);
-  {$ifdef fpc}
-  FMixerName:=SysToUtf8(FMixerName);
-  {$endif}
 
   error:=mixerOpen(@FMixerHandle, Num, 0, 0, MIXER_OBJECTF_MIXER);
   if error <> MMSYSERR_NOERROR then Exit;

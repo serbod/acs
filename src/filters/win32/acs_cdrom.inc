@@ -12,19 +12,15 @@ Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 type
   MSFAddr = array[0..3] of Byte;
 
-constructor TAcsCDIn.Create();
+constructor TAcsCDIn.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FLibLoaded:=False;
   FStreamDisabled:=True;
   AppPath := ExtractFilePath(ParamStr(0));
   if AppPath[length(AppPath)] <> '\' then AppPath := AppPath + '\';
-  LoadCDRip();
-  if not (csDesigning in ComponentState) then
-    if not CDRipLoaded then
-      raise EAcsException.Create(akriplib + ' could not be loaded.');
   FillChar(FCDList, SizeOf(FCDList), 0);
   FCDList.max := MAXCDLIST;
-  GetCDList(FCDList);
 end;
 
 destructor TAcsCDIn.Destroy();
@@ -145,7 +141,7 @@ begin
   Frames2MSF(Frames, Result.TrackLength);
 end;
 
-procedure TAcsCDIn.SetST();
+procedure TAcsCDIn.SetST(Track: Integer);
 begin
   if Self.Active then raise EAcsException.Create(strBusy);
   FStartTrack := Track;
@@ -153,7 +149,7 @@ begin
   FillChar(FStartPos.MSF, SizeOf(FStartPos.MSF), 0);
 end;
 
-procedure TAcsCDIn.SetET();
+procedure TAcsCDIn.SetET(Track: Integer);
 begin
   if Self.Active then raise EAcsException.Create(strBusy);
   FEndTrack := Track;
@@ -161,13 +157,13 @@ begin
   FillChar(FEndPos.MSF, SizeOf(FEndPos.MSF), 0);
 end;
 
-procedure TAcsCDIn.SetSP();
+procedure TAcsCDIn.SetSP(Pos: TAcsCDPosition);
 begin
   if Self.Active then raise EAcsException.Create(strBusy);
   FStartPos := Pos;
 end;
 
-procedure TAcsCDIn.SetEP();
+procedure TAcsCDIn.SetEP(Pos: TAcsCDPosition);
 begin
   if Self.Active then raise EAcsException.Create(strBusy);
   FEndPos := Pos;
@@ -194,6 +190,7 @@ procedure TAcsCDIn.Init();
 var
   Sect1, Sect2: Integer;
 begin
+  InitLib;
   if Status = cdsNotReady then
     raise EAcsException.Create(strDrivenotready);
   if (FStartPos.Track in [0..GetNumTracks-1]) = False then
@@ -257,7 +254,7 @@ begin
   Inc(FPosition, Result);
 end;
 
-procedure TAcsCDIn.SetCurrentDrive();
+procedure TAcsCDIn.SetCurrentDrive(Value: Integer);
 begin
   if Value in [0..FCDList.num-1] then
     FCurrentDrive := Value;
@@ -270,6 +267,7 @@ end;
 
 function TAcsCDIn.GetDrivesCount(): Integer;
 begin
+  InitLib;
   Result := FCDList.num;
 end;
 
@@ -280,6 +278,7 @@ end;
 
 procedure TAcsCDIn.Eject();
 begin
+  InitLib;
   if Active then
     raise EAcsException.Create(strBusy);
 end;

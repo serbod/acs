@@ -49,6 +49,7 @@ procedure TfMain.FormCreate(Sender: TObject);
 var
   i : Integer;
 begin
+  CDIn:= TACSCDIn.Create(nil);
   lvTracks.Column[0].Width := 60;
   lvTracks.Column[1].Width := 260;
   lvTracks.Column[2].Width := 120;
