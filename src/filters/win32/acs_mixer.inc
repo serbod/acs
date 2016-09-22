@@ -167,8 +167,8 @@ begin
     aLineInfo.dwDestination := destination;
     error:=mixerGetLineInfo(FMixerHandle, @aLineInfo, MIXER_GETLINEINFOF_DESTINATION);
     if error <> MMSYSERR_NOERROR then Continue;
-    if aLineInfo.dwComponentType <> MIXERLINE_COMPONENTTYPE_DST_SPEAKERS then
-      Continue;
+    //if aLineInfo.dwComponentType <> MIXERLINE_COMPONENTTYPE_DST_SPEAKERS then
+    //  Continue;
 
     GetLineControls(aLineInfo);
     for connection:=0 to aLineInfo.cConnections-1 do
