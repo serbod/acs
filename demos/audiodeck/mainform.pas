@@ -155,7 +155,7 @@ begin
   begin
     if ListBoxAudioInDrivers.Selected[i] then
     begin
-      AcsAudioIn1.Driver:=AcsAudioIn1.Drivers[i];
+      AcsAudioIn1.DriverName:=AcsAudioIn1.Drivers[i];
       // fill devices list
       ListBoxAudioInDevices.Clear();
       for n:=0 to AcsAudioIn1.DeviceCount-1 do
@@ -178,7 +178,7 @@ begin
   begin
     if ListBoxAudioOutDrivers.Selected[i] then
     begin
-      AcsAudioOut1.Driver:=AcsAudioOut1.Drivers[i];
+      AcsAudioOut1.DriverName:=AcsAudioOut1.Drivers[i];
       // fill devices list
       ListBoxAudioOutDevices.Clear();
       for n:=0 to AcsAudioOut1.DeviceCount-1 do

@@ -14,13 +14,13 @@ type
 
   TfMain = class(TForm)
     bOpen: TBitBtn;
-    Mixer1: TACSMixer;
     AudioIn1: TACSAudioIn;
     FileOut1: TACSFileOut;
     bRecord: TBitBtn;
     bStop: TBitBtn;
     cbRecordSource: TComboBox;
     Label1: TLabel;
+    OpenDialog1: TOpenDialog;
     procedure FormCreate(Sender: TObject);
     procedure bOpenClick(Sender: TObject);
     procedure bRecordClick(Sender: TObject);
@@ -43,21 +43,27 @@ procedure TfMain.FormCreate(Sender: TObject);
 var
   i : Integer;
 begin
-  for i := 0 to Mixer1.Channelcount-1 do
-    if Mixer1.IsRecordable(i) then
-      cbRecordSource.Items.Add(Mixer1.ChannelName[i]);
-  cbRecordSource.Text := Mixer1.ChannelName[Mixer1.RecordSource];
+  for i := 0 to AudioIn1.DeviceCount-1 do
+    cbRecordSource.Items.Add(AudioIn1.DeviceInfo[i].DeviceName);
 end;
 
 procedure TfMain.bOpenClick(Sender: TObject);
+var
+  desc: String;
 begin
-  FileOut1.Open;
-  if FileExists(FileOut1.FileName) then
-    FileOut1.FileMode := foAppend;
+  FileFormats.BuildFilterStrings(desc, [fcSave]);
+  OpenDialog1.Filter:=desc;
+  if OpenDialog1.Execute then
+    begin
+      FileOut1.FileName:=OpenDialog1.FileName;
+      if FileExists(FileOut1.FileName) then
+        FileOut1.FileMode := foAppend;
+    end;
 end;
 
 procedure TfMain.bRecordClick(Sender: TObject);
 begin
+  AudioIn1.Device:=4;
   FileOut1.Run;
 end;
 
@@ -70,9 +76,9 @@ procedure TfMain.cbRecordSourceChange(Sender: TObject);
 var
   i : Integer;
 begin
-  for i := 0 to Mixer1.Channelcount-1 do
-    if Mixer1.ChannelName[i] = cbRecordSource.Text then
-      Mixer1.RecordSource := i;
+  for i := 0 to AudioIn1.DeviceCount-1 do
+    if AudioIn1.DeviceInfo[i].DeviceName=cbRecordSource.Text then
+      AudioIn1.Device:=i;
 end;
 
 initialization

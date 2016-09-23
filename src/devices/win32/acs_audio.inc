@@ -339,7 +339,7 @@ begin
   if FOpened = 1 then
   begin
     waveInClose(_audio_fd);
-    FreeMem(FBuffer);
+    //FreeMem(FBuffer);
   end;
   if FOpened > 0 then Dec(FOpened);
 end;

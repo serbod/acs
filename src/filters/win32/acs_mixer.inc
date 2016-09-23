@@ -11,7 +11,7 @@ begin
   if mixerGetDevCaps(DevNum, @MixerCaps, SizeOf(TMixerCaps)) <> MMSYSERR_NOERROR then Exit;
   Result:=StrPas(MixerCaps.szPName);
   {$ifdef fpc}
-  Result:=SysToUtf8(Result);
+  Result:=WinCPToUtf8(Result);
   {$endif}
 end;
 
@@ -161,7 +161,7 @@ begin
   if error <> MMSYSERR_NOERROR then Exit;
   FMixerName:=StrPas(FMixerCaps.szPName);
   {$ifdef fpc}
-  FMixerName:=SysToUtf8(FMixerName);
+  FMixerName:=WinCPToUtf8(FMixerName);
   {$endif}
 
   error:=mixerOpen(@FMixerHandle, Num, 0, 0, MIXER_OBJECTF_MIXER);
@@ -173,8 +173,8 @@ begin
     aLineInfo.dwDestination := destination;
     error:=mixerGetLineInfo(FMixerHandle, @aLineInfo, MIXER_GETLINEINFOF_DESTINATION);
     if error <> MMSYSERR_NOERROR then Continue;
-    if aLineInfo.dwComponentType <> MIXERLINE_COMPONENTTYPE_DST_SPEAKERS then
-      Continue;
+    //if aLineInfo.dwComponentType <> MIXERLINE_COMPONENTTYPE_DST_SPEAKERS then
+    //  Continue;
 
     GetLineControls(aLineInfo);
     for connection:=0 to aLineInfo.cConnections-1 do

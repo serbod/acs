@@ -1,3 +1,10 @@
+2016-09-23  serbod
+* applied patches from cutec-chris and tcs-ulli
+* cdrip, acs_mixer and demos fixes
+* default driver for AudioIn
+* some WaveOut and Mp3Tags fixes
+* windows encoding fixed for Mixer and DX in/out 
+
 2015-06-09  serbod
 * TFileIn/Out, TAudioIn/Out subclassed and improved
 + audiodeck demo

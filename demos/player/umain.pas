@@ -42,6 +42,7 @@ type
     lLeft: TLabel;
     lFilename: TLabel;
     lTime: TLabel;
+    OpenDialog1: TOpenDialog;
     Panel1: TPanel;
     Progress: TProgressBar;
     PlayTimer: TTimer;
@@ -170,19 +171,23 @@ end;
 
 procedure TfMain.OpenClick(Sender: TObject);
 begin
-  FileIn1.Open;
-  btPlay.Enabled := True;
-  ResetDisplay;
+  if OpenDialog1.Execute then
+    begin
+      FileIn1.FileName:=OpenDialog1.FileName;
+      btPlay.Enabled := True;
+      ResetDisplay;
+    end;
 end;
 
 procedure TfMain.Timer1Timer(Sender: TObject);
 var
   tmp : real;
 begin
+  if FileIn1.Size<=0 then exit;
   case TimeFormat of
   tfElapsed:
     begin
-      tmp := ((FileIn1.Position * FileIn1.TotalTime) / FileIn1.Size);
+        tmp := ((FileIn1.Position * FileIn1.TotalTime) / FileIn1.Size);
       lTime.Caption := Format('%.2d:%.2d:%.2d',[round((tmp-30) / 60) mod 120,round(tmp) mod 60,round(tmp*100) mod 100]);
       tmp := FileIn1.TotalTime-((FileIn1.Position * FileIn1.TotalTime) / FileIn1.Size);
       lLeft.Caption := Format('%.2d:%.2d:%.2d',[round((tmp-30) / 60) mod 120,round(tmp) mod 60,round(tmp*100) mod 100]);

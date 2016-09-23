@@ -14,9 +14,6 @@
     <i18n>
       <EnableI18N LFM="False"/>
     </i18n>
-    <VersionInfo>
-      <StringTable ProductVersion=""/>
-    </VersionInfo>
     <BuildModes Count="1">
       <Item1 Name="Default" Default="True"/>
     </BuildModes>
@@ -40,12 +37,12 @@
       <Unit0>
         <Filename Value="audiodeck.lpr"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="audiodeck"/>
       </Unit0>
       <Unit1>
         <Filename Value="mainform.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="FormMain"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="MainForm"/>
       </Unit1>

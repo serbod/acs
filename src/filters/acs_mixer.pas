@@ -15,7 +15,7 @@ uses
   ,LazUTF8
   {$endif}
   {$IFDEF MSWINDOWS}
-  ,MMSystem, Windows, Dialogs
+  ,MMSystem, Windows
   ,Math
   {$ELSE}
   ,Soundcard, baseunix

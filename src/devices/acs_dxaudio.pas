@@ -24,8 +24,8 @@ interface
 {$DEFINE USE_EXTENDED_SPEC_FOR_24_BPS }
 
 uses
-  ACS_Audio, SysUtils, Classes, ACS_Types, ACS_Classes, Windows,
-  DSWrapper, ACS_Strings, DirectSound, mmsystem;
+  ACS_Audio, SysUtils, Classes, ACS_Types, ACS_Classes, Windows,{$ifdef fpc}LazUTF8,{$endif}
+  DSWrapper, ACS_Strings, DirectSound, mmsystem{$ifdef LCL},Forms{$endif};
 
 const
   LATENCY = 25;
@@ -268,7 +268,7 @@ begin
   FFetchDelay:=10;
   FLatency:=100;
   FVolumeEx:=0; //DW
-  FPrefetchMode:=pmAuto;
+  FPrefetchMode:=TAcsPrefetchMode.pmAuto;
   //FDeviceCount:=0;
   FBufferSize:=$40000; // default buffer size
 
@@ -283,7 +283,8 @@ begin
     for i:=0 to Devices.devcount-1 do
     begin
       {$ifdef FPC}
-      FDeviceInfoArray[i].DeviceName:=AnsiToUtf8(Devices.dinfo[i].name);
+      //FDeviceInfoArray[i].DeviceName:=AnsiToUtf8(Devices.dinfo[i].name);
+      FDeviceInfoArray[i].DeviceName:=WinCPToUTF8(Devices.dinfo[i].name);
       {$else}
       FDeviceInfoArray[i].DeviceName:=Devices.dinfo[i].name;
       {$endif}
@@ -328,6 +329,11 @@ begin
     raise EAcsException.Create(strFailedtoCreateDSdev+': '+DSErrToString(Res));
   DSW_Initialized:=True;
 
+  Wnd:=0;
+  {$ifdef LCL}
+  if (Owner is TForm) then Wnd:=(Owner as TForm).Handle;
+  {$endif}
+
   // align buffer size to sample size
   Self.SetBufferSize(FBufferSize - (FBufferSize mod FSampleSize));
   //Self.SetBufferSize(FFramesInBuffer * (BPS div 8) * Chan);
@@ -369,9 +375,6 @@ begin
   //FormatExt.wSamplesPerBlock:=0;
   //FormatExt.wReserved:=0;
   //FormatExt.SubFormat:=1;
-
-  Wnd:=0;
-  //if (Owner is TControl) then Wnd:=(Owner as TControl).Handle;
 
   Res:=DSW_InitOutputBufferEx(DSW, Wnd, FormatExt, FBuffer.Size);
   if Res <> 0 then
@@ -581,8 +584,9 @@ begin
     SetLength(FDeviceInfoArray, Devices.devcount);
     for i:=0 to Devices.devcount-1 do
     begin
-      {$ifdef WINDOWS}
-      FDeviceInfoArray[i].DeviceName:=AnsiToUtf8(Devices.dinfo[i].name);
+      {$ifdef fpc}
+      //FDeviceInfoArray[i].DeviceName:=AnsiToUtf8(Devices.dinfo[i].name);
+      FDeviceInfoArray[i].DeviceName:=WinCPToUTF8(Devices.dinfo[i].name);
       {$else}
       FDeviceInfoArray[i].DeviceName:=Devices.dinfo[i].name;
       {$endif}

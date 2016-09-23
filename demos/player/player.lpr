@@ -13,7 +13,7 @@ uses
   ,uPlaylist
   ,uVis;
 
-{$IFDEF WINDOWS}{$R manifest.rc}{$ENDIF}
+{$IFDEF WINDOWS}{.$R manifest.rc}{$ENDIF}
 
 begin
   Application.Title:='Lazarus Player Example';
