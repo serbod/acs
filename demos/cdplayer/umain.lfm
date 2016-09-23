@@ -312,7 +312,7 @@ object fMain: TfMain
   end
   object AudioOut1: TACSAudioOut
     Buffersize = 32768
-    Driver = 'Alsa'
+    DriverName = 'Alsa'
     Device = 0
     Volume = 0
     Input = CDIn1
