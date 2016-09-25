@@ -301,7 +301,7 @@ implementation
 
 function LoadCDRip(): Boolean;
 begin
-  Libhandle:=LoadLibraryEx(akriplib, 0, 0);
+  Libhandle := LoadLibraryEx(akriplib, 0, 0);
   if Libhandle <> 0 then
   begin
     CDRipLoaded:=True;

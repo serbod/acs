@@ -5,7 +5,7 @@ LazarusResources.Add('TfVizu','FORMDATA',[
   +'th'#3#194#0#18'HorzScrollBar.Page'#3#193#0#18'VertScrollBar.Page'#2'N'#11'B'
   +'orderStyle'#7#13'bsSizeToolWin'#7'Caption'#6#13'Visualization'#12'ClientHei'
   +'ght'#2'O'#11'ClientWidth'#3#194#0#4'Menu'#7#9'MainMenu1'#8'OnCreate'#7#10'F'
-  +'ormCreate'#7'OnPaint'#7#9'FormPaint'#10'LCLVersion'#6#7'1.2.4.0'#0#6'TImage'
+  +'ormCreate'#7'OnPaint'#7#9'FormPaint'#10'LCLVersion'#6#7'1.6.0.4'#0#6'TImage'
   +#5'Image'#4'Left'#2#0#6'Height'#2'O'#3'Top'#2#0#5'Width'#3#194#0#5'Align'#7#8
   +'alClient'#11'Transparent'#9#0#0#9'TMainMenu'#9'MainMenu1'#4'left'#2#17#3'to'
   +'p'#2#10#0#9'TMenuItem'#6'miType'#7'Caption'#6#4'Type'#0#9'TMenuItem'#4'rFFT'

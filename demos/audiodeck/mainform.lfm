@@ -78,9 +78,6 @@ object FormMain: TFormMain
           Height = 167
           Top = 128
           Width = 217
-          Lines.Strings = (
-            'MemoInputFileInfo'
-          )
           TabOrder = 1
         end
         object ListBoxFileInDrivers: TListBox
@@ -108,10 +105,10 @@ object FormMain: TFormMain
       Height = 330
       Top = 4
       Width = 244
-      ActivePage = tsOutFile
+      ActivePage = tsOutAudioDevice
       Align = alClient
       BorderSpacing.Around = 4
-      TabIndex = 1
+      TabIndex = 0
       TabOrder = 0
       object tsOutAudioDevice: TTabSheet
         Caption = 'Audio device'
@@ -133,6 +130,13 @@ object FormMain: TFormMain
           Width = 217
           ItemHeight = 0
           TabOrder = 1
+        end
+        object MemoAudioOutInfo: TMemo
+          Left = 7
+          Height = 111
+          Top = 184
+          Width = 217
+          TabOrder = 2
         end
       end
       object tsOutFile: TTabSheet

@@ -106,7 +106,6 @@ type
     procedure SetET(Track: Integer);
     procedure SetSP(Pos: TAcsCDPosition);
     procedure SetEP(Pos: TAcsCDPosition);
-    function GetSize(): Integer; override;
     function GetInfo(): TAcsCDInfo;
     function GetDrivesCount(): Integer;
     procedure SetCurrentDrive(Value: Integer);
@@ -117,6 +116,7 @@ type
     function GetCh(): Integer; override;
     function GetSR(): Integer; override;
     function GetTotalTime(): Real; override;
+    function GetSize(): Integer; override;
     procedure InitLib;
   public
     constructor Create(AOwner: TComponent); override;

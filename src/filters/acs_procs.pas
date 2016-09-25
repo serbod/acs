@@ -15,23 +15,32 @@ uses
 type
 
   TAcsFilterWindowType = (fwHamming, fwHann, fwBlackman);
+  TWindowFunction = (wf_None, wf_Hamming, wf_Blackman, wf_KaiserBessel, wf_FlatTop);
 
 {$IFDEF LINUX}
   function FindLibs(const Pattern: String): String;
 {$ENDIF}
 
+{$ifdef CPU386}
+  {.$define USE_ASM}
+{$endif}
+
+  procedure Windowing(var data: array of double; Taps: integer; WF: TWindowFunction);
+  procedure FFT(var data: array of double; nn: integer; invers: boolean);
+
 
   // Fast Fourier Transformation for Complex array
   // Direction = 1 - forward FFT, Direction = -1 - inverse FFT.
-  procedure ComplexFFT(PData: PAcsComplexArray; DataSize, Direction: Integer);
+  procedure ComplexFFT(var Data: TAcsArrayOfComplex; Direction: Integer);
 
-  procedure HannWindow(OutData: PAcsDoubleArray; Width: Integer; Symmetric: Boolean);
+  // The Hann function window
+  procedure FillHanningWindow(out OutData: TAcsArrayOfDouble; Width: Integer);
 
-  procedure HammingWindow(OutData: PAcsDoubleArray; Width: Integer; Symmetric: Boolean);
+  procedure FillHammingWindow(out OutData: TAcsArrayOfDouble; Width: Integer);
 
-  procedure BlackmanWindow(OutData: PAcsDoubleArray; Width: Integer; Symmetric: Boolean);
+  procedure BlackmanWindow(out OutData: TAcsArrayOfDouble; Width: Integer; Symmetric: Boolean);
 
-  procedure CalculateSincKernel(OutData: PAcsDoubleArray; CutOff: Double; Width: Integer; WType: TAcsFilterWindowType);
+  procedure CalculateSincKernel(out OutData: TAcsArrayOfDouble; CutOff: Double; Width: Integer; WType: TAcsFilterWindowType);
 
   // not used
   procedure SmallIntArrayToDouble(InData: PSmallInt; OutData: PDouble; DataSize: Integer);
@@ -40,11 +49,16 @@ type
   procedure SmallIntArrayToComplex(InData: PSmallInt; OutData: PAcsComplex; DataSize: Integer);
 
 
-  // Computes Op2[i] = Op1[i]*Op2[i], i = [0..DataSize-1]
-  procedure MultDoubleArrays(Op1, Op2: PDouble; DataSize: Integer);
+  // Computes Data1[i] = Data1[i] * Data2[i], i = [0..DataSize-1]
+  procedure MultDoubleArrays(var Data1: TAcsArrayOfDouble; const Data2: TAcsArrayOfDouble; DataSize: Integer);
+
+  // Magnitude = sqrt(Re^2 + Im^2)
+  function Magnitude(const Re, Im: Double): Double;
+  // Amplitude = Log10(Magnitude)
+  function Amplitude(const Re, Im: Double): Double;
 
   (*
-    Performs calculation of
+    Amplitude
                    /
                   | Lg(Abs(InData[i])) + Shift, if Lg(Abs(InData[i])) + Shift >= 0
     OutData[i] = <  0, if Lg(Abs(InData[i])) + Shift < 0
@@ -52,7 +66,7 @@ type
                    \
     i = [0..DataSize-1]
   *)
-  procedure LgMagnitude(InData: PAcsComplexArray; OutData: PAcsDoubleArray; DataSize, Shift: Integer);
+  procedure LgAmplitude(const InData: TAcsArrayOfComplex; out OutData: TAcsArrayOfDouble; DataSize, Shift: Integer);
 
 implementation
 
@@ -82,137 +96,317 @@ end;
 
 (* This routine is converted from the original C code by P. Burke
  Direction = 1 - forward FFT, Direction = -1 - inverse FFT. *)
-procedure ComplexFFT(PData: PAcsComplexArray; DataSize, Direction: Integer);
+procedure ComplexFFT(var Data: TAcsArrayOfComplex; Direction: Integer);
 var
-  i, ii, i1, j, m, n, l, l1, l2, Log2n: Integer;
+  i, i1, j, m, l, l1, l2, Log2n: Integer;
   c1, c2, tr, ti, t1, t2, u1, u2, z: Double;
-  Data: PAcsComplexArray;
+  DataSize: Integer;
 begin
-  Data:=PData;
-  {$R-}
-  Log2n:=Trunc(Log2(DataSize));
+  DataSize := Length(Data);
+  Log2n := Trunc(Log2(DataSize));
   // Do the bit reversal
-  j:=1;
+  j := 1;
   for i:=0 to DataSize-1 do
   begin
-    if i < j then
+    if (j < DataSize) and (i < j) then
     begin
-      tr:=Data[i].Re;
-      ti:=Data[i].Im;
-      Data[i].Re:=Data[j].Re;
-      Data[i].Im:= Data[j].Im;
-      Data[j].Re:=tr;
-      Data[j].Im:=ti;
+      tr := Data[i].Re;
+      ti := Data[i].Im;
+      Data[i].Re := Data[j].Re;
+      Data[i].Im := Data[j].Im;
+      Data[j].Re := tr;
+      Data[j].Im := ti;
     end;
-    m:=DataSize div 2;
-    while (m >=2) and (j > m) do
+    m := DataSize div 2;
+    while (m >= 2) and (j > m) do
     begin
       Dec(j, m);
-      m:=(m div 2);
+      m := (m div 2);
     end;
     Inc(j, m);
   end;
   // Compute the FFT
-  c1:=-1.0;
-  c2:=0.0;
-  l2:=1;
-  for l:=0 to Log2n-1 do
+  c1 := -1.0;
+  c2 := 0.0;
+  l2 := 1;
+  for l := 0 to Log2n - 1 do
   begin
-    l1:=l2;
-    l2:=(l2 shl 1);
-    u1:=1.0;
-    u2:=0.0;
-    for j:=0 to l1-1 do
+    l1 := l2;
+    l2 := (l2 shl 1);
+    u1 := 1.0;
+    u2 := 0.0;
+    for j:=0 to l1 - 1 do
     begin
-      i:=j;
-      while i < DataSize do
+      i := j;
+      while (i + l1) < DataSize do
       begin
-        i1:=i+l1;
-        t1:=u1*Data[i1].Re - u2*Data[i1].Im;
-        t2:=u1*Data[i1].Im + u2*Data[i1].Re;
-        Data[i1].Re:=Data[i].Re-t1;
-        Data[i1].Im:=Data[i].Im-t2;
-        Data[i].Re:=Data[i].Re+t1;
-        Data[i].Im:=Data[i].Im+t2;
+        i1 := i + l1;
+        t1 := u1 * Data[i1].Re - u2 * Data[i1].Im;
+        t2 := u1 * Data[i1].Im + u2 * Data[i1].Re;
+        Data[i1].Re := Data[i].Re - t1;
+        Data[i1].Im := Data[i].Im - t2;
+        Data[i].Re := Data[i].Re + t1;
+        Data[i].Im := Data[i].Im + t2;
         Inc(i, l2);
       end;
-      z:=u1*c1 - u2*c2;
-      u2:=u1*c2 + u2*c1;
-      u1:=z;
+      z := u1*c1 - u2*c2;
+      u2 := u1*c2 + u2*c1;
+      u1 := z;
     end;
-    c2:=Sqrt((1.0-c1)/2.0);
-    if Direction = 1 then c2:=-c2;
-    c1:=Sqrt((1.0+c1)/2.0);
+    c2 := Sqrt((1.0 - c1) / 2.0);
+    if Direction = 1 then
+      c2 := -c2;
+    c1 := Sqrt((1.0 + c1) / 2.0);
   end;
 
   // Scaling for forward transform
   if Direction = 1 then
   for i:=0 to DataSize-1 do
   begin
-    Data[i].Re:=Data[i].Re/DataSize;
-    Data[i].Im:=Data[i].Im/DataSize;
+    Data[i].Re := Data[i].Re / DataSize;
+    Data[i].Im := Data[i].Im / DataSize;
   end;
-  {$R+}
 end;
 
-procedure HannWindow(OutData: PAcsDoubleArray; Width: Integer; Symmetric: Boolean);
+procedure Windowing(var data: array of double; Taps: integer; WF: TWindowFunction);
+var i:integer;
+begin
+  for i:=0 to high(data) do
+   case WF of
+     wf_None : ;
+     wf_Hamming      : data[i]:=data[i]*(0.54-0.46*cos((i*2*PI)/Taps));
+     wf_Blackman     : data[i]:=data[i]*(0.42-0.5*cos((i*2*PI)/Taps)+0.08*cos((i*4*PI)/Taps));
+     wf_KaiserBessel : data[i]:=data[i]*(0.4021-0.4986*cos((i*2*PI)/Taps)+0.0981*cos((i*4*PI)/Taps)-0.0012*cos((i*6*PI)/Taps));
+     wf_FlatTop      : data[i]:=data[i]*(0.2155-0.4159*cos((i*2*PI)/Taps)+0.2780*cos((i*4*PI)/Taps)-0.0836*cos((i*6*PI)/Taps)+0.0070*cos((i*8*PI)/Taps));
+   end;//case
+end;
+
+procedure four(data: array of Real; isign: Integer);
+var  tmpdata             : array of Real;
+     alpha, beta, theta,
+     temp,sw,cw          : double;
+     i,j,Count           : integer;
+begin
+  Count:=length(data);
+  setlength(tmpdata,2*Count);
+  //ZeroMemory(tmpdata,sizeof(tmpdata));
+  for i := 0 to Length(tmpdata) do
+    tmpdata[i] := 0;
+  for i:=0 to Count-1 do
+  begin
+    theta:=isign*2.0*PI*(i/Count);
+    temp:=sin(0.5*theta);
+    alpha:=2.0*sqr(temp);
+    beta:=sin(theta);
+    cw:=1.0;
+    sw:=0.0;
+    for j:=0 to Count-1 do
+    begin
+      tmpdata[2*i]:=tmpdata[2*i]+(cw*data[2*j]-sw*data[2*j+1]);
+      tmpdata[2*i+1]:=tmpdata[2*i+1]+(cw*data[2*j+1]+sw*data[2*j]);
+//      cw:=(temp=cw)-(alpha*cw+beta*sw);
+      sw:=sw-(alpha*sw-beta*temp);
+    end;
+  end;
+  if (isign=-1) then
+  begin
+    for i:=0 to 2*Count-1 do tmpdata[i]:=tmpdata[i]/Count;
+  end;
+  for i:=0 to 2*Count-1 do data[i]:=tmpdata[i];
+  setlength(tmpdata,0);
+end;
+
+procedure DFT(data: array of Real; isign: integer);
+var i,i1,i2,i3,i4,np3, Count  : integer;
+    c1,c2,h1r,h2r,h1i,h2i : Real;
+    wr,wi,wpr,wpi,wtemp,theta : Real;
+begin
+  Count:=length(data);
+  if (Count mod 4<>0) then raise EMathError.Create('Fehler in DFT (N kein Vielfaches von 4)');
+  c1:=0.5;
+  theta:=PI/(Count/2);
+  if (isign=1) then
+  begin
+    c2:=-0.5;
+    four(data,1);
+  end else
+  begin
+    c2:=0.5;
+    theta:=-theta;
+  end;
+  wtemp:=sin(0.5*theta);
+  wpr:=-2.0*wtemp*wtemp;
+  wpi:=sin(theta);
+  wr:=1.0+wpr;
+  wi:=wpi;
+  np3:=Count+3;
+  for i:=2 to Count div 4 do
+  begin
+//    i4:=1+(i3=np3-(i2=1+(i1=i+i-1)));
+    h1r:=c1*(data[i1]+data[i3]);
+    h1i:=c1*(data[i2]-data[i4]);
+    h2r:=-c2*(data[i2]+data[i4]);
+    h2i:=c2*(data[i1]-data[i3]);
+    data[i1]:=h1r+wr*h2r-wi*h2i;
+    data[i2]:= h1i+wr*h2i+wi*h2r;
+    data[i3]:= h1r-wr*h2r+wi*h2i;
+    data[i4]:=-h1i+wr*h2i+wi*h2r;
+//    wr:=(wtemp=wr)*wpr-wi*wpi+wr;
+    wi:=wi*wpr+wtemp*wpi+wi;
+  end;
+  if (isign=1) then
+  begin
+//    data[1]:=(h1r=data[1])+data[2];
+    data[2]:=h1r-data[2];
+  end else
+  begin
+//  data[1]:=c1*((h1r=data[1])+data[2]);
+    data[2]:=c1*(h1r-data[2]);
+    four(data,-1);
+  end;
+end;
+
+procedure SWAP(var a, b:double);
+var temp:double;
+begin
+   temp:=(a);
+   a:=b;
+   b:=temp;
+end;
+
+procedure FFT(var data: array of double; nn: integer; invers: boolean);
+(* Programs using routine FOUR1 must define type
+TYPE
+   gldarray = ARRAY [1..nn2] OF real;
+in the calling routine, where nn2=nn+nn. *)
+var ii,jj,n,mmax,m,j,istep,i: integer;
+    wtemp,wr,wpr,wpi,wi,theta: double;
+    tempr,tempi: real;
+begin
+   n := 2*nn;
+   j := 1;
+   for ii := 1 to nn do
+   begin
+      i := 2*ii-1;
+      if (j > i) then
+      begin
+         tempr := data[j];
+         tempi := data[j+1];
+         data[j] := data[i];
+         data[j+1] := data[i+1];
+         data[i] := tempr;
+         data[i+1] := tempi
+      end;
+      m := n div 2;
+      while ((m >= 2) and (j > m)) do
+      begin
+         j := j-m;
+         m := m div 2
+      end;
+      j := j+m
+   end;
+   mmax := 2;
+   while (n > mmax) do
+   begin
+      istep := 2*mmax;
+      if invers then
+         theta := 6.28318530717959/mmax else
+         theta := 6.28318530717959/-mmax;
+      wpr := -2.0*sqr(sin(0.5*theta));
+      wpi := sin(theta);
+      wr := 1.0;
+      wi := 0.0;
+      for ii := 1 to (mmax div 2) do
+      begin
+         m := 2*ii-1;
+         for jj := 0 to ((n-m) div istep) do
+         begin
+            i := m + jj*istep;
+            j := i+mmax;
+            tempr := real(wr)*data[j]-real(wi)*data[j+1];
+            tempi := real(wr)*data[j+1]+real(wi)*data[j];
+            data[j] := data[i]-tempr;
+            data[j+1] := data[i+1]-tempi;
+            data[i] := data[i]+tempr;
+            data[i+1] := data[i+1]+tempi
+         end;
+         wtemp := wr;
+         wr := wr*wpr-wi*wpi+wr;
+         wi := wi*wpr+wtemp*wpi+wi
+      end;
+      mmax := istep
+   end;
+end;
+
+
+procedure FillHanningWindow(out OutData: TAcsArrayOfDouble; Width: Integer);
 var
   i, n: Integer;
 begin
-  if Symmetric then n:=Width-1 else n:=Width;
-  {$R-}
-  for i:=0 to Width-1 do OutData[i]:=(1-Cos(TwoPi*i/n))/2;
-  {$R+}
+  SetLength(OutData, Width);
+  if Width <= 0 then
+     Exit;
+
+  n := Width-1;
+  OutData[0] := 0.5 * (1 + cos((TwoPi * Width) / n));
+  for i := 1 to Width-1 do
+     OutData[i] := 0.5 * (1 - cos((TwoPi * Width) / n));
 end;
 
-procedure HammingWindow(OutData: PAcsDoubleArray; Width: Integer; Symmetric: Boolean);
+procedure FillHammingWindow(out OutData: TAcsArrayOfDouble; Width: Integer);
 var
   i, n: Integer;
 begin
-  if Symmetric then n:=Width-1 else n:=Width;
-  {$R-}
-  for i:=0 to Width-1 do OutData[i]:=0.54-0.46*Cos(TwoPi*i/n);
-  {$R+}
+  SetLength(OutData, Width);
+  n := Width - 1;
+  for i := 1 to Width do
+    OutData[i-1] := 0.54 - 0.46 * Cos(TwoPi * i / n);
 end;
 
-procedure BlackmanWindow(OutData: PAcsDoubleArray; Width: Integer; Symmetric: Boolean);
+procedure BlackmanWindow(out OutData: TAcsArrayOfDouble; Width: Integer; Symmetric: Boolean);
 var
   i, n: Integer;
 begin
-  if Symmetric then n:=Width-1 else n:=Width;
-  {$R-}
-  for i:=0 to Width-1 do OutData[i]:=0.42-0.5*Cos(TwoPi*i/n) + 0.08*Cos(2*TwoPi*i/n);
-  {$R+}
+  SetLength(OutData, Width);
+  if Symmetric then
+    n := Width - 1
+  else
+    n := Width;
+
+  for i := 0 to Width-1 do
+    OutData[i] := 0.42 - 0.5 * Cos(TwoPi * i / n) + 0.08 * Cos(2 * TwoPi * i / n);
 end;
 
-procedure CalculateSincKernel(OutData: PAcsDoubleArray; CutOff: Double; Width: Integer; WType: TAcsFilterWindowType);
+procedure CalculateSincKernel(out OutData: TAcsArrayOfDouble; CutOff: Double; Width: Integer; WType: TAcsFilterWindowType);
 var
   i: Integer;
-  S: Double;
-  Window: array of Double;
+  Sinc: Double;
+  Window: TAcsArrayOfDouble;
 begin
-//    SetLength(OutData, Width);
-  SetLength(Window, Width);
+  { TODO : http://avisynth.nl/index.php/Resampling }
   case WType of
-    fwHamming: HammingWindow(@Window[0], Width, False);
-    fwHann: HannWindow(@Window[0], Width, False);
-    fwBlackman: BlackmanWindow(@Window[0], Width, False);
+    fwHamming: FillHammingWindow(Window, Width);
+    fwHann: FillHanningWindow(Window, Width);
+    fwBlackman: BlackmanWindow(Window, Width, False);
   end;
-  S:=0;
-  for i:=0 to Width-1 do
+
+  SetLength(OutData, Width);
+  Sinc := 0;
+  for i := 0 to Width-1 do
   begin
     if i-(Width shr 1) <> 0 then
-      OutData[i]:=Sin(TwoPi*CutOff*(i-(Width shr 1)))/(i-(Width shr 1))*Window[i]
+      OutData[i] := Sin(TwoPi * CutOff * (i-(Width shr 1))) / (i-(Width shr 1)) * Window[i]
     else
-      OutData[i]:=TwoPi*CutOff*Window[i];
-    S:=S+OutData[i];
+      OutData[i] := TwoPi * CutOff * Window[i];
+    Sinc := Sinc + OutData[i];
   end;
-  for i:=0 to Width-1 do OutData[i]:=OutData[i]/S;
+  for i := 0 to Width-1 do
+    OutData[i] := OutData[i] / Sinc;
 end;
 
 procedure SmallIntArrayToDouble(InData: PSmallInt; OutData: PDouble; DataSize: Integer);
 begin
-  {$ifdef CPU386}
+  {$ifdef USE_ASM}
   asm
               MOV EDX, DataSize;
               SHL EDX, 3;
@@ -233,7 +427,7 @@ end;
 
 procedure SmallIntArrayToComplex(InData: PSmallInt; OutData: PAcsComplex; DataSize: Integer);
 begin
-  {$ifdef CPU386}
+  {$ifdef USE_ASM}
   asm
               MOV EDX, DataSize;
               SHR EDX, 4;
@@ -252,94 +446,100 @@ begin
   {$ENDIF}
 end;
 
-procedure MultDoubleArrays(Op1, Op2: PDouble; DataSize: Integer);
-{$ifndef CPU386}
+procedure MultDoubleArrays(var Data1: TAcsArrayOfDouble; const Data2: TAcsArrayOfDouble; DataSize: Integer);
+{$ifndef USE_ASM}
 var
   i: integer;
-  pd1, pd2: PDouble;
+{$endif}
 begin
-  pd1:=Op1;
-  pd2:=Op2;
+  DataSize := Length(Data2);
+{$ifndef USE_ASM}
   for i:=0 to DataSize-1 do
   begin
-    pd2^:=pd1^ * pd2^;
-    Inc(pd1);
-    Inc(pd2);
+    Data1[i] := Data1[i] * Data2[i];
   end;
-end;
 {$else}
-begin
   asm
               MOV EDX, DataSize;
               SHL EDX, 3;        // DataSize * 8
-              MOV ECX, Op1;
-              ADD EDX, ECX;      // @End = @Op1 + (DataSize * 8)
-              MOV EAX, Op2;
+              MOV ECX, Data1[0]; // ECX = @Data1
+              ADD EDX, ECX;      // EDX = @Data1 + (DataSize * 8)
+              MOV EAX, Data2[0]; // EAX = @Data2
     @test:    CMP EDX, ECX;
-              JE @out;           // if @Op1 = @End then Exit
-              FLD QWORD[ECX];    // load double from Op1
-              FLD QWORD[EAX];    // load double from Op2
+              JE @out;           // if @Data1 = EDX then Exit
+              FLD QWORD[ECX];    // load double from Data1
+              FLD QWORD[EAX];    // load double from Data2
               FMUL;              // multiply them
-              FSTP QWORD[EAX];   // save result to Op2
-              ADD ECX, 8;        // next Op1
-              ADD EAX, 8;        // next Op2
+              FSTP QWORD[EAX];   // save result to Data2
+              ADD ECX, 8;        // next Data1
+              ADD EAX, 8;        // next Data2
               JMP @test;
     @out:     ;
   end;
-end;
 {$endif}
+end;
 
-procedure LgMagnitude(InData: PAcsComplexArray; OutData: PAcsDoubleArray;
-  DataSize, Shift: Integer);
-{$ifndef CPU386}
-var
-  LogBase, num: Double;
-  pIn: PACSComplex;
-  pOut: PDouble;
-  i: integer;
+function Magnitude(const Re, Im: Double): Double;
 begin
-  {$R-}
-  //pIn:=@InData[0];
-  //pOut:=@OutData[0];
-  //LogBase:=1/log2(10); // 0.3010299956639812
+  Result := sqrt( power(abs(Re), 2) + power(abs(Im), 2) );
+end;
+
+function Amplitude(const Re, Im: Double): Double;
+begin
+  Result := sqrt( power(abs(Re), 2) + power(abs(Im), 2) );
+  if Result > 0 then
+    Result := log10(Result);
+end;
+
+procedure LgAmplitude(const InData: TAcsArrayOfComplex; out OutData: TAcsArrayOfDouble;
+  DataSize, Shift: Integer);
+var
+  LogBase: Double;
+  {$ifndef USE_ASM}
+  num: Double;
+  i: integer;
+  {$endif}
+begin
+  DataSize := Length(InData);
+  SetLength(OutData, DataSize);
+{$ifndef USE_ASM}
+
+  //LogBase := 1 / log2(10); // 0.3010299956639812
   for i:=0 to DataSize-1 do
   begin
-    OutData[i]:=0;
-    num:=sqrt((InData[i].Re * 2) + (InData[i].Im * 2));
+    OutData[i] := 0;
+    num := sqrt( power(abs(InData[i].Re), 2) + power(abs(InData[i].Im), 2) );
     if num > 0 then
     begin
-      num:=log10(num)+Shift;
-      if num >= 0 then OutData[i]:=num;
+      num := log10(num) + Shift;
+      //num := num * log2(LogBase) + Shift;  // log10 equivalent
+      //num := LogBase * log2(num) + Shift;
+      if num >= 0 then
+        OutData[i] := num;
     end;
-    //num:=num*log2(LogBase)+Shift;
-    //num:=LogBase*log2(num)+Shift;
-    //Inc(pIn);
-    //Inc(pOut);
   end;
-  {$R+}
 
 {$else}
 
-var
-  LogBase: Double;
-begin
   asm
               FLD1;               // st0 := 1.0
               FLDL2T;             // st1 <- st0, st0 := log2(10)
               FDIVP ST(1), ST(0); // st0 := st1 / st0
-              FSTP LogBase;       // LogBase:=1/log2(10)
+              FSTP LogBase;       // LogBase := 1/log2(10)
               MOV EDX, DataSize;
-              SHL EDX, 3;
-              MOV ECX, OutData;   // cx:=@OutData
-              ADD EDX, ECX;       // dx:=@OutData+(DataSize*8)
-              MOV EAX, InData;    // ax:=@InData.re
+              SHL EDX, 3;         // DataSize * 8
+              MOV ECX, OutData[0]; // cx := @OutData
+              ADD EDX, ECX;       // dx := @OutData + (DataSize*8)
+              MOV EAX, InData[0]; // ax := @InData.re
     @test:    CMP EDX, ECX;
               JE @out;
               FLD QWORD[EAX];     // st0 := InData.re
-              FMUL ST(0), ST(0);  // st0 := st0 * st0
+              FABS ST(0);         // abs(st0)
+              FMUL ST(0), ST(0);  // st0 := st0 * st0 (st0 ^ 2)
               ADD EAX, 8;         // ax := InData.im
-              FLD QWORD[EAX];     // st1:=st0, st0 := @ax
-              FMUL ST(0), ST(0);  // st0 := st0 * st0
+              FLD QWORD[EAX];     // st1 := st0, st0 := @ax
+              FABS ST(0);         // abs(st0)
+              FMUL ST(0), ST(0);  // st0 := st0 * st0 (st0 ^ 2)
               FADDP ST(1), ST(0); // st0 := st0 + st1
               FSQRT;              // st0 := sqrt(st0)
               FTST;               // test st0

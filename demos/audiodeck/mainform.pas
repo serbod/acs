@@ -13,7 +13,8 @@ uses
   {$ENDIF}
   acs_stdaudio, //Wavemapper Driver
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ComCtrls, EditBtn, acs_file, acs_audio, acs_allformats, acs_classes;
+  ComCtrls, EditBtn, acs_file, acs_audio, acs_allformats, acs_classes,
+  TypInfo;
 
 type
 
@@ -38,6 +39,7 @@ type
     ListBoxFileOutDrivers: TListBox;
     ListBoxAudioOutDrivers: TListBox;
     ListBoxFileInDrivers: TListBox;
+    MemoAudioOutInfo: TMemo;
     MemoInputFileInfo: TMemo;
     MemoAudioInInfo: TMemo;
     pgcOutputTypes: TPageControl;
@@ -84,6 +86,95 @@ begin
   Result:=Format('%.2d:%.2d:%.2d', [Round((AValue-30) / 60) mod 120, Round(AValue) mod 60, Round(AValue*100) mod 100]);
 end;
 
+procedure AcsInToStrings(AAcsIn: TAcsCustomInput; AStrings: TStrings);
+begin
+  if not Assigned(AAcsIn) then Exit;
+  if not Assigned(AStrings) then Exit;
+  AStrings.Append('Sample rate: '+IntToStr(AAcsIn.SampleRate));
+  AStrings.Append('Bits per sample: '+IntToStr(AAcsIn.BitsPerSample));
+  AStrings.Append('Channels: '+IntToStr(AAcsIn.Channels));
+  AStrings.Append('Buffer size: '+IntToStr(AAcsIn.BufferSize));
+  //AStrings.Append('Size, bytes: '+IntToStr(AAcsIn.Size));
+  //AStrings.Append('Total samples: '+IntToStr(AAcsIn.TotalSamples));
+  //AStrings.Append('Total time: '+SecondsToStr(AAcsIn.TotalTime));
+end;
+
+function TypeKindToStr(AValue: TTypeKind): string;
+begin
+  Result:='';
+  case AValue of
+    tkUnknown: Result:='tkUnknown';
+    tkInteger: Result:='tkInteger';
+    tkChar: Result:='tkChar';
+    tkEnumeration: Result:='tkEnumeration';
+    tkFloat: Result:='tkFloat';
+    tkSet: Result:='tkSet';
+    tkMethod: Result:='tkMethod';
+    tkSString: Result:='tkSString';
+    tkLString: Result:='tkLString';
+    tkAString: Result:='tkAString';
+    tkWString: Result:='tkWString';
+    tkVariant: Result:='tkVariant';
+    tkArray: Result:='tkArray';
+    tkRecord: Result:='tkRecord';
+    tkInterface: Result:='tkInterface';
+    tkClass: Result:='tkClass';
+    tkObject: Result:='tkObject';
+    tkWChar: Result:='tkWChar';
+    tkBool: Result:='tkBool';
+    tkInt64: Result:='tkInt64';
+    tkQWord: Result:='tkQWord';
+    tkDynArray: Result:='tkDynArray';
+    tkInterfaceRaw: Result:='tkInterfaceRaw';
+    tkProcVar: Result:='tkProcVar';
+    tkUString: Result:='tkUString';
+    tkUChar: Result:='tkUChar';
+    tkHelper: Result:='tkHelper';
+  end;
+end;
+
+procedure AcsOutToStrings(AAcsOut: TAcsCustomOutput; AStrings: TStrings);
+var
+  i: Integer;
+  PropList: PPropList;
+  TypeData: PTypeData;
+  PropName, PropTypeName, PropValue: string;
+begin
+  if not Assigned(AAcsOut) then Exit;
+  if not Assigned(AStrings) then Exit;
+  TypeData:=GetTypeData(AAcsOut.ClassInfo);
+  GetMem(PropList, TypeData^.PropCount * SizeOf(Pointer));
+  //GetPropList(AAcsOut, PropList);
+  try
+    GetPropInfos(AAcsOut.ClassInfo, PropList);
+    for i:=0 to TypeData^.PropCount-1 do
+    begin
+      PropName:=PropList^[i]^.Name;
+      PropTypeName:=TypeKindToStr(PropType(AAcsOut, PropName));
+      //PropTypeName:=PropList^[i]^.PropType^.Name;
+      PropValue:='';
+      case PropList^[i]^.PropType^.Kind of
+        tkInteger: PropValue:=IntToStr(GetInt64Prop(AAcsOut, PropName));
+        tkFloat: PropValue:=FloatToStr(GetFloatProp(AAcsOut, PropName));
+        tkSString..tkWString: PropValue:=GetStrProp(AAcsOut, PropName);
+        tkVariant: PropValue:=GetPropValue(AAcsOut, PropName, True);
+        tkEnumeration: PropValue:=GetEnumProp(AAcsOut, PropName);
+      end;
+      AStrings.Append(IntToStr(i)+': '+PropName+' ('+PropTypeName+') = '+PropValue);
+    end;
+  finally
+    FreeMem(PropList);
+  end;
+  //for i:=0 to AAcsOut.
+  //AStrings.Append('Sample rate: '+IntToStr(AAcsOut.SampleRate));
+  //AStrings.Append('Bits per sample: '+IntToStr(AAcsOut.BitsPerSample));
+  //AStrings.Append('Channels: '+IntToStr(AAcsOut.Channels));
+  //AStrings.Append('Buffer size: '+IntToStr(AAcsOut.BufferSize));
+  //AStrings.Append('Size, bytes: '+IntToStr(AAcsOut.Size));
+  //AStrings.Append('Total samples: '+IntToStr(AAcsOut.TotalSamples));
+  //AStrings.Append('Total time: '+SecondsToStr(AAcsOut.TotalTime));
+end;
+
 { TFormMain }
 
 procedure TFormMain.FileNameEditInputAcceptFileName(Sender: TObject;
@@ -93,13 +184,10 @@ begin
   MemoInputFileInfo.Clear();
   if AcsFileIn1.Valid then
   begin
-    MemoInputFileInfo.Append('Sample rate: '+IntToStr(AcsFileIn1.SampleRate));
-    MemoInputFileInfo.Append('Bits per sample: '+IntToStr(AcsFileIn1.BitsPerSample));
-    MemoInputFileInfo.Append('Channels: '+IntToStr(AcsFileIn1.Channels));
+    AcsInToStrings(AcsFileIn1, MemoInputFileInfo.Lines);
     MemoInputFileInfo.Append('Size, bytes: '+IntToStr(AcsFileIn1.Size));
     MemoInputFileInfo.Append('Total samples: '+IntToStr(AcsFileIn1.TotalSamples));
     MemoInputFileInfo.Append('Total time: '+SecondsToStr(AcsFileIn1.TotalTime));
-    MemoInputFileInfo.Append('Buffer size: '+IntToStr(AcsFileIn1.BufferSize));
   end
   else
   begin
@@ -163,6 +251,9 @@ begin
         ListBoxAudioInDevices.AddItem(AcsAudioIn1.DeviceInfo[n].DeviceName, nil);
         if AcsAudioIn1.Device = n then ListBoxAudioInDevices.Selected[n]:=True;
       end;
+      // show info
+      MemoAudioInInfo.Clear();
+      AcsInToStrings(AcsAudioIn1, MemoAudioInInfo.Lines);
       Exit;
     end;
   end;
@@ -186,6 +277,9 @@ begin
         ListBoxAudioOutDevices.AddItem(AcsAudioOut1.DeviceInfo[n].DeviceName, nil);
         if AcsAudioOut1.Device = n then ListBoxAudioOutDevices.Selected[n]:=True;
       end;
+      // show driver properties
+      MemoAudioOutInfo.Lines.Clear();
+      AcsOutToStrings(AcsAudioOut1.Driver, MemoAudioOutInfo.Lines);
       Exit;
     end;
   end;

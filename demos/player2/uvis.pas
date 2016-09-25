@@ -50,7 +50,7 @@ var
   i,x,y,m : Integer;
   {$IFDEF FPC}
   newcolor : TFPColor;
-  d: Double;
+  d, dValue: Double;
   {$ENDIF}
 begin
   SetLength(Vals, ValCount);
@@ -64,13 +64,15 @@ begin
     Canvas.Pen.Color := clAqua;
     Canvas.Brush.Color := clAqua;
     for i := 0 to ValCount-1 do
+    begin
       Canvas.Rectangle(((Width div ValCount)*i)+1, Height-Round(Vals[i]*Height), ((Width div ValCount)*(i+1))-1, Height);
+    end;
   end
 
   else
   begin
     {$IFDEF FPC}
-    m:=Height div 4;
+    m := Height div 4;
     SetLength(lVals, m);
     for i := m-1 downto 0 do
     begin

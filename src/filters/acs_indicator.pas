@@ -5,7 +5,7 @@
   you can contact me at mail@z0m3ie.de
 *)
 {
-Status: broken =(
+Status: tested
 }
 {$define FFTREAL_}
 unit acs_indicator;
@@ -13,11 +13,10 @@ unit acs_indicator;
 interface
 
 uses
-   sysutils, Classes, ACS_Types, ACS_Classes, ACS_Procs, ACS_Strings
+  SysUtils, Classes, ACS_Types, ACS_Classes, ACS_Procs, ACS_Strings
 {$ifdef FFTREAL}
-   , FFTReal
-{$endif}
-   ;
+  , FFTReal
+{$endif}   ;
 
 type
 
@@ -25,18 +24,19 @@ type
 
   TAcsSoundIndicator = class(TAcsCustomConverter)
   private
-    FLocked: Boolean;
-    //Window: array of Double;
-    FValuesCount: Integer;
-    procedure CalculateSpectrum(PSampleWindow: Pointer; SamplesCount: integer;
-      var AValues: array of Double);
+    FLocked: boolean;
+    FHanningWindow: TAcsArrayOfDouble;
+    FValuesCount: integer;
+    procedure CalculateSpectrum(var ASamplesArr: TAcsArrayOfDouble; SamplesCount: integer;
+      var AValues: array of double);
   protected
     procedure SetValuesCount(AValue: integer);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
-    procedure GetValues(var Values: array of Double);
+    function GetData(ABuffer: Pointer; ABufferSize: integer): integer; override;
+    { Get spectrum values (0..1) }
+    procedure GetValues(var Values: array of double);
     procedure Init(); override;
     procedure Done(); override;
   published
@@ -49,10 +49,10 @@ implementation
 constructor TAcsSoundIndicator.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FLocked:=False;
-  FValuesCount:=32;
-  FBufferSize:=$1000;
-  //HannWindow(@Window, Length(Window), True);
+  FLocked := False;
+  FValuesCount := 32;
+  FBufferSize := $1000;
+  SetLength(FHanningWindow, 0);
 end;
 
 destructor TAcsSoundIndicator.Destroy;
@@ -62,20 +62,23 @@ end;
 
 {$ifdef FFTREAL}
 procedure TAcsSoundIndicator.CalculateSpectrum(PSampleWindow: Pointer;
-  SamplesCount: integer; var AValues: array of Double);
+  SamplesCount: integer; var AValues: array of double);
 var
   pSample: PAcsDoubleArray;
   pFFTResult: pflt_array;
   i, ii, n, FreqCount: integer;
-  k, sum: Double;
+  k, sum: double;
   fftr: TFFTReal;
 begin
-  if Length(AValues)<>ValuesCount then Exit;
+  if Length(AValues) <> ValuesCount then
+  begin
+    Exit;
+  end;
 
-  pSample:=PSampleWindow;
-  pFFTResult:=GetMem(SamplesCount * SizeOf(flt_t));
+  pSample := PSampleWindow;
+  pFFTResult := GetMem(SamplesCount * SizeOf(flt_t));
 
-  fftr:=TFFTReal.Create(SamplesCount);
+  fftr := TFFTReal.Create(SamplesCount);
 
   fftr.do_fft(pFFTResult, pflt_array(pSample));
   // pFFTResult[0..length(x)/2] = real values
@@ -84,172 +87,314 @@ begin
   FreeAndNil(fftr);
 
   // Using only real values, first half of result
-  FreqCount:=SamplesCount div 2;
+  FreqCount := SamplesCount div 2;
   // FreqCount to ValueCount ratio
-  k:=FreqCount / ValuesCount;
+  k := FreqCount / ValuesCount;
 
   // use first half of result, second half is symmetric
   //SetLength(AValues, SamplesCount);
   {$R-}
-  for i:=0 to ValuesCount-1 do
+  for i := 0 to ValuesCount - 1 do
   begin
-    n:=Trunc(i*k);
-    AValues[i]:=pFFTResult[n];
+    n := Trunc(i * k);
+    AValues[i] := pFFTResult[n];
   end;
   {$R+}
   Freemem(pFFTResult);
 end;
 
 {$else}
-procedure TAcsSoundIndicator.CalculateSpectrum(PSampleWindow: Pointer;
-  SamplesCount: integer; var AValues: array of Double);
+(*
+procedure TAcsSoundIndicator.CalculateSpectrum(var ASamplesArr: TAcsArrayOfDouble;
+  SamplesCount: integer; var AValues: array of double);
 var
-  pSample: PAcsDoubleArray;
-  pWindow: PAcsDoubleArray;
-  pCA: PAcsComplexArray;
-  i, ii, n: integer;
-  sum: Double;
+  FFTResultArr: TAcsArrayOfDouble;
+  ComplexArr: TAcsArrayOfComplex;
+  i, ii, n, iSamplesCount, iValuesCount: integer;
+  sum, c: double;
 begin
-  if Length(AValues)<>ValuesCount then Exit;
-  pSample:=PSampleWindow;
+  if Length(AValues) <> ValuesCount then
+  begin
+    Exit;
+  end;
 
-  i:=SizeOf(Double)*SamplesCount;
   { TODO : Save window between calls }
-  pWindow:=GetMem(i);
   // Hann window elements count must be equal to sample elements count
-  HannWindow(pWindow, SamplesCount, True);
-  // apply Hann window
-  MultDoubleArrays(@pWindow[0], @pSample[0], SamplesCount);
-  Freemem(pWindow);
+  if Length(FHanningWindow) <> SamplesCount then
+    FillHanningWindow(FHanningWindow, SamplesCount);
+
+  // apply Hann window to samples
+  MultDoubleArrays(ASamplesArr, FHanningWindow, SamplesCount);
 
   // create ComplexArr
-  i:=SizeOf(TAcsComplex)*SamplesCount;
-  pCA:=GetMem(i);
+  SetLength(ComplexArr, SamplesCount);
+
+  // fill FFT samples
+  for i := 0 to SamplesCount - 1 do
+  begin
+    ComplexArr[i].Re := ASamplesArr[i];
+    ComplexArr[i].Im := 0;
+  end;
 
   // apply FFT
-  {$R-}
-  for i:=0 to SamplesCount-1 do
+  ComplexFFT(ComplexArr, 1);
+
+  // compute amplitude
+  //LgAmplitude(ComplexArr, FFTResultArr, SamplesCount, 0);
+
+  SetLength(FFTResultArr, SamplesCount);
+  // compute magnitude
+  for i := 0 to SamplesCount - 1 do
   begin
-    pCA[i].Re:=pSample[i];
-    pCA[i].Im:=0;
+    FFTResultArr[i] := Magnitude(ComplexArr[i]);
   end;
-  {$R+}
-
-  ComplexFFT(pCA, SamplesCount, 1);
-  //LgMagnitude(pCA, pSample, SamplesCount, 0);
-
-  // dispose ComplexArr
-  Freemem(pCA);
 
   // use first half of result, second half is symmetric
   //SetLength(AValues, SamplesCount);
-  {$R-}
-  n:=(SamplesCount div (ValuesCount*2)); // total spectrum slices
-  for i:=0 to ValuesCount-1 do
+
+  iSamplesCount := Length(FFTResultArr);
+  iValuesCount := Length(AValues);
+  if (iSamplesCount > 0) and (iValuesCount > 0) then
   begin
-    sum:=0;
-    for ii:=0 to n-1 do
+    c := (iSamplesCount / 2) / iValuesCount; // coefficient ValuesCount -> SamplesCount/2
+    n := Trunc(c);
+    if n = 0 then
+      n := 1;
+    for i := 0 to ValuesCount - 1 do
     begin
-      sum:=sum+pSample[i*n+ii];
+      sum := 0;
+      for ii := 0 to n - 1 do
+      begin
+        sum := sum + FFTResultArr[i * n + ii];
+      end;
+      AValues[i] := sum / n;
     end;
-    AValues[i]:=sum/n;
   end;
-  {$R+}
 end;
+*)
+
+procedure TAcsSoundIndicator.CalculateSpectrum(var ASamplesArr: TAcsArrayOfDouble;
+  SamplesCount: integer; var AValues: array of double);
+var
+  FFTArr: TAcsArrayOfDouble;
+  FFTResultArr: TAcsArrayOfDouble;
+  i, ii, n, iSamplesCount, iValuesCount: integer;
+  sum, c, MaxValue, MinValue: double;
+begin
+  iValuesCount := Length(AValues);
+  if iValuesCount <> ValuesCount then
+  begin
+    Exit;
+  end;
+
+  { TODO : Save window between calls }
+  // Hann window elements count must be equal to sample elements count
+  if Length(FHanningWindow) <> SamplesCount then
+    Windowing(FHanningWindow, SamplesCount-1, wf_Hamming);
+
+  // apply Hann window to samples
+  MultDoubleArrays(ASamplesArr, FHanningWindow, SamplesCount);
+
+  // create FFTArr
+  SetLength(FFTArr, SamplesCount * 2);
+
+  // fill FFT samples
+  for i := 0 to SamplesCount - 1 do
+  begin
+    FFTArr[i]   := ASamplesArr[i];
+    FFTArr[i+1] := 0;
+  end;
+
+  // apply FFT
+  FFT(FFTArr, SamplesCount div 2, True);
+
+  // compute amplitude
+  //LgAmplitude(ComplexArr, FFTResultArr, SamplesCount, 0);
+
+  SetLength(FFTResultArr, SamplesCount);
+
+  // normalize
+  {MaxValue := 0;
+  MinValue := 99999999; }
+  for i := 0 to iSamplesCount - 1 do
+  begin
+    //Magnitude(ComplexArr[i]);
+    //FFTResultArr[i] := Amplitude(FFTArr[i], FFTArr[i+1]) / 10;
+    FFTResultArr[i] := (ln(Magnitude(FFTArr[i], FFTArr[i+1])) - 7.5) * 0.1;
+    {if MaxValue < FFTResultArr[i] then
+      MaxValue := FFTResultArr[i];
+    if MinValue > FFTResultArr[i] then
+      MinValue := FFTResultArr[i]; }
+    if FFTResultArr[i] < 0 then
+      FFTResultArr[i] := 0;
+    if FFTResultArr[i] > 1 then
+      FFTResultArr[i] := 1;
+  end;
+
+  iSamplesCount := Length(FFTResultArr) div 2;
+  SetLength(FFTResultArr, iSamplesCount);
+
+  // use first half of result, second half is symmetric
+  if (iSamplesCount > 0) and (iValuesCount > 0) then
+  begin
+    c := (iSamplesCount-1) / iValuesCount; // coefficient ValuesCount -> SamplesCount/2
+    n := Trunc(c);
+    if n = 0 then
+      n := 1;
+    for i := 0 to iValuesCount - 1 do
+    begin
+      sum := 0;
+      if i < iSamplesCount then
+      begin
+        for ii := 0 to n - 1 do
+        begin
+          sum := sum + FFTResultArr[i * n + ii];
+        end;
+      end;
+      AValues[i] := sum / n;
+    end;
+  end;
+
+end;
+
 {$endif}
 
 procedure TAcsSoundIndicator.SetValuesCount(AValue: integer);
 begin
-  FValuesCount:=AValue;
+  FValuesCount := AValue;
 end;
 
 procedure TAcsSoundIndicator.Init();
 begin
   inherited Init();
   //FillChar(FValues[0], SizeOf(Double)*32, 0);
-  FLocked:=False;
+  FLocked := False;
 end;
 
 procedure TAcsSoundIndicator.Done();
 begin
   inherited Done();
   //FillChar(FValues[0], SizeOf(Double)*32, 0);
-  FLocked:=False;
+  FLocked := False;
 end;
 
-function TAcsSoundIndicator.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
+function TAcsSoundIndicator.GetData(ABuffer: Pointer; ABufferSize: integer): integer;
 var
-  n: Integer;
+  n: integer;
 begin
   if not Active then
+  begin
     raise EAcsException.Create(strStreamnotopen);
+  end;
 
   // copy input ABuffer to param ABuffer
-  while InputLock do Sleep(1);
-  InputLock:=True;
-  Result:=FInput.GetData(ABuffer, ABufferSize);
-  FPosition:=FInput.Position;
-  InputLock:=False;
+  while InputLock do
+  begin
+    Sleep(1);
+  end;
+  InputLock := True;
+  Result := FInput.GetData(ABuffer, ABufferSize);
+  FPosition := FInput.Position;
+  InputLock := False;
 
   // copy param ABuffer to local ABuffer
-  while FLocked do Sleep(1);
-  FLocked:=True;
+  while FLocked do
+  begin
+    Sleep(1);
+  end;
+  FLocked := True;
   {
   if Length(FBuffer)<>Result then SetLength(FBuffer, Result);
   if Result > 0 then Move(ABuffer^, FBuffer[0], Result);
   }
-  n:=Result;
-  if n > FAudioBuffer.Size then n:=FAudioBuffer.Size;
+  n := Result;
+  if n > FAudioBuffer.Size then
+  begin
+    n := FAudioBuffer.Size;
+  end;
   FAudioBuffer.Reset();
   FAudioBuffer.Write(ABuffer^, n);
-  FLocked:=False;
- end;
+  FLocked := False;
+end;
 
-procedure TAcsSoundIndicator.GetValues(var Values: array of Double);
+procedure TAcsSoundIndicator.GetValues(var Values: array of double);
 var
-  i, NumSamples: Integer;
-  pSample: PAcsDoubleArray;
+  i, NumSamples: integer;
+  SamplesArr: TAcsArrayOfDouble;
   P: Pointer;
 begin
-  if Length(Values)<>ValuesCount then Exit;
+  if Length(Values) <> ValuesCount then
+  begin
+    Exit;
+  end;
   //SetLength(Values, ValuesCount);
   //if BufferSize=0 then
-  FillChar(Values[0], SizeOf(Double) * ValuesCount, 0);
-  if FAudioBuffer.WritePosition = 0 then Exit;
-
-  if (FInput.Channels = 0) or (FInput.BitsPerSample = 0) then Exit;
-  NumSamples:=FAudioBuffer.WritePosition div (FInput.Channels * (FInput.BitsPerSample div 8));
-
-  while FLocked do Sleep(1);
-  FLocked:=True;
-
-  i:=SizeOf(Double) * NumSamples;
-  pSample:=GetMem(i);
-  // convert raw sample to mono sample array
-  {$R-}
-  //P:=@FBuffer[0];
-  P:=FAudioBuffer.Memory;
-  if FInput.BitsPerSample=8 then
+  //FillChar(Values[0], SizeOf(double) * Length(Values), 0);
+  if not Assigned(FAudioBuffer) or (FAudioBuffer.WritePosition = 0) then
   begin
-    if FInput.Channels=1 then
-      for i:=0 to NumSamples-1 do pSample[i]:=PAcsBuffer8(P)[i]
-    else
-      for i:=0 to NumSamples-1 do pSample[i]:=(PAcsStereoBuffer8(P)[i].Left + PAcsStereoBuffer8(P)[i].Right)/2;
+    Exit;
+  end;
+
+  if (FInput.Channels = 0) or (FInput.BitsPerSample = 0) then
+  begin
+    Exit;
+  end;
+  NumSamples := FAudioBuffer.WritePosition div (FInput.Channels *
+    (FInput.BitsPerSample div 8));
+
+  while FLocked do
+  begin
+    Sleep(1);
+  end;
+  FLocked := True;
+
+  SetLength(SamplesArr, NumSamples);
+  // convert raw sample to mono sample array with values -32768..32768
+  {$R-}
+  P := FAudioBuffer.Memory;
+  if FInput.BitsPerSample = 8 then
+  begin
+    if FInput.Channels = 1 then
+    begin
+      for i := 0 to NumSamples - 1 do
+      begin
+        SamplesArr[i] := PAcsBuffer8(P)[i] * 256;
+      end;
     end
+    else
+    begin
+      for i := 0 to NumSamples - 1 do
+      begin
+        SamplesArr[i] := (PAcsStereoBuffer8(P)[i].Left + PAcsStereoBuffer8(P)[i].Right) / 2 * 256;
+      end;
+    end;
+  end
   else
   begin
-    if FInput.Channels=1 then
-      for i:=0 to NumSamples-1 do pSample[i]:=PAcsBuffer16(P)[i]
+    if FInput.Channels = 1 then
+    begin
+      for i := 0 to NumSamples - 1 do
+      begin
+        SamplesArr[i] := PAcsBuffer16(P)[i] + 32767;
+      end;
+    end
     else
-      for i:=0 to NumSamples-1 do pSample[i]:=(PAcsStereoBuffer16(P)[i].Left + PAcsStereoBuffer16(P)[i].Right)/2;
+    begin
+      for i := 0 to NumSamples - 1 do
+      begin
+        SamplesArr[i] := (PAcsStereoBuffer16(P)[i].Left + PAcsStereoBuffer16(P)[i].Right) / 2 + 32767;
+      end;
+    end;
   end;
   {$R+}
 
-  CalculateSpectrum(pSample, NumSamples, Values);
-  Freemem(pSample);
-
-  for i:=0 to ValuesCount-1 do Values[i]:=Values[i] * 0.4; //ValCount;
-  FLocked:=False;
+  CalculateSpectrum(SamplesArr, NumSamples, Values);
+  {
+  for i := 0 to ValuesCount - 1 do
+  begin
+    Values[i] := Values[i] * 0.4;
+  end; //ValCount;   }
+  FLocked := False;
 end;
 
 end.

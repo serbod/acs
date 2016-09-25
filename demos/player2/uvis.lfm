@@ -12,7 +12,7 @@ object fVizu: TfVizu
   Menu = MainMenu1
   OnCreate = FormCreate
   OnPaint = FormPaint
-  LCLVersion = '1.2.4.0'
+  LCLVersion = '1.6.0.4'
   object Image: TImage
     Left = 0
     Height = 79

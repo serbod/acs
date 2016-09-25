@@ -73,7 +73,7 @@ type
   private
     Lock: Boolean;
     Kernel: array of Double;
-    DA: PAcsDoubleArray;
+    DA: TAcsArrayOfDouble;
     DAS: PAcsStereoBufferD;
     inBuf: array[1..BUF_SIZE] of Byte;
     FFilterType: TAcsFilterType;
@@ -92,7 +92,7 @@ type
     function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
     procedure Done(); override;
-    procedure GetKernel(var K: PAcsDoubleArray);
+    procedure GetKernel(var K: TAcsArrayOfDouble);
   published
     { Use this property to select the filter type. The possible values are:
       ftBandPass - Band-pass filter. HighFreq and LowFreq define the band to be passed.
@@ -123,7 +123,7 @@ type
   private
     Lock: Boolean;
     Kernel: array of Double;
-    DA: PAcsDoubleArray;
+    DA: TAcsArrayOfDouble;
     DAS: PAcsStereoBufferD;
     inBuf: array[1..BUF_SIZE] of Byte;
     FKernelWidth: Integer;
@@ -141,7 +141,7 @@ type
       the procedure if the kernel is inverted or not. You may call this procedure
       on the fly, to change the current convolution kernel, but note, that you
       cannot change KernelWidth value on the fly. }
-    procedure SetKernel(K: PAcsDoubleArray; Inverted: Boolean);
+    procedure SetKernel(const K: TAcsArrayOfDouble; Inverted: Boolean);
     { Use this property to set the number of the kernel points for the convolution kernel.
       This property should be set before the convolver starts its playback and
       after it is set SetKernel function must be called. }
@@ -370,7 +370,7 @@ begin
     begin
       SetLength(Kernel, FKernelWidth);
       CutOff:=FLowFreq / InputSampleRate;
-      CalculateSincKernel(@Kernel[0], CutOff, FKernelWidth, FWindowType);
+      CalculateSincKernel(Kernel, CutOff, FKernelWidth, FWindowType);
     end;
 
     ftHighPass:
@@ -378,7 +378,7 @@ begin
       if not Odd(FKernelWidth) then Inc(FKernelWidth);
       SetLength(Kernel, FKernelWidth);
       CutOff:=FHighFreq/InputSampleRate;
-      CalculateSincKernel(@Kernel[0], CutOff, FKernelWidth, FWindowType);
+      CalculateSincKernel(Kernel, CutOff, FKernelWidth, FWindowType);
       for i:=0 to FKernelWidth - 1 do
         Kernel[i]:=-Kernel[i];
       Kernel[(FKernelWidth div 2)]:=Kernel[(FKernelWidth div 2)] + 1;
@@ -389,13 +389,13 @@ begin
       if not Odd(FKernelWidth) then Inc(FKernelWidth);
       SetLength(Kernel1, FKernelWidth);
       CutOff:=FLowFreq/InputSampleRate;
-      CalculateSincKernel(@Kernel1[0], CutOff, FKernelWidth, FWindowType);
+      CalculateSincKernel(Kernel1, CutOff, FKernelWidth, FWindowType);
       for i:=0 to FKernelWidth - 1 do
         Kernel1[i]:=-Kernel1[i];
       Kernel1[(FKernelWidth div 2)]:=Kernel1[(FKernelWidth div 2)] + 1;
       SetLength(Kernel2, FKernelWidth);
       CutOff:=FHighFreq/InputSampleRate;
-      CalculateSincKernel(@Kernel2[0], CutOff, FKernelWidth, FWindowType);
+      CalculateSincKernel(Kernel2, CutOff, FKernelWidth, FWindowType);
       SetLength(Kernel, 2*FKernelWidth);
       FillChar(Kernel[0], Length(Kernel)*SizeOf(Double), 0);
       for i:=0 to KernelWidth - 1 do
@@ -411,13 +411,13 @@ begin
       if not Odd(FKernelWidth) then Inc(FKernelWidth);
       SetLength(Kernel1, FKernelWidth);
       CutOff:=FHighFreq/InputSampleRate;
-      CalculateSincKernel(@Kernel1[0], CutOff, FKernelWidth, FWindowType);
+      CalculateSincKernel(Kernel1, CutOff, FKernelWidth, FWindowType);
       for i:=0 to FKernelWidth - 1 do
         Kernel1[i]:=-Kernel1[i];
       Kernel1[(FKernelWidth div 2)]:=Kernel1[(FKernelWidth div 2)] + 1;
       SetLength(Kernel2, FKernelWidth);
       CutOff:=FLowFreq/InputSampleRate;
-      CalculateSincKernel(@Kernel2[0], CutOff, FKernelWidth, FWindowType);
+      CalculateSincKernel(Kernel2, CutOff, FKernelWidth, FWindowType);
       SetLength(Kernel, FKernelWidth);
       for i:=0 to FKernelWidth - 1 do
         Kernel[i]:=Kernel1[i] + Kernel2[i];
@@ -578,9 +578,9 @@ begin
   //FPosition:=Round(FInput.Position*(FSize/FInput.Size));
 end;
 
-procedure TAcsSincFilter.GetKernel(var K: PAcsDoubleArray);
+procedure TAcsSincFilter.GetKernel(var K: TAcsArrayOfDouble);
 begin
-  K:=@Kernel[0];
+  K := Kernel;
 end;
 
 { TAcsConvolver }
@@ -713,7 +713,7 @@ begin
   //FPosition:=Round(FInput.Position*(FSize/FInput.Size));
 end;
 
-procedure TAcsConvolver.SetKernel(K: PAcsDoubleArray; Inverted: Boolean);
+procedure TAcsConvolver.SetKernel(const K: TAcsArrayOfDouble; Inverted: Boolean);
 var
   i: Integer;
 begin
