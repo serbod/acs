@@ -112,11 +112,11 @@ type
     function GetDriveName(): string;
     function GetCDDBID(): LongInt;
   protected
+    function GetSize(): Integer; override;
     function GetBPS(): Integer; override;
     function GetCh(): Integer; override;
     function GetSR(): Integer; override;
     function GetTotalTime(): Real; override;
-    function GetSize(): Integer; override;
     procedure InitLib;
   public
     constructor Create(AOwner: TComponent); override;
@@ -211,19 +211,6 @@ function TAcsCDIn.GetTotalTime(): Real;
 begin
   if (SampleRate=0) or (Channels=0) or (BitsPerSample=0) then Exit;
   Result:=Size / (SampleRate * Channels * (BitsPerSample div 8));
-end;
-
-procedure TAcsCDIn.InitLib;
-begin
-  if not FLibLoaded then
-    begin
-      FLibLoaded:=True;
-      LoadCDRip();
-      if not (csDesigning in ComponentState) then
-        if not CDRipLoaded then
-          raise EAcsException.Create(akriplib + ' could not be loaded.');
-      GetCDList(FCDList);
-    end;
 end;
 
 function TAcsCDIn.GetCDDBID(): LongInt;

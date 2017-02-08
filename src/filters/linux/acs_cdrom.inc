@@ -10,6 +10,47 @@ Copyright (c) 2014-2015  Sergey Bodrov, serbod@gmail.com
 
 }
 
+procedure CountDrives();
+var
+  _cd_fd, i: Integer;
+  fname: String;
+  sci: cdrom_subchnl;
+  res:Integer;
+  Data: Integer;
+begin
+  DrivesCount:=0;
+  Data:=CDSL_CURRENT;
+  for i:=0 to 3 do
+  begin
+    fname:='/dev/hd'+chr(ord('a')+i);
+    _cd_fd:=fpopen(PChar(fname), O_RDONLY or O_NONBLOCK);
+    if _cd_fd >= 0 then
+      begin
+        res:=fpioctl(_cd_fd, CDROM_DRIVE_STATUS, @Data);
+        case res of
+        CDS_TRAY_OPEN, CDS_NO_DISC, CDS_DRIVE_NOT_READY:
+           begin
+             inc(DrivesCount);
+             setlength(DrivesPaths,DrivesCount);
+             DrivesPaths[DrivesCount-1]:=fname;
+             fpclose(_cd_fd);
+             continue;
+           end;
+        end;
+        (* Either the disc is ok or no information
+        from the driver. Trying CDROMSUBCHNL.*)
+        sci.cdsc_format:=CDROM_MSF;
+        if fpioctl(_cd_fd, CDROMSUBCHNL, @sci) >= 0 then
+          begin
+             inc(DrivesCount);
+             setlength(DrivesPaths,DrivesCount);
+             DrivesPaths[DrivesCount-1]:=fname;
+          end;
+        fpclose(_cd_fd);
+      end;
+  end;
+end;
+
 function GetTocEntry(cd_fd, Track: Integer): TAcsCDTrackInfo;
 var
   Entry: cdrom_tocentry;
@@ -236,6 +277,15 @@ begin
     ((msf1.minute*60 + msf1.second)*75 + msf1.frame))*CD_FRAMESIZE_RAW;
 end;
 
+procedure TAcsCDIn.InitLib;
+begin
+  if not FLibLoaded then
+    begin
+      FLibLoaded:=True;
+      CountDrives;
+    end;
+end;
+
 procedure TAcsCDIn.Init();
 begin
   if not (DiscInfo in [cdiDiscAudio, cdiDiscMixed]) then
@@ -311,47 +361,6 @@ begin
   Data:=0;
   fpioctl(_cd_fd, CDROMCLOSETRAY,@Data);
   CloseCD;
-end;
-
-procedure CountDrives();
-var
-  _cd_fd, i: Integer;
-  fname: String;
-  sci: cdrom_subchnl;
-  res:Integer;
-  Data: Integer;
-begin
-  DrivesCount:=0;
-  Data:=CDSL_CURRENT;
-  for i:=0 to 3 do
-  begin
-    fname:='/dev/hd'+chr(ord('a')+i);
-    _cd_fd:=fpopen(PChar(fname), O_RDONLY or O_NONBLOCK);
-    if _cd_fd >= 0 then
-      begin
-        res:=fpioctl(_cd_fd, CDROM_DRIVE_STATUS, @Data);
-        case res of
-        CDS_TRAY_OPEN, CDS_NO_DISC, CDS_DRIVE_NOT_READY:
-           begin
-             inc(DrivesCount);
-             setlength(DrivesPaths,DrivesCount);
-             DrivesPaths[DrivesCount-1]:=fname;
-             fpclose(_cd_fd);
-             continue;
-           end;
-        end;
-        (* Either the disc is ok or no information
-        from the driver. Trying CDROMSUBCHNL.*)
-        sci.cdsc_format:=CDROM_MSF;
-        if fpioctl(_cd_fd, CDROMSUBCHNL, @sci) >= 0 then
-          begin
-             inc(DrivesCount);
-             setlength(DrivesPaths,DrivesCount);
-             DrivesPaths[DrivesCount-1]:=fname;
-          end;
-        fpclose(_cd_fd);
-      end;
-  end;
 end;
 
 function TAcsCDIn.GetDrivesCount(): Integer;
