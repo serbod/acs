@@ -15,8 +15,8 @@ type
 constructor TAcsCDIn.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FLibLoaded:=False;
-  FStreamDisabled:=True;
+  FLibLoaded := False;
+  FStreamDisabled := True;
   AppPath := ExtractFilePath(ParamStr(0));
   if AppPath[length(AppPath)] <> '\' then AppPath := AppPath + '\';
   FillChar(FCDList, SizeOf(FCDList), 0);
@@ -43,17 +43,17 @@ var
   GetCD: GETCDHAND;
 begin
   with GetCD do
-    begin
-      Size := SizeOf(GETCDHAND);
-      Ver := 1;
-      ha := 0;
-      tgt := FCurrentDrive;
-      lun := 0;
-      readType := CDR_ANY;
-      jitterCorr := false;
-      numJitter := 0;
-      numOverlap := 0;
-    end;
+  begin
+    Size := SizeOf(GETCDHAND);
+    Ver := 1;
+    ha := 0;
+    tgt := FCurrentDrive;
+    lun := 0;
+    readType := CDR_ANY;
+    jitterCorr := false;
+    numJitter := 0;
+    numOverlap := 0;
+  end;
   FCDHandle := GetCDHandle(GetCD);
 end;
 
@@ -186,24 +186,24 @@ begin
   Result := (Sect2 - Sect1) * CD_FRAMESIZE_RAW;
 end;
 
-procedure TAcsCDIn.InitLib;
+procedure TAcsCDIn.InitLib();
 begin
   if not FLibLoaded then
-    begin
-      FLibLoaded:=True;
-      LoadCDRip();
-      if not (csDesigning in ComponentState) then
-        if not CDRipLoaded then
-          raise EAcsException.Create(akriplib + ' could not be loaded.');
-      GetCDList(FCDList);
-    end;
+  begin
+    FLibLoaded := LoadCDRip();
+    {if not (csDesigning in ComponentState) then
+      if not CDRipLoaded then
+        raise EAcsException.Create(akriplib + ' could not be loaded.'); }
+  end;
+  if FLibLoaded then
+    GetCDList(FCDList);
 end;
 
 procedure TAcsCDIn.Init();
 var
   Sect1, Sect2: Integer;
 begin
-  InitLib;
+  InitLib();
   if Status = cdsNotReady then
     raise EAcsException.Create(strDrivenotready);
   if (FStartPos.Track in [0..GetNumTracks-1]) = False then
@@ -269,13 +269,15 @@ end;
 
 procedure TAcsCDIn.SetCurrentDrive(Value: Integer);
 begin
-  if Value in [0..FCDList.num-1] then
+  if (FCDList.num > 0) and (Value in [0..FCDList.num-1]) then
+  begin
     FCurrentDrive := Value;
-  OpenCD();
-  FillChar(FToc, SizeOf(FToc),0);
-  ModifyCDParms(FCDHandle, CDP_MSF, DWORD(true));
-  ReadTOC(FCDHandle, FTOC);
-  CloseCD();
+    OpenCD();
+    FillChar(FToc, SizeOf(FToc),0);
+    ModifyCDParms(FCDHandle, CDP_MSF, DWORD(true));
+    ReadTOC(FCDHandle, FTOC);
+    CloseCD();
+  end;
 end;
 
 function TAcsCDIn.GetDrivesCount(): Integer;
@@ -289,15 +291,47 @@ begin
   Result := FCDList.Cd[FCurrentDrive].id;
 end;
 
-procedure TAcsCDIn.Eject();
+function CDTrayControl(const ADriveName: string; AEject: Boolean): Boolean;
+var
+  Res: MciError;
+  OpenParm: TMCI_Open_Parms;
+  Flags: DWord;
+  S: string;
 begin
-  InitLib;
-  if Active then
-    raise EAcsException.Create(strBusy);
+  Result := False;
+  OpenParm.dwCallback:= 0;
+  OpenParm.lpstrDeviceType := 'CDAudio';
+  Flags := MCI_OPEN_TYPE;
+
+  S := ADriveName + ':';
+  if GetDriveType(PChar(S)) = DRIVE_CDROM then
+  begin
+    Flags := MCI_OPEN_TYPE or MCI_OPEN_ELEMENT;
+    OpenParm.lpstrElementName := PChar(S);
+  end;
+
+  Res := mciSendCommand(0, MCI_OPEN, Flags, PtrInt(@OpenParm));
+  if Res <> 0 then
+    Exit;
+  try
+    if AEject then
+      Res := mciSendCommand(OpenParm.wDeviceID, MCI_SET, MCI_SET_DOOR_OPEN, 0)
+    else
+      Res := mciSendCommand(OpenParm.wDeviceID, MCI_SET, MCI_SET_DOOR_CLOSED, 0);
+    Result := (Res = 0);
+  finally
+    mciSendCommand(OpenParm.wDeviceID, MCI_CLOSE, Flags, PtrInt(@OpenParm));
+  end;
 end;
 
-procedure TAcsCDIn.CloseTray();
+function TAcsCDIn.Eject(): Boolean;
 begin
+  Result := CDTrayControl(DriveName, True);
+end;
+
+function TAcsCDIn.CloseTray(): Boolean;
+begin
+  Result := CDTrayControl(DriveName, False);
 end;
 
 

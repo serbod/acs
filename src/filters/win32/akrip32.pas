@@ -304,22 +304,22 @@ begin
   Libhandle := LoadLibraryEx(akriplib, 0, 0);
   if Libhandle <> 0 then
   begin
-    CDRipLoaded:=True;
-    GetNumAdapters:=GetProcAddress(Libhandle, 'GetNumAdapters');
-    GetCDList:=GetProcAddress(Libhandle, 'GetCDList');
-    GetAspiLibError:=GetProcAddress(Libhandle, 'GetAspiLibError');
-    GetAspiLibAspiError:=GetProcAddress(Libhandle, 'GetAspiLibAspiError');
-    GetCDId:=GetProcAddress(Libhandle, 'GetCDId');
-    GetDriveInfo:=GetProcAddress(Libhandle, 'GetCDDriveInfo');
-    ReadTOC:=GetProcAddress(Libhandle, 'ReadTOC');
-    ReadCDAudioLBA:=GetProcAddress(Libhandle, 'ReadCDAudioLBA');
-    QueryCDParms:=GetProcAddress(Libhandle, 'QueryCDParams');
-    ModifyCDParms:=GetProcAddress(Libhandle, 'ModifyCDParms');
-    GetCDHandle:=GetProcAddress(Libhandle, 'GetCDHandle');
-    CloseCDHandle:=GetProcAddress(Libhandle, 'CloseCDHandle');
-    ReadCDAudioLBAEx:=GetProcAddress(Libhandle, 'ReadCDAudioLBAEx');
+    CDRipLoaded := True;
+    GetNumAdapters := GetProcAddress(Libhandle, 'GetNumAdapters');
+    GetCDList := GetProcAddress(Libhandle, 'GetCDList');
+    GetAspiLibError := GetProcAddress(Libhandle, 'GetAspiLibError');
+    GetAspiLibAspiError := GetProcAddress(Libhandle, 'GetAspiLibAspiError');
+    GetCDId := GetProcAddress(Libhandle, 'GetCDId');
+    GetDriveInfo := GetProcAddress(Libhandle, 'GetCDDriveInfo');
+    ReadTOC := GetProcAddress(Libhandle, 'ReadTOC');
+    ReadCDAudioLBA := GetProcAddress(Libhandle, 'ReadCDAudioLBA');
+    QueryCDParms := GetProcAddress(Libhandle, 'QueryCDParams');
+    ModifyCDParms := GetProcAddress(Libhandle, 'ModifyCDParms');
+    GetCDHandle := GetProcAddress(Libhandle, 'GetCDHandle');
+    CloseCDHandle := GetProcAddress(Libhandle, 'CloseCDHandle');
+    ReadCDAudioLBAEx := GetProcAddress(Libhandle, 'ReadCDAudioLBAEx');
   end;
-  Result:=(Libhandle <> 0);
+  Result := (Libhandle <> 0);
 end;
 
 procedure UnloadCDRip();
@@ -327,7 +327,7 @@ begin
   if Libhandle <> 0 then
   begin
     FreeLibrary(Libhandle);
-    CDRipLoaded:=False;
+    CDRipLoaded := False;
   end;
 end;
 

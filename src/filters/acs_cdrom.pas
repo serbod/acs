@@ -124,8 +124,10 @@ type
     function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
     procedure Done(); override;
-    procedure Eject();
-    procedure CloseTray();
+    { Open CD tray }
+    function Eject(): Boolean;
+    { Close CD tray }
+    function CloseTray(): Boolean;
     property DiscInfo: TAcsCDInfo read GetInfo;
     property Status: TAcsCDStatus read GetStatus;
     property Tracks[const vIndex: Integer]: TAcsCDTrackInfo read GetTrackInfo;
