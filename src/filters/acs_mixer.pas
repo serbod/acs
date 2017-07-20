@@ -10,7 +10,7 @@ unit acs_mixer;
 interface
 
 uses
-  Classes, SysUtils, ACS_Classes, ACS_Strings
+  Classes, SysUtils, ACS_Classes, ACS_Strings{$ifdef fpc},LazUTF8{$endif}
   {$ifdef fpc}
   {$endif}
   {$IFDEF MSWINDOWS}

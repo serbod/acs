@@ -165,14 +165,17 @@ SOFTWARE."/>
         <UnitName Value="acs_volumequery"/>
       </Item26>
     </Files>
-    <RequiredPkgs Count="2">
+    <RequiredPkgs Count="3">
       <Item1>
-        <PackageName Value="laz_directx"/>
+        <PackageName Value="LazUtils"/>
       </Item1>
       <Item2>
+        <PackageName Value="laz_directx"/>
+      </Item2>
+      <Item3>
         <PackageName Value="FCL"/>
         <MinVersion Major="1" Valid="True"/>
-      </Item2>
+      </Item3>
     </RequiredPkgs>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>

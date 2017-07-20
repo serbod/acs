@@ -186,19 +186,6 @@ begin
   Result := (Sect2 - Sect1) * CD_FRAMESIZE_RAW;
 end;
 
-procedure TAcsCDIn.InitLib();
-begin
-  if not FLibLoaded then
-  begin
-    FLibLoaded := LoadCDRip();
-    {if not (csDesigning in ComponentState) then
-      if not CDRipLoaded then
-        raise EAcsException.Create(akriplib + ' could not be loaded.'); }
-  end;
-  if FLibLoaded then
-    GetCDList(FCDList);
-end;
-
 procedure TAcsCDIn.Init();
 var
   Sect1, Sect2: Integer;
