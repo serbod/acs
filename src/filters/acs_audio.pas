@@ -140,7 +140,9 @@ type
     property PrefetchMode: TAcsPrefetchMode read GetPrefetchMode write SetPrefetchMode;
     { use this property to set an driver, on create of this component the driver
       with lowest latency is used for default }
-    property Driver: string read FDriverName write SetDriver;
+    property DriverName: string read FDriverName write SetDriver;
+    { Output driver object }
+    property Driver: TAcsAudioOutDriver read FOutputDriver stored False;
     { Use this property to set the output device }
     property Device: Integer read FBaseChannel write SetDevice;
     property Volume: Byte read FVolume write FVolume;
@@ -202,7 +204,7 @@ type
   published
     { use this property to set an driver, on create of this component the driver
       with lowest latency is used for default }
-    property Driver: string read FDriverName write SetDriver stored True;
+    property DriverName: string read FDriverName write SetDriver stored True;
     { Use this property to set the input device }
     property Device: Integer read FBaseChannel write SetDevice stored True;
     { Use this property to set the number of bits per sample for the input audio stream.
