@@ -68,7 +68,7 @@ object fMain: TfMain
     top = 8
   end
   object AudioIn1: TAcsAudioIn
-    Driver = 'Wavemapper'
+    DriverName = 'Wavemapper'
     Device = 0
     InBitsPerSample = 8
     InChannels = 1

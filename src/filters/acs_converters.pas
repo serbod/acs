@@ -82,7 +82,7 @@ type
     InBufS, OutBufS: PAcsStereoBuffer16;
     DAM: array of Double;
     DAS: array of TAcsStereoSampleD;
-    Kernel: array of Double;
+    FKernel: TAcsArrayOfDouble;
     FKernelWidth: Integer;
     FFilterWindow: TAcsFilterWindowType;
     Tail: Pointer;
@@ -156,6 +156,9 @@ type
 implementation
 
 function TAcsRateConverter.ConvertFreqs16Mono(InSize: Integer): Integer;
+type
+  TAcsDoubleArray = array [0..0] of Double;
+  PAcsDoubleArray = ^TAcsDoubleArray;
 var
   i, step, j, k, s, m: Integer;
   D: Double;
@@ -176,9 +179,9 @@ begin
         D:=0;
         for k:=0 to FKernelWidth - 1 do
         if i-k >= 0 then
-        D:=D + InBufM[i-k]*Kernel[FKernelWidth - 1 - k]
+        D:=D + InBufM[i-k] * FKernel[FKernelWidth - 1 - k]
         else
-        D:=D + TailMono[FKernelWidth-1+i-k]*Kernel[FKernelWidth - 1 - k];
+        D:=D + TailMono[FKernelWidth-1+i-k] * FKernel[FKernelWidth - 1 - k];
         OutBufM[j]:=Round(D);
         Inc(j);
         Inc(remainder, step);
@@ -201,7 +204,7 @@ begin
     begin
       m:=Round(((FOutSampleRate - remainder)*LBS.Left +  remainder*InBufM[0])/FOutSampleRate);
       for k:=0 to FKernelWidth-1 do
-      DAM[j+k]:=DAM[j+k] + m*Kernel[k];
+      DAM[j+k]:=DAM[j+k] + m * FKernel[k];
       Inc(j);
       Inc(remainder, step);
     end;
@@ -212,7 +215,7 @@ begin
       begin
         m:=Round(((FOutSampleRate - remainder)*InBufM[i] +  remainder*InBufM[i+1])/FOutSampleRate);
         for k:=0 to FKernelWidth-1 do
-        DAM[j+k]:=DAM[j+k] + m*Kernel[k];
+        DAM[j+k]:=DAM[j+k] + m * FKernel[k];
         Inc(j);
         Inc(remainder, step);
       end;
@@ -250,12 +253,12 @@ begin
         for k:=0 to FKernelWidth - 1 do
         if i-k >= 0 then
         begin
-          D1:=D1 + InBufS[i-k].Left*Kernel[FKernelWidth - 1 - k];
-          D2:=D2 + InBufS[i-k].Right*Kernel[FKernelWidth - 1 - k];
+          D1:=D1 + InBufS[i-k].Left * FKernel[FKernelWidth - 1 - k];
+          D2:=D2 + InBufS[i-k].Right * FKernel[FKernelWidth - 1 - k];
         end else
         begin
-          D1:=D1 + TailStereo[FKernelWidth-1+i-k].Left*Kernel[FKernelWidth - 1 - k];
-          D2:=D2 + TailStereo[FKernelWidth-1+i-k].Right*Kernel[FKernelWidth - 1 - k];
+          D1:=D1 + TailStereo[FKernelWidth-1+i-k].Left * FKernel[FKernelWidth - 1 - k];
+          D2:=D2 + TailStereo[FKernelWidth-1+i-k].Right * FKernel[FKernelWidth - 1 - k];
         end;
         OutBufS[j].Left:=Round(D1);
         OutBufS[j].Right:=Round(D2);
@@ -286,8 +289,8 @@ begin
       m2:=Round(((FOutSampleRate - remainder)*LBS.Right +  remainder*InBufS[0].Right)/FOutSampleRate);
       for k:=0 to FKernelWidth-1 do
       begin
-        DAS[j+k].Left:=DAS[j+k].Left + m1*Kernel[k]; //InBufS[i].Left*Kernel[k];
-        DAS[j+k].Right:=DAS[j+k].Right + m2*Kernel[k]; //InBufS[i].Right*Kernel[k];
+        DAS[j+k].Left:=DAS[j+k].Left + m1 * FKernel[k]; //InBufS[i].Left*Kernel[k];
+        DAS[j+k].Right:=DAS[j+k].Right + m2 * FKernel[k]; //InBufS[i].Right*Kernel[k];
       end;
       Inc(j);
       Inc(remainder, step);
@@ -301,8 +304,8 @@ begin
         m2:=Round(((FOutSampleRate - remainder)*InBufS[i].Right +  remainder*InBufS[i+1].Right)/FOutSampleRate);
         for k:=0 to FKernelWidth-1 do
         begin
-         DAS[j+k].Left:=DAS[j+k].Left + m1*Kernel[k]; //InBufS[i].Left*Kernel[k];
-         DAS[j+k].Right:=DAS[j+k].Right + m2*Kernel[k]; //InBufS[i].Right*Kernel[k];
+         DAS[j+k].Left:=DAS[j+k].Left + m1 * FKernel[k]; //InBufS[i].Left*Kernel[k];
+         DAS[j+k].Right:=DAS[j+k].Right + m2 * FKernel[k]; //InBufS[i].Right*Kernel[k];
         end;
         Inc(j);
         Inc(remainder, step);
@@ -402,7 +405,7 @@ end;
 
 destructor TAcsRateConverter.Destroy;
 begin
-  Kernel:=nil;
+  FKernel:=nil;
   DAS:=nil;
   DAM:=nil;
   inherited Destroy;
@@ -459,8 +462,7 @@ begin
   remainder:=-1;
   if Ratio > 1. then Ratio:=1/Ratio;
   Ratio:=Ratio*0.4;
-  SetLength(Kernel, FKernelWidth);
-  CalculateSincKernel(@Kernel[0], Ratio, FKernelWidth, FFilterWindow);
+  CalculateSincKernel(FKernel, Ratio, FKernelWidth, FFilterWindow);
 end;
 
 procedure TAcsRateConverter.Done();

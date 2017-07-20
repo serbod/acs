@@ -24,7 +24,7 @@ interface
 {$DEFINE USE_EXTENDED_SPEC_FOR_24_BPS }
 
 uses
-  ACS_Audio, SysUtils, Classes, ACS_Types, ACS_Classes, Windows,
+  ACS_Audio, SysUtils, Classes, ACS_Types, ACS_Classes, Windows,{$ifdef fpc}LazUTF8,{$endif}
   DSWrapper, ACS_Strings, DirectSound, mmsystem{$ifdef LCL},Forms{$endif};
 
 const
@@ -268,7 +268,7 @@ begin
   FFetchDelay:=10;
   FLatency:=100;
   FVolumeEx:=0; //DW
-  FPrefetchMode:=pmAuto;
+  FPrefetchMode:=TAcsPrefetchMode.pmAuto;
   //FDeviceCount:=0;
   FBufferSize:=$40000; // default buffer size
 
@@ -283,7 +283,8 @@ begin
     for i:=0 to Devices.devcount-1 do
     begin
       {$ifdef FPC}
-      FDeviceInfoArray[i].DeviceName:=AnsiToUtf8(Devices.dinfo[i].name);
+      //FDeviceInfoArray[i].DeviceName:=AnsiToUtf8(Devices.dinfo[i].name);
+      FDeviceInfoArray[i].DeviceName:=WinCPToUTF8(Devices.dinfo[i].name);
       {$else}
       FDeviceInfoArray[i].DeviceName:=Devices.dinfo[i].name;
       {$endif}
@@ -583,8 +584,9 @@ begin
     SetLength(FDeviceInfoArray, Devices.devcount);
     for i:=0 to Devices.devcount-1 do
     begin
-      {$ifdef WINDOWS}
-      FDeviceInfoArray[i].DeviceName:=AnsiToUtf8(Devices.dinfo[i].name);
+      {$ifdef fpc}
+      //FDeviceInfoArray[i].DeviceName:=AnsiToUtf8(Devices.dinfo[i].name);
+      FDeviceInfoArray[i].DeviceName:=WinCPToUTF8(Devices.dinfo[i].name);
       {$else}
       FDeviceInfoArray[i].DeviceName:=Devices.dinfo[i].name;
       {$endif}

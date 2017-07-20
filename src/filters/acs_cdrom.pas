@@ -106,13 +106,13 @@ type
     procedure SetET(Track: Integer);
     procedure SetSP(Pos: TAcsCDPosition);
     procedure SetEP(Pos: TAcsCDPosition);
-    function GetSize(): Integer; override;
     function GetInfo(): TAcsCDInfo;
     function GetDrivesCount(): Integer;
     procedure SetCurrentDrive(Value: Integer);
     function GetDriveName(): string;
     function GetCDDBID(): LongInt;
   protected
+    function GetSize(): Integer; override;
     function GetBPS(): Integer; override;
     function GetCh(): Integer; override;
     function GetSR(): Integer; override;
@@ -124,8 +124,10 @@ type
     function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
     procedure Init(); override;
     procedure Done(); override;
-    procedure Eject();
-    procedure CloseTray();
+    { Open CD tray }
+    function Eject(): Boolean;
+    { Close CD tray }
+    function CloseTray(): Boolean;
     property DiscInfo: TAcsCDInfo read GetInfo;
     property Status: TAcsCDStatus read GetStatus;
     property Tracks[const vIndex: Integer]: TAcsCDTrackInfo read GetTrackInfo;

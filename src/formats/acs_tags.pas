@@ -340,7 +340,7 @@ type
   end;
 
 const
-  INVALID_HANDLE_VALUE = -1;
+  INVALID_HANDLE_VALUE = THandle(-1);
   FILE_CURRENT = fsFromCurrent;
   FILE_BEGIN = fsFromBeginning;
   FILE_END = fsFromEnd;
@@ -1019,7 +1019,7 @@ end;
 
 class function TId3v1Tags.Presents(InFile: THandle): Boolean;
 var
-  file_pos: Cardinal;
+  file_pos: Int64;
   tags_info: TId3v1TagsInfo;
 begin
   Result := (InFile <> INVALID_HANDLE_VALUE);
@@ -1224,7 +1224,7 @@ end;
 
 class function TId3v2Tags.Presents(InFile: THandle): Boolean;
 var
-  file_pos: Cardinal;
+  file_pos: Int64;
   tags_info: TId3v2TagsInfo;
 begin
   Result := (InFile <> INVALID_HANDLE_VALUE);
@@ -1513,7 +1513,8 @@ function TId3v2Tags.ReadFromFile(InFile: THandle): Boolean;
   // sub-function
   function read_frames_old(var tags_info: TId3v2TagsInfo): Boolean;
   var
-    start_file_pos, end_tag_pos, file_size, file_pos, bytes_read: Cardinal;
+    start_file_pos, end_tag_pos, file_size, file_pos: Int64;
+    bytes_read: LongInt;
     frame: TId3v2FrameHeaderOld;
     data_size: Cardinal;
     data: AnsiString;
@@ -1568,7 +1569,8 @@ function TId3v2Tags.ReadFromFile(InFile: THandle): Boolean;
   // sub-function
   function read_frames_new(var tags_info: TId3v2TagsInfo): Boolean;
   var
-    start_file_pos, end_tag_pos, file_size, file_pos, bytes_read: Cardinal;
+    start_file_pos, end_tag_pos, file_size, file_pos: Int64;
+    bytes_read: LongInt;
     frame: TId3v2FrameHeaderNew;
     data_size: Cardinal;
     data: AnsiString;
@@ -1623,7 +1625,7 @@ function TId3v2Tags.ReadFromFile(InFile: THandle): Boolean;
   end;
 
 var
-  file_pos: Cardinal;
+  file_pos: Int64;
   tags_info: TId3v2TagsInfo;
 begin
   Result := inherited ReadFromFile(InFile);
@@ -1660,7 +1662,8 @@ const
 var
   ms: TMemoryStream;
   i: Integer;
-  size, data_size, tags_size, full_data_size, padding_size: Cardinal;
+  size: Int64;
+  data_size, tags_size, full_data_size, padding_size: Cardinal;
   frame_is_unicode: Boolean;
   buf: AnsiString;
   w_buf: WideString;

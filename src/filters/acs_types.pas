@@ -58,12 +58,13 @@ type
   end;
   PAcsComplex = ^TAcsComplex;
 
-  TAcsComplexArray = array[0..0] of TAcsComplex;
-  PAcsComplexArray = ^TAcsComplexArray;
+  TAcsArrayOfComplex = array of TAcsComplex;
+  //TAcsComplexArray = array[0..0] of TAcsComplex;
+  //PAcsComplexArray = ^TAcsComplexArray;
 
   // double
-  TAcsDoubleArray = array[0..0] of Double;
-  PAcsDoubleArray = ^TAcsDoubleArray;
+  TAcsArrayOfDouble = array of Double;
+  //PAcsArrayOfDouble = ^TAcsArrayOfDouble;
 
   TAcsStereoSampleD = record
     Left: Double;

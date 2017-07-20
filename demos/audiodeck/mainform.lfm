@@ -1,13 +1,13 @@
 object FormMain: TFormMain
-  Left = 612
+  Left = 499
   Height = 380
-  Top = 236
+  Top = 299
   Width = 729
   Caption = 'FormMain'
   ClientHeight = 380
   ClientWidth = 729
   OnCreate = FormCreate
-  LCLVersion = '1.4.0.4'
+  LCLVersion = '1.7'
   object gbInput: TGroupBox
     Left = 10
     Height = 358
@@ -22,10 +22,10 @@ object FormMain: TFormMain
       Height = 330
       Top = 4
       Width = 242
-      ActivePage = tsInputFile
+      ActivePage = tsInputAudioDevice
       Align = alClient
       BorderSpacing.Around = 4
-      TabIndex = 1
+      TabIndex = 0
       TabOrder = 0
       object tsInputAudioDevice: TTabSheet
         Caption = 'Audio device'
@@ -78,9 +78,6 @@ object FormMain: TFormMain
           Height = 167
           Top = 128
           Width = 217
-          Lines.Strings = (
-            'MemoInputFileInfo'
-          )
           TabOrder = 1
         end
         object ListBoxFileInDrivers: TListBox
@@ -108,10 +105,10 @@ object FormMain: TFormMain
       Height = 330
       Top = 4
       Width = 244
-      ActivePage = tsOutFile
+      ActivePage = tsOutAudioDevice
       Align = alClient
       BorderSpacing.Around = 4
-      TabIndex = 1
+      TabIndex = 0
       TabOrder = 0
       object tsOutAudioDevice: TTabSheet
         Caption = 'Audio device'
@@ -133,6 +130,13 @@ object FormMain: TFormMain
           Width = 217
           ItemHeight = 0
           TabOrder = 1
+        end
+        object MemoAudioOutInfo: TMemo
+          Left = 7
+          Height = 111
+          Top = 184
+          Width = 217
+          TabOrder = 2
         end
       end
       object tsOutFile: TTabSheet
@@ -224,13 +228,16 @@ object FormMain: TFormMain
     top = 295
   end
   object AcsFileOut1: TAcsFileOut
+    BufferSize = 0
+    PrefetchMode = pmAuto
     FileMode = foRewrite
     left = 664
     top = 304
   end
   object AcsAudioOut1: TAcsAudioOut
-    BufferSize = 0
+    BufferSize = 16384
     PrefetchMode = pmAuto
+    DriverName = 'DirectSound'
     Device = 0
     Volume = 0
     Delay = -1
