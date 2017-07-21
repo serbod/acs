@@ -151,6 +151,7 @@ begin
       fMixer.RemoveControl(aComp);
       aComp.Free;
     end;
+  Mixer.DevNum:=cbDevice.ItemIndex;
   for i := 0 to Mixer.ChannelCount-1 do
    begin
      newPanel := TPanel.Create(nil);
