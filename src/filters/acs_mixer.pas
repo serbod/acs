@@ -10,9 +10,8 @@ unit acs_mixer;
 interface
 
 uses
-  Classes, SysUtils, ACS_Classes, ACS_Strings
+  Classes, SysUtils, ACS_Classes, ACS_Strings{$ifdef fpc},LazUTF8{$endif}
   {$ifdef fpc}
-  ,LazUTF8
   {$endif}
   {$IFDEF MSWINDOWS}
   ,MMSystem, Windows
@@ -104,6 +103,8 @@ type
     FMuteControls: array of TControlEntry;
     {$ENDIF}
     FMixerName: string;
+    function GetControl(vControl: Integer): TControlEntry;
+    function GetControlCount: Integer;
     function GetRecSource(): Integer;
     function GetVolume(vChannel: Integer): TAcsMixerLevel;
     procedure SetVolume(vChannel: Integer; vLevel: TAcsMixerLevel);
@@ -127,6 +128,8 @@ type
     property RecordSource: Integer read GetRecSource write SetRecSource;
     property DevCount: Integer read GetDevCount;
     property ChannelCount: Integer read GetChannelCount;
+    property Control[vControl: Integer]: TControlEntry read GetControl;
+    property ControlCount: Integer read GetControlCount;
   published
     property DevNum: Integer read FDevNum write SetDevNum;
     property MixerName: string read FMixerName;
@@ -162,7 +165,7 @@ begin
   end;
 end;
 
-constructor TAcsMixer.Create;
+constructor TAcsMixer.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   //if MixersCount > 0 then SetDevNum(0);

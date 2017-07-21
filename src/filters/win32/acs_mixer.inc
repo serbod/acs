@@ -118,6 +118,8 @@ var
         begin
           SetLength(FControls, Length(FControls)+1);
           aControl:=@FControls[Length(FControls)-1];
+          if (pmxctrl^.dwControlType = MIXERCONTROL_CONTROLTYPE_ONOFF) then
+            aControl.CName:='AGC??';
         end;
 
         SetLength(FChannels, Max(Length(FControls), Length(FMuteControls)));
@@ -281,7 +283,7 @@ begin
   Result:= not (FControls[vChannel].CKanal=1);
 end;
 
-function TAcsMixer.GetMute(vChannel: integer): Boolean;
+function TAcsMixer.GetMute(vChannel: Integer): Boolean;
 type
   TData = array [0..3] of MIXERCONTROLDETAILS_UNSIGNED;
   PData = ^TData;
@@ -333,7 +335,7 @@ begin
   Result:=(FMuteControls[vChannel].CDetails[0].dwValue = 1);
 end;
   
-procedure TAcsMixer.SetMute(vChannel: integer; Mute: Boolean);
+procedure TAcsMixer.SetMute(vChannel: Integer; Mute: Boolean);
 var
   aControlDetails: TMixerControlDetails;
 begin
@@ -372,6 +374,17 @@ function TAcsMixer.GetRecSource: Integer;
 begin
   { TODO : GetRecSource }
   Result:=-1;
+end;
+
+function TAcsMixer.GetControl(vControl: Integer): TControlEntry;
+begin
+  if vControl<length(FControls) then
+    Result := FControls[vControl];
+end;
+
+function TAcsMixer.GetControlCount: Integer;
+begin
+  Result := length(FControls);
 end;
 
 destructor TAcsMixer.Destroy;

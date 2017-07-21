@@ -37,12 +37,10 @@
       <Unit0>
         <Filename Value="mixer.lpr"/>
         <IsPartOfProject Value="True"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="-1"/>
         <WindowIndex Value="1"/>
         <CursorPos X="41" Y="19"/>
         <UsageCount Value="88"/>
-        <Loaded Value="True"/>
       </Unit0>
       <Unit1>
         <Filename Value="umixer.pas"/>
@@ -51,9 +49,11 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="uMixer"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="1"/>
-        <CursorPos X="14" Y="96"/>
+        <TopLine Value="131"/>
+        <CursorPos X="35" Y="154"/>
         <UsageCount Value="88"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -280,7 +280,7 @@
       </Unit38>
       <Unit39>
         <Filename Value="umixer.lfm"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="-1"/>
         <WindowIndex Value="1"/>
         <TopLine Value="33"/>
         <CursorPos Y="59"/>
@@ -293,23 +293,19 @@
         <DefaultSyntaxHighlighter Value="LFM"/>
       </Unit39>
     </Units>
-    <JumpHistory Count="4" HistoryIndex="3">
+    <JumpHistory Count="3" HistoryIndex="2">
       <Position1>
-        <Filename Value="mixer.lpr"/>
-        <Caret Line="19" Column="41"/>
+        <Filename Value="umixer.pas"/>
+        <Caret Line="19" Column="42" TopLine="4"/>
       </Position1>
       <Position2>
-        <Filename Value="mixer.lpr"/>
-        <Caret Line="22"/>
+        <Filename Value="umixer.pas"/>
+        <Caret Line="181" Column="37" TopLine="165"/>
       </Position2>
       <Position3>
-        <Filename Value="mixer.lpr"/>
-        <Caret Line="19" Column="28"/>
+        <Filename Value="umixer.pas"/>
+        <Caret Line="115" Column="48" TopLine="143"/>
       </Position3>
-      <Position4>
-        <Filename Value="mixer.lpr"/>
-        <Caret Line="12" Column="11"/>
-      </Position4>
     </JumpHistory>
   </ProjectOptions>
   <CompilerOptions>

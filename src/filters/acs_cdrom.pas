@@ -215,6 +215,19 @@ begin
   Result:=Size / (SampleRate * Channels * (BitsPerSample div 8));
 end;
 
+procedure TAcsCDIn.InitLib;
+begin
+  if not FLibLoaded then
+    begin
+      FLibLoaded:=True;
+      LoadCDRip();
+      if not (csDesigning in ComponentState) then
+        if not CDRipLoaded then
+          raise EAcsException.Create(akriplib + ' could not be loaded.');
+      GetCDList(FCDList);
+    end;
+end;
+
 function TAcsCDIn.GetCDDBID(): LongInt;
 
 function prg_sum(n: integer): integer;
