@@ -15,7 +15,7 @@ interface
 uses
   SysUtils, Classes, ACS_Types, ACS_Classes, ACS_Procs, ACS_Strings
 {$ifdef FFTREAL}
-  , FFTReal
+  ,FFTReal
 {$endif}   ;
 
 type
@@ -216,7 +216,7 @@ begin
   // normalize
   {MaxValue := 0;
   MinValue := 99999999; }
-  for i := 0 to iSamplesCount - 1 do
+  for i := 0 to SamplesCount - 1 do
   begin
     //Magnitude(ComplexArr[i]);
     //FFTResultArr[i] := Amplitude(FFTArr[i], FFTArr[i+1]) / 10;
