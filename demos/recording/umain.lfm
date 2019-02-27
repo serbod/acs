@@ -10,28 +10,27 @@ object fMain: TfMain
   ClientHeight = 59
   ClientWidth = 409
   OnShow = FormShow
-  LCLVersion = '1.4.4.0'
   object Label1: TLabel
     Left = 8
-    Height = 13
+    Height = 15
     Top = 2
-    Width = 54
+    Width = 58
     Caption = 'Input Level'
     ParentColor = False
   end
   object Label2: TLabel
     Left = 255
-    Height = 13
+    Height = 15
     Top = 36
-    Width = 25
+    Width = 28
     Caption = '-3 db'
     ParentColor = False
   end
   object Label3: TLabel
     Left = 8
-    Height = 13
+    Height = 15
     Top = 36
-    Width = 31
+    Width = 34
     Caption = '-96 db'
     ParentColor = False
   end
@@ -55,35 +54,35 @@ object fMain: TfMain
   end
   object Label4: TLabel
     Left = 136
-    Height = 13
+    Height = 15
     Top = 46
-    Width = 31
+    Width = 34
     Caption = 'Label4'
     ParentColor = False
   end
   object AudioIn1: TAcsAudioIn
-    Driver = 'Wavemapper'
+    DriverName = 'Wavemapper'
     Device = 0
     InBitsPerSample = 8
     InChannels = 1
     InSampleRate = 8000
     RecTime = -1
-    left = 48
+    Left = 48
   end
   object NULLOut1: TAcsNULLOut
     Input = VolumeQuery
     BufferSize = 0
     PrefetchMode = pmAuto
-    left = 192
+    Left = 192
   end
   object VolumeQuery: TAcsVolumeQuery
     Input = AudioIn1
     Delay = 0
-    left = 144
+    Left = 144
   end
   object Timer1: TTimer
     Interval = 100
     OnTimer = Timer1Timer
-    left = 96
+    Left = 96
   end
 end
