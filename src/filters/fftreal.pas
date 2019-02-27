@@ -41,20 +41,23 @@ unit
 
 interface
 
+uses
+    Windows;
+
 (* Change this typedef to use a different floating point type in your FFTs
 	(i.e. float, double or long double). *)
 type
     pflt_t = ^flt_t;
-    flt_t = single;
+    flt_t = double;
 
     pflt_array = ^flt_array;
     flt_array = array[0..0] of flt_t;
 
     plongarray = ^longarray;
-    longarray = array[0..0] of longint;
+    longarray = array[0..0] of LongInt;
 
 const
-     sizeof_flt : longint = SizeOf(flt_t);
+     sizeof_flt : LongInt = SizeOf(flt_t);
 
 
 
@@ -122,7 +125,11 @@ begin
   GetMem(_ptr, length*SizeOf(longint));
 
   br_index := 0;
+  {$ifdef FPC}
+  PLongint(_ptr)[0] := 0;
+  {$else}
   plongarray(_ptr)^[0] := 0;
+  {$endif}
   for cnt := 1 to length-1 do
   begin
     // ++br_index (bit reversed)
@@ -133,8 +140,11 @@ begin
       bit := bit shr 1;
       br_index := br_index xor bit;
     end;
-
+    {$ifdef FPC}
+    PLongint(_ptr)[cnt] := br_index;
+    {$else}
     plongarray(_ptr)^[cnt] := br_index;
+    {$endif}
   end;
 end;
 
@@ -178,8 +188,10 @@ begin
       level_ptr := pointer(get_ptr(level));
       mul := PI / (level_len shl 1);
 
+      {$R-}
       for i := 0 to level_len-1 do
         level_ptr^[i] := cos(i * mul);
+      {$R+}
     end;
   end;
 end;
@@ -233,6 +245,7 @@ begin
   inherited;       
 end;
 
+{$R-}
 (*==========================================================================*/
 /*      Name: do_fft                                                        */
 /*      Description: Compute the FFT of the array.                          */
@@ -654,5 +667,6 @@ begin
     dec(i);
   until (i < 0);
 end;
+{$R+}
 
 end.

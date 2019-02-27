@@ -1,3 +1,7 @@
+2019-02-27  serbod
+- Removed DirectX dependancy and units from main package
+* Separated Win32 and Win64 units
+
 2016-09-23  serbod
 * applied patches from cutec-chris and tcs-ulli
 * cdrip, acs_mixer and demos fixes

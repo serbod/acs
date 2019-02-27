@@ -30,6 +30,8 @@ unit waveconverter;
 
 interface
 
+{$ifdef linux}{$message error 'unit not supported'}{$endif linux}
+
 uses
   SysUtils,
   Windows, Classes, MMSystem, MSAcm;

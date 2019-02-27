@@ -21,7 +21,7 @@ unit lame;
 interface
 
 uses
-{$IFDEF WIN32}
+{$IFDEF MSWINDOWS}
   Windows;
 {$ENDIF}
 
@@ -34,7 +34,7 @@ const
   LAME_PATH = '/usr/lib/libmp3lame.so';
 {$ENDIF}
 
-{$IFDEF WIN32}
+{$IFDEF MSWINDOWS}
   LAME_PATH = 'lame_enc.dll';
 {$ENDIF}
 
@@ -772,7 +772,7 @@ var
   Libhandle: Pointer;
 {$ENDIF}
 
-{$IFDEF WIN32}
+{$IFDEF MSWINDOWS}
   Libhandle: HMODULE;
 {$ENDIF}
 
@@ -901,7 +901,7 @@ begin
   end;
 {$ENDIF}
 
-{$IFDEF WIN32}
+{$IFDEF MSWINDOWS}
   Libhandle:=LoadLibraryEx(LAME_PATH, 0, 0);
   if Libhandle <> 0 then
   begin
@@ -1030,7 +1030,7 @@ begin
   if Libhandle <> nil then dlclose(Libhandle);
 {$ENDIF}
 
-{$IFDEF WIN32}
+{$IFDEF MSWINDOWS}
   if Libhandle <> 0 then FreeLibrary(Libhandle);
 {$ENDIF}
   LAMELoaded:=False;

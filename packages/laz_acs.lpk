@@ -59,7 +59,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."/>
     <Version Major="3"/>
-    <Files Count="26">
+    <Files Count="24">
       <Item1>
         <Filename Value="..\src\filters\acs_audio.pas"/>
         <UnitName Value="acs_audio"/>
@@ -121,61 +121,50 @@ SOFTWARE."/>
         <UnitName Value="acs_types"/>
       </Item15>
       <Item16>
-        <Filename Value="..\src\formats\acs_dsfiles.pas"/>
-        <UnitName Value="acs_dsfiles"/>
-      </Item16>
-      <Item17>
         <Filename Value="..\src\formats\acs_flac.pas"/>
         <UnitName Value="acs_flac"/>
-      </Item17>
-      <Item18>
+      </Item16>
+      <Item17>
         <Filename Value="..\src\formats\acs_lame.pas"/>
         <UnitName Value="acs_lame"/>
-      </Item18>
-      <Item19>
+      </Item17>
+      <Item18>
         <Filename Value="..\src\formats\acs_mac.pas"/>
         <UnitName Value="acs_mac"/>
-      </Item19>
-      <Item20>
+      </Item18>
+      <Item19>
         <Filename Value="..\src\formats\acs_vorbis.pas"/>
         <UnitName Value="acs_vorbis"/>
-      </Item20>
-      <Item21>
+      </Item19>
+      <Item20>
         <Filename Value="..\src\formats\acs_wave.pas"/>
         <UnitName Value="acs_wave"/>
-      </Item21>
-      <Item22>
+      </Item20>
+      <Item21>
         <Filename Value="..\src\formats\acs_allformats.pas"/>
         <UnitName Value="acs_allformats"/>
-      </Item22>
-      <Item23>
-        <Filename Value="..\src\devices\acs_dxaudio.pas"/>
-        <UnitName Value="acs_dxaudio"/>
-      </Item23>
-      <Item24>
+      </Item21>
+      <Item22>
         <Filename Value="..\src\devices\acs_stdaudio.pas"/>
         <UnitName Value="acs_stdaudio"/>
-      </Item24>
-      <Item25>
+      </Item22>
+      <Item23>
         <Filename Value="..\src\devices\acs_alsaaudio.pas"/>
         <UnitName Value="acs_alsaaudio"/>
-      </Item25>
-      <Item26>
+      </Item23>
+      <Item24>
         <Filename Value="..\src\filters\acs_volumequery.pas"/>
         <UnitName Value="acs_volumequery"/>
-      </Item26>
+      </Item24>
     </Files>
-    <RequiredPkgs Count="3">
+    <RequiredPkgs Count="2">
       <Item1>
         <PackageName Value="LazUtils"/>
       </Item1>
       <Item2>
-        <PackageName Value="laz_directx"/>
-      </Item2>
-      <Item3>
         <PackageName Value="FCL"/>
         <MinVersion Major="1" Valid="True"/>
-      </Item3>
+      </Item2>
     </RequiredPkgs>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>
@@ -183,7 +172,6 @@ SOFTWARE."/>
     <PublishOptions>
       <Version Value="2"/>
       <DestinationDirectory Value="$(TestDir)\publishedpackage\"/>
-      <IgnoreBinaries Value="False"/>
     </PublishOptions>
     <CustomOptions Items="ExternHelp" Version="2">
       <_ExternHelp Items="Count"/>

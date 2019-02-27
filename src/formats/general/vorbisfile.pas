@@ -36,10 +36,10 @@ changed mail adress
 }
 
 {$IFDEF FPC}
-  {$IFDEF WIN32}
+  {$IFDEF MSWINDOWS}
     {$PACKRECORDS C}
-  {$ENDIF WIN32}
-{$ENDIF WIN32}
+  {$ENDIF MSWINDOWS}
+{$ENDIF FPC}
 
 unit vorbisfile;
 
@@ -56,7 +56,7 @@ uses
   {$IFDEF LINUX}
   baseunix,dl,
   {$ENDIF}
-  {$IFDEF WIN32}
+  {$IFDEF MSWINDOWS}
   Windows,
   {$ENDIF}
   ogg,
@@ -134,7 +134,7 @@ const
   LibvorbisfilePath =  'libvorbisfile.so*'; //'/usr/lib/libvorbisfile.so';
   {$DEFINE SEARCH_LIBS}
 {$ENDIF}
-{$IFDEF WIN32}
+{$IFDEF MSWINDOWS}
   LibvorbisfilePath = 'vorbisfile.dll';
 {$ENDIF}
 
@@ -207,7 +207,7 @@ var
   ov_read : ov_read_t;
 
 
-{$IFDEF WIN32}
+{$IFDEF MSWINDOWS}
   Libhandle : HMODULE;
 {$ELSE}
   Libhandle : Pointer;
@@ -265,11 +265,10 @@ begin
   Libhandle := dlopen(LibvorbisfilePath, RTLD_NOW or RTLD_GLOBAL);
 {$ENDIF}
   if Libhandle <> nil then
-  begin                            {$IFDEF FPC}
-  {$IFDEF WIN32}
+  begin
+  {$IFDEF FPC}
     {$PACKRECORDS C}
-  {$ENDIF WIN32}
-{$ENDIF WIN32}
+  {$ENDIF FPC}
 
     LibvorbisfileLoaded := True;
     ov_open := dlsym(Libhandle, 'ov_open');

@@ -18,7 +18,7 @@ unit flac;
 interface
 
 uses
-  {$IFDEF WIN32}
+  {$IFDEF MSWINDOWS}
    Windows, ACS_Classes;
   {$ENDIF}
 
@@ -89,7 +89,7 @@ type
 
 const
 
- {$IFDEF WIN32}
+ {$IFDEF MSWINDOWS}
   LibFLACPath = 'libFLAC.dll';
  {$ENDIF}
 

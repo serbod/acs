@@ -45,7 +45,7 @@ uses
   {$IFDEF LINUX}
   baseunix,dl,
   {$ENDIF}
-  {$IFDEF WIN32}
+  {$IFDEF MSWINDOWS}
   Windows,
   {$ENDIF}
 
@@ -59,7 +59,7 @@ const
   {$DEFINE SEARCH_LIBS}
 {$ENDIF}
 
-{$IFDEF WIN32}
+{$IFDEF MSWINDOWS}
   LibvorbisencPath = 'vorbisenc.dll';
 {$ENDIF}
 
@@ -171,7 +171,7 @@ finalization
 
 {$ENDIF}
 
-{$IFDEF WIN32}
+{$IFDEF MSWINDOWS}
 
 var
   Libhandle : HMODULE;

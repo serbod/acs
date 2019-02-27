@@ -29,7 +29,7 @@ interface
 uses
 
   // This is required to enable TWaveIn read MS ACM (MP3-encoded) files.
-  {$IFDEF WIN32}
+  {$IFDEF MSWINDOWS}
   MSAcm, waveconverter, mmsystem,
   {$ENDIF}
 
@@ -1253,7 +1253,7 @@ end;
 
 procedure TWaveIn.OpenFile();
 var
-{$IFDEF WIN32}
+{$IFDEF MSWINDOWS}
   WaveConverter: TWaveConverter;
   ValidItems: longword;
   Res: MMResult;
@@ -1310,7 +1310,7 @@ begin
         wtACM:
         begin
 
-  {$IFDEF WIN32}
+  {$IFDEF MSWINDOWS}
 
           (* Checking if the file is ACM encoded and if it is, decoding it.
              Thanks to Jan Henrik Ejme, <jan.h.ejme@xhlp.com> for the

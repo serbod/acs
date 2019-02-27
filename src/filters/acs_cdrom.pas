@@ -20,7 +20,12 @@ interface
 uses
   Classes, SysUtils, ACS_Classes, ACS_Strings
   {$IFDEF MSWINDOWS}
-  ,Windows, MMSystem, akrip32
+  ,Windows, MMSystem
+    {$IFDEF WIN32}
+     ,akrip32
+    {$ELSE}
+      {$WARNING acs_cdrom only for Win32!}
+    {$ENDIF}
   {$ELSE}
   ,baseunix, cd_rom
   {$ENDIF}
@@ -88,7 +93,8 @@ type
     FDrivesCount: Integer;
     _cd_fd: Integer;
     BufSize: Integer;
-    {$ELSE}
+    {$ENDIF}
+    {$IFDEF WIN32}
     FToc: TOC;
     FCDList: CDLIST;
     FCDHandle: HCDROM;
@@ -117,7 +123,9 @@ type
     function GetCh(): Integer; override;
     function GetSR(): Integer; override;
     function GetTotalTime(): Real; override;
+    {$IFDEF WIN32}
     procedure InitLib;
+    {$ENDIF}
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -215,19 +223,6 @@ begin
   Result:=Size / (SampleRate * Channels * (BitsPerSample div 8));
 end;
 
-procedure TAcsCDIn.InitLib;
-begin
-  if not FLibLoaded then
-    begin
-      FLibLoaded:=True;
-      LoadCDRip();
-      if not (csDesigning in ComponentState) then
-        if not CDRipLoaded then
-          raise EAcsException.Create(akriplib + ' could not be loaded.');
-      GetCDList(FCDList);
-    end;
-end;
-
 function TAcsCDIn.GetCDDBID(): LongInt;
 
 function prg_sum(n: integer): integer;
@@ -270,7 +265,7 @@ initialization
   CountDrives;
 {$ENDIF}
 
-{$ifdef WINDOWS}
+{$ifdef WIN32}
 initialization
   LoadCDRip();
 

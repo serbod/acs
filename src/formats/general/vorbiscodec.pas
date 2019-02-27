@@ -29,10 +29,10 @@ changed mail adress
 
 }
 {$IFDEF FPC}
-  {$IFDEF WIN32}
+  {$IFDEF MSWINDOWS}
     {$PACKRECORDS C}
-  {$ENDIF WIN32}
-{$ENDIF WIN32}
+  {$ENDIF MSWINDOWS}
+{$ENDIF FPC}
 
 unit vorbiscodec;
 
@@ -49,7 +49,7 @@ uses
   {$IFDEF LINUX}
   baseunix,dl,
   {$ENDIF}
-  {$IFDEF WIN32}
+  {$IFDEF MSWINDOWS}
   Windows,
   {$ENDIF}
   ogg;
@@ -195,7 +195,7 @@ const
   {$DEFINE SEARCH_LIBS}
 {$ENDIF}
 
-{$IFDEF WIN32}
+{$IFDEF MSWINDOWS}
   LibvorbisPath = 'vorbis.dll';
 {$ENDIF}
 
@@ -430,7 +430,7 @@ initialization
 
 {$ENDIF}
 
-{$IFDEF WIN32}
+{$IFDEF MSWINDOWS}
 
 var
   Libhandle : HMODULE;

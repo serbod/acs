@@ -5,7 +5,9 @@ interface
 uses
   ACS_Vorbis,
   {$IFDEF MSWINDOWS}
-  ACS_DSFiles,
+   {$IFDEF DIRECTX_ENABLED}
+   ACS_DSFiles,
+   {$ENDIF}
   ACS_MAC,
   {$ELSE}
   acs_mpeg,
