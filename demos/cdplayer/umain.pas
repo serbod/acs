@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, LResources, Forms, Controls, Graphics, Dialogs, Buttons,
-  ACS_Audio,ACS_File,ACS_Classes,ACS_Allformats, ExtCtrls, StdCtrls, ComCtrls, ACS_CDROM;
+  ACS_Audio,ACS_File,ACS_Classes,ACS_Allformats, ExtCtrls, StdCtrls, ComCtrls, acs_cdrom;
 
 type
 

@@ -6,7 +6,9 @@ interface
 
 uses
   {$IFDEF WINDOWS}
-  ACS_DXAudio,  //DirectSound Driver
+    {$IFDEF DIRECTX_ENABLED}
+    ACS_DXAudio,  //DirectSound Driver
+    {$ENDIF}
   {$ELSE}
   acs_alsaaudio, //Alsa Driver
   ACS_AOLive,    //AO Live Driver

@@ -10,7 +10,7 @@ uses
   Classes, SysUtils, CustApp,
   acs_file, acs_audio, // audio in/out, file in/out
   acs_allformats, // all files formats
-  acs_stdaudio; // standard audio driver
+  acs_stdaudio, laz_acs_lib; // standard audio driver
 
 type
 

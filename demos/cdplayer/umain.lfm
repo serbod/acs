@@ -10,7 +10,7 @@ object fMain: TfMain
   ClientHeight = 99
   ClientWidth = 189
   OnCreate = FormCreate
-  LCLVersion = '1.3'
+  LCLVersion = '2.0.0.4'
   object Panel1: TPanel
     Left = 4
     Height = 64
@@ -23,9 +23,9 @@ object fMain: TfMain
     TabOrder = 0
     object lTime: TLabel
       Left = 68
-      Height = 30
+      Height = 35
       Top = 24
-      Width = 112
+      Width = 88
       Caption = '00:00:00'
       Font.Height = -25
       ParentColor = False
@@ -33,9 +33,9 @@ object fMain: TfMain
     end
     object lTrack: TLabel
       Left = 16
-      Height = 44
+      Height = 50
       Top = 17
-      Width = 48
+      Width = 40
       Caption = '01'
       Font.Height = -37
       ParentColor = False
@@ -45,7 +45,7 @@ object fMain: TfMain
       Left = 4
       Height = 12
       Top = 14
-      Width = 25
+      Width = 20
       Caption = 'Track'
       Font.Height = -9
       ParentColor = False
@@ -55,7 +55,7 @@ object fMain: TfMain
       Left = 92
       Height = 12
       Top = 14
-      Width = 34
+      Width = 28
       Caption = 'remain'
       Font.Height = -9
       ParentColor = False
@@ -65,7 +65,7 @@ object fMain: TfMain
       Left = 4
       Height = 12
       Top = 2
-      Width = 30
+      Width = 24
       Caption = 'Tracks'
       Font.Height = -9
       ParentColor = False
@@ -73,9 +73,9 @@ object fMain: TfMain
     end
     object lTracksCount: TLabel
       Left = 44
-      Height = 14
+      Height = 15
       Top = 1
-      Width = 14
+      Width = 12
       Caption = '09'
       ParentColor = False
     end
@@ -83,7 +83,7 @@ object fMain: TfMain
       Left = 60
       Height = 12
       Top = 0
-      Width = 43
+      Width = 35
       Caption = 'Time left'
       Font.Height = -9
       ParentColor = False
@@ -93,7 +93,7 @@ object fMain: TfMain
       Left = 124
       Height = 15
       Top = 1
-      Width = 56
+      Width = 42
       Alignment = taRightJustify
       Caption = '00:00:00'
       Font.Height = -12
@@ -304,22 +304,25 @@ object fMain: TfMain
     OnTimer = Timer1Timer
     top = 152
   end
-  object CDIn1: TACSCDIn
+  object CDIn1: TAcsCDIn
+    StartSample = 0
+    EndSample = -1
+    Loop = False
     CurrentDrive = 0
     StartTrack = 0
     EndTrack = 0
     top = 8
   end
-  object AudioOut1: TACSAudioOut
-    Buffersize = 32768
-    DriverName = 'Alsa'
-    Device = 0
-    Volume = 0
+  object AudioOut1: TAcsAudioOut
     Input = CDIn1
-    Delay = 6
-    SuspendWhenIdle = True
     OnDone = AudioOut1Done
     OnProgress = AudioOut1Progress
+    BufferSize = 32768
+    PrefetchMode = pmAuto
+    DriverName = 'Wavemapper'
+    Device = 0
+    Volume = 0
+    Delay = 6
     top = 40
   end
 end

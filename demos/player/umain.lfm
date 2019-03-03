@@ -12,7 +12,7 @@ object fMain: TfMain
   ClientWidth = 201
   OnClose = FormClose
   OnCreate = FormCreate
-  LCLVersion = '1.4.4.0'
+  LCLVersion = '2.0.0.4'
   object Panel1: TPanel
     Left = 4
     Height = 64
@@ -25,9 +25,9 @@ object fMain: TfMain
     TabOrder = 0
     object lTime: TLabel
       Left = 1
-      Height = 30
+      Height = 35
       Top = 24
-      Width = 102
+      Width = 88
       Caption = '00:00:00'
       Font.Height = -25
       ParentColor = False
@@ -35,7 +35,7 @@ object fMain: TfMain
     end
     object lFilename: TLabel
       Left = 1
-      Height = 11
+      Height = 12
       Top = 1
       Width = 190
       Align = alTop
@@ -47,9 +47,9 @@ object fMain: TfMain
     end
     object lTime1: TLabel
       Left = 1
-      Height = 11
+      Height = 12
       Top = 20
-      Width = 52
+      Width = 50
       Caption = 'Time remain'
       Font.Height = -9
       ParentColor = False
@@ -58,7 +58,7 @@ object fMain: TfMain
     end
     object lTime2: TLabel
       Left = 116
-      Height = 11
+      Height = 12
       Top = 20
       Width = 13
       Caption = 'left'
@@ -68,9 +68,9 @@ object fMain: TfMain
     end
     object lLeft: TLabel
       Left = 116
-      Height = 14
+      Height = 15
       Top = 28
-      Width = 50
+      Width = 42
       Caption = '00:00:00'
       Font.Height = -12
       ParentColor = False
@@ -431,7 +431,7 @@ object fMain: TfMain
     OnThreadException = AudioOut1ThreadException
     BufferSize = 16384
     PrefetchMode = pmAuto
-    DriverName = 'DirectSound'
+    DriverName = 'Wavemapper'
     Device = 0
     Volume = 0
     Delay = 10

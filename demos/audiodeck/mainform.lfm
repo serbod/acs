@@ -7,7 +7,7 @@ object FormMain: TFormMain
   ClientHeight = 380
   ClientWidth = 729
   OnCreate = FormCreate
-  LCLVersion = '1.7'
+  LCLVersion = '2.0.0.4'
   object gbInput: TGroupBox
     Left = 10
     Height = 358
@@ -237,7 +237,7 @@ object FormMain: TFormMain
   object AcsAudioOut1: TAcsAudioOut
     BufferSize = 16384
     PrefetchMode = pmAuto
-    DriverName = 'DirectSound'
+    DriverName = 'Wavemapper'
     Device = 0
     Volume = 0
     Delay = -1
@@ -245,10 +245,11 @@ object FormMain: TFormMain
     top = 304
   end
   object AcsAudioIn1: TAcsAudioIn
+    DriverName = 'Wavemapper'
     Device = 0
-    InBitsPerSample = -1
-    InChannels = -1
-    InSampleRate = -1
+    InBitsPerSample = 8
+    InChannels = 1
+    InSampleRate = 8000
     RecTime = 0
     left = 40
     top = 295

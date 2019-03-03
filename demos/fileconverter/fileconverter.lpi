@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <ProjectOptions>
-    <Version Value="9"/>
+    <Version Value="11"/>
     <PathDelim Value="\"/>
     <General>
       <Flags>
@@ -9,21 +9,26 @@
       </Flags>
       <MainUnit Value="0"/>
       <Title Value="Fileconverter Example"/>
+      <ActiveWindowIndexAtStart Value="1"/>
     </General>
     <BuildModes Count="1">
       <Item1 Name="default" Default="True"/>
     </BuildModes>
     <PublishOptions>
       <Version Value="2"/>
-      <IgnoreBinaries Value="False"/>
-      <IncludeFileFilter Value="*.(pas|pp|inc|lfm|lpr|lrs|lpi|lpk|sh|xml)"/>
-      <ExcludeFileFilter Value="*.(bak|ppu|ppw|o|so);*~;backup"/>
     </PublishOptions>
     <RunParams>
       <local>
-        <FormatVersion Value="1"/>
         <LaunchingApplication PathPlusParams="\usr\X11R6\bin\xterm -T 'Lazarus Run Output' -e $(LazarusDir)\tools\runwait.sh $(TargetCmdLine)"/>
       </local>
+      <FormatVersion Value="2"/>
+      <Modes Count="1">
+        <Mode0 Name="default">
+          <local>
+            <LaunchingApplication PathPlusParams="\usr\X11R6\bin\xterm -T 'Lazarus Run Output' -e $(LazarusDir)\tools\runwait.sh $(TargetCmdLine)"/>
+          </local>
+        </Mode0>
+      </Modes>
     </RunParams>
     <RequiredPackages Count="2">
       <Item1>
@@ -34,15 +39,14 @@
         <MinVersion Major="2" Minor="4" Valid="True"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="13">
+    <Units Count="16">
       <Unit0>
         <Filename Value="fileconverter.lpr"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="1"/>
+        <EditorIndex Value="-1"/>
         <WindowIndex Value="1"/>
         <CursorPos X="46"/>
-        <UsageCount Value="22"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="23"/>
         <LoadedDesigner Value="True"/>
       </Unit0>
       <Unit1>
@@ -54,9 +58,9 @@
         <UnitName Value="uMain"/>
         <IsVisibleTab Value="True"/>
         <WindowIndex Value="1"/>
-        <TopLine Value="44"/>
-        <CursorPos X="16" Y="62"/>
-        <UsageCount Value="22"/>
+        <TopLine Value="58"/>
+        <CursorPos X="28" Y="86"/>
+        <UsageCount Value="23"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit1>
@@ -76,12 +80,14 @@
       </Unit3>
       <Unit4>
         <Filename Value="D:\lazarus\lcl\include\control.inc"/>
+        <IsVisibleTab Value="True"/>
         <TopLine Value="2219"/>
         <CursorPos Y="2235"/>
         <UsageCount Value="10"/>
       </Unit4>
       <Unit5>
         <Filename Value="D:\lazarus\lcl\EditBtn.pas"/>
+        <IsVisibleTab Value="True"/>
         <TopLine Value="798"/>
         <CursorPos Y="814"/>
         <UsageCount Value="10"/>
@@ -95,6 +101,7 @@
       </Unit6>
       <Unit7>
         <Filename Value="D:\LKomponenten\acs\Src\fileformats\acs_dsfiles.pas"/>
+        <IsVisibleTab Value="True"/>
         <TopLine Value="313"/>
         <CursorPos X="22" Y="317"/>
         <UsageCount Value="10"/>
@@ -102,6 +109,7 @@
       <Unit8>
         <Filename Value="D:\LKomponenten\acs\Src\fileformats\ACS_Allformats.pas"/>
         <UnitName Value="acs_allformats"/>
+        <IsVisibleTab Value="True"/>
         <CursorPos X="8" Y="12"/>
         <UsageCount Value="10"/>
       </Unit8>
@@ -114,6 +122,7 @@
       </Unit9>
       <Unit10>
         <Filename Value="D:\LKomponenten\acs\Src\fileformats\general\lame.pas"/>
+        <IsVisibleTab Value="True"/>
         <TopLine Value="1022"/>
         <CursorPos Y="1038"/>
         <UsageCount Value="10"/>
@@ -131,8 +140,34 @@
         <WindowIndex Value="1"/>
         <UsageCount Value="10"/>
       </Unit12>
+      <Unit13>
+        <Filename Value="..\..\src\filters\acs_file.pas"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <CursorPos X="3" Y="159"/>
+        <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="..\..\src\filters\acs_classes.pas"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="281"/>
+        <CursorPos X="3" Y="277"/>
+        <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="..\..\src\formats\acs_lame.pas"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="264"/>
+        <CursorPos X="27" Y="283"/>
+        <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit15>
     </Units>
-    <JumpHistory Count="5" HistoryIndex="4">
+    <JumpHistory Count="10" HistoryIndex="9">
       <Position1>
         <Filename Value="umain.pas"/>
         <Caret Line="66" TopLine="50"/>
@@ -153,6 +188,26 @@
         <Filename Value="umain.pas"/>
         <Caret Line="92" Column="10" TopLine="57"/>
       </Position5>
+      <Position6>
+        <Filename Value="umain.pas"/>
+        <Caret Line="9" Column="20"/>
+      </Position6>
+      <Position7>
+        <Filename Value="umain.pas"/>
+        <Caret Line="77" Column="37" TopLine="60"/>
+      </Position7>
+      <Position8>
+        <Filename Value="umain.pas"/>
+        <Caret Line="21" Column="5" TopLine="4"/>
+      </Position8>
+      <Position9>
+        <Filename Value="umain.pas"/>
+        <Caret Line="78" Column="15" TopLine="55"/>
+      </Position9>
+      <Position10>
+        <Filename Value="umain.pas"/>
+        <Caret Line="86" Column="28" TopLine="58"/>
+      </Position10>
     </JumpHistory>
   </ProjectOptions>
   <CompilerOptions>
@@ -175,29 +230,6 @@
     </Linking>
   </CompilerOptions>
   <Debugging>
-    <BreakPoints Count="3">
-      <Item1>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsGlobal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="D:\LKomponenten\acs\Demos\Ripper\umain.pas"/>
-        <Line Value="68"/>
-      </Item1>
-      <Item2>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsGlobal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="D:\LKomponenten\acs\Src\fileformats\acs_lame.pas"/>
-        <Line Value="297"/>
-      </Item2>
-      <Item3>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsGlobal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="D:\LKomponenten\acs\Src\fileformats\acs_vorbis.pas"/>
-        <Line Value="335"/>
-      </Item3>
-    </BreakPoints>
     <Watches Count="1">
       <Item1>
         <Expression Value="newfilename"/>

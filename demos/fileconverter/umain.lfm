@@ -11,12 +11,12 @@ object fMain: TfMain
   ClientHeight = 62
   ClientWidth = 401
   OnCreate = FormCreate
-  LCLVersion = '1.4.4.0'
+  LCLVersion = '2.0.0.4'
   object Label1: TLabel
     Left = 88
-    Height = 13
+    Height = 15
     Top = 16
-    Width = 50
+    Width = 56
     Caption = 'Output Dir'
     ParentColor = False
   end
@@ -84,7 +84,7 @@ object fMain: TfMain
   end
   object DirectoryEdit: TDirectoryEdit
     Left = 152
-    Height = 21
+    Height = 23
     Top = 11
     Width = 112
     ShowHidden = False
@@ -105,10 +105,10 @@ object fMain: TfMain
   end
   object cbOutput: TComboBox
     Left = 295
-    Height = 21
+    Height = 23
     Top = 11
     Width = 49
-    ItemHeight = 13
+    ItemHeight = 15
     Style = csDropDownList
     TabOrder = 3
   end
@@ -123,6 +123,7 @@ object fMain: TfMain
     Input = FileIn
     OnDone = FileOutDone
     OnProgress = FileOutProgress
+    BufferSize = 0
     PrefetchMode = pmAuto
     FileMode = foRewrite
     left = 248

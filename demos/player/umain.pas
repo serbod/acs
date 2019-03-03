@@ -11,11 +11,13 @@ uses
   LResources,
   {$ENDIF}
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, Buttons,
-  ACS_Audio,ACS_File,ACS_Classes,ACS_Allformats, ExtCtrls, StdCtrls,
-  ComCtrls,uPlaylist, ACS_Indicator,uvis
+  ACS_Audio, ACS_File, ACS_Classes, ACS_Allformats, ExtCtrls, StdCtrls,
+  ComCtrls, uPlaylist, ACS_Indicator, uvis
   //You must include Output drivers to not get an "No drier selected" exception
   {$IFDEF WINDOWS}
-  ,ACS_DXAudio  //DirectSound Driver
+    {$IFDEF DIRECTX_ENABLED}
+    ,ACS_DXAudio  //DirectSound Driver
+    {$ENDIF}
   {$ELSE}
   ,acs_alsaaudio //Alsa Driver
 //  ,ACS_AOLive    //AO Live Driver

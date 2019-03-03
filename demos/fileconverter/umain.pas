@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, LResources, Forms, Controls, Graphics, Dialogs, ComCtrls, Buttons, EditBtn, ACS_File, StdCtrls
-  ,ACS_AllFormats,ACS_Classes;
+  ,ACS_AllFormats, ACS_Classes;
 
 type
 
@@ -74,7 +74,7 @@ end;
 
 procedure TfMain.FileOutProgress(Sender: TComponent);
 begin
-  pbProgress.Position := round(FileOut.Progress);
+  pbProgress.Position := round(FileIn.Progress);
   Update;
   Application.Processmessages;
 end;
@@ -83,7 +83,7 @@ procedure TfMain.FormCreate(Sender: TObject);
 var
   i : Integer;
 begin
-  for i := 0 to Fileformats.Count-1 do
+  for i := 0 to FileFormats.Count-1 do
     if TACSFileFormat(Fileformats[i]).FileClass.InheritsFrom(TACSCustomFileOut) then
       cbOutput.Items.Add(TACSFileFormat(Fileformats[i]).Extension);
 end;

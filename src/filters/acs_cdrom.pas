@@ -165,7 +165,7 @@ type
 
 implementation
 
-{$I ACS_CDROM.inc}
+{$I acs_cdrom.inc}
 
 function MSFToStr(const MSF: TAcsCDMSF): string;
 var
