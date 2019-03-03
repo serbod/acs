@@ -26,7 +26,7 @@
     <Description Value="Audio Component Suite - non-visual components for audio recording, playing and processing.
 Supports many audio devices and libraries, codecs, file formats."/>
     <License Value="The MIT License (MIT)"/>
-    <Version Major="3"/>
+    <Version Major="3" Release="1"/>
     <Files Count="3">
       <Item1>
         <Filename Value="..\src\filters\acs_properties.pas"/>

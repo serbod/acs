@@ -41,7 +41,7 @@
     </CompilerOptions>
     <Description Value="Audio Component Suite addon for MS Windows DirectX audio devices, codecs, file formats."/>
     <License Value="The MIT License (MIT)"/>
-    <Version Major="3"/>
+    <Version Major="3" Release="1"/>
     <Files Count="2">
       <Item1>
         <Filename Value="..\src\devices\acs_dxaudio.pas"/>
