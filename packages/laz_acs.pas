@@ -8,7 +8,7 @@ unit laz_acs;
 interface
 
 uses
-  acs_properties, acs_reg, LazarusPackageIntf;
+  acs_reg, acs_properties, LazarusPackageIntf;
 
 implementation
 

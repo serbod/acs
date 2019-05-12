@@ -9,7 +9,8 @@
       <Version Value="11"/>
       <PathDelim Value="\"/>
       <SearchPaths>
-        <IncludeFiles Value="..\src\filters\$(TargetOS);..\src\formats\$(TargetOS);..\src\devices\$(TargetOS)"/>
+        <IncludeFiles Value="..\src\filters;..\src\filters\$(TargetOS);..\src\formats;..\src\formats\general;..\src\formats\$(TargetOS);..\src\devices;..\src\devices\$(TargetOS)"/>
+        <OtherUnitFiles Value="..\src\filters;..\src\filters\$(TargetOS);..\src\formats;..\src\formats\general;..\src\formats\$(TargetOS);..\src\devices;..\src\devices\$(TargetOS)"/>
         <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
       <Parsing>
@@ -29,17 +30,17 @@ Supports many audio devices and libraries, codecs, file formats."/>
     <Version Major="3" Release="1"/>
     <Files Count="3">
       <Item1>
-        <Filename Value="..\src\filters\acs_properties.pas"/>
-        <UnitName Value="acs_properties"/>
-      </Item1>
-      <Item2>
         <Filename Value="..\src\resources\acs_reg.lrs"/>
         <Type Value="LRS"/>
-      </Item2>
-      <Item3>
+      </Item1>
+      <Item2>
         <Filename Value="acs_reg.pas"/>
         <HasRegisterProc Value="True"/>
         <UnitName Value="acs_reg"/>
+      </Item2>
+      <Item3>
+        <Filename Value="acs_properties.pas"/>
+        <UnitName Value="acs_properties"/>
       </Item3>
     </Files>
     <RequiredPkgs Count="4">

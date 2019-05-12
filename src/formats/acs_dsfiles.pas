@@ -164,8 +164,10 @@ begin
       if FPosition < 0 then
         FPosition:=0
       else
+      begin
         if FPosition > FSize then
           FPosition:=FSize;
+      end;
       SetPosition(Int64(FPosition)*FSeekScale);
       FOffset:=0;
     end;
@@ -251,8 +253,10 @@ begin
       if (Value > FDuration) then
         Value:=FDuration
       else
+      begin
         if (FxSelLength <> 0) and (Value > FxSelStart+FxSelLength) then
           Value:=FxSelStart+FxSelLength;
+      end;
     ErrorCheck('FxMediaControl.StopWhenReady()', FxMediaControl.StopWhenReady );
     ErrorCheck('FxMediaSeeking.SetPositions()', FxMediaSeeking.SetPositions(Value, AM_SEEKING_AbsolutePositioning, Value, AM_SEEKING_NoPositioning) );
     ErrorCheck('FxMediaControl.Run()', FxMediaControl.Run );
@@ -297,10 +301,12 @@ begin
         if AMGetErrorText(Value, s2, High(s2)) = 0 then
           s:='Unrecognized error value.'
         else
+        begin
           s:=string(s2);
           {$ifdef fpc}
           s:=AnsiToUtf8(s);
           {$endif}
+        end;
       end;
     end;
     raise EAcsException.Create(FuncName+': '+s);
