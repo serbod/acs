@@ -10,7 +10,6 @@
       <PathDelim Value="\"/>
       <SearchPaths>
         <IncludeFiles Value="..\src\filters;..\src\filters\$(TargetOS);..\src\formats;..\src\formats\general;..\src\formats\$(TargetOS);..\src\devices;..\src\devices\$(TargetOS)"/>
-        <OtherUnitFiles Value="..\src\filters;..\src\filters\$(TargetOS);..\src\formats;..\src\formats\general;..\src\formats\$(TargetOS);..\src\devices;..\src\devices\$(TargetOS)"/>
         <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
       <Parsing>
