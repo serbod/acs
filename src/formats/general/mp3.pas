@@ -50,7 +50,8 @@ type
 
   { MPEG1 Layer 1-3 frame header (32 bits) }
   TMpeg1Header = bitpacked record
-    Sync: 0..4095;               // 12 bits  MP3 Sync Word
+    Sync: 0..2047;               // 11 bits  MP3 Sync Word
+    Version: 0..1;               // 1 bit    Version, 0 = verion 2, 1 = verion 1
     Id: 0..1;                    // 1 bit    Version, 1 = MPEG
     Layer: 0..3;                 // 2 bits
     ProtectionBit: 0..1;         // 1 bit    Error protection, 1 = disabled
@@ -115,8 +116,8 @@ type
 
   { for compatibility, remove later }
   TMpeg1SideInfo = record
-    MainDataBegin: Byte;           // 8 bits
-    PrivateBits: Byte;             // 3 bits in mono,5 in stereo
+    MainDataBegin: 0..511;           // 9 bits    (reservoir size)
+    PrivateBits: Byte;              // 3 bits in mono,5 in stereo   (padding)
     Scfsi: array[0..1, 0..3] of Byte;    // 1 bit
     Part2_3_length: array [0..1, 0..1] of Word;    // 12 bits
     BigValues: array [0..1, 0..1] of Word;         // 9 bits
@@ -211,6 +212,11 @@ function pdmp3_decode(var id: TPdmp3Handle; const AIn; AInSize: Integer;
 function pdmp3_getformat(var id: TPdmp3Handle; out rate, channels, encoding: Integer): Integer;
 { end of the subset of a libmpg123 compatible streaming API }
 
+{ Calculate header audio data size }
+function GetFrameSize(const id: TPdmp3Handle): Integer; inline;
+{ Return number of samples per single frame }
+function GetSamplesPerFrame(const id: TPdmp3Handle): Integer;
+
 {procedure pdmp3(const mp3s: string);   }
 
 implementation
@@ -247,7 +253,7 @@ const
 //#define TRUE       1
 //#define FALSE      0
   C_SYNC             = $fff00000;
-  C_EOF              = $ffffffff;
+  C_EOF              = -1;
   C_PI               = 3.14159265358979323846;
   C_INV_SQRT_2       = 0.70710678118654752440;
   Hz                 = 1;
@@ -903,6 +909,20 @@ const
     )
   );
 
+  { Samples per frame
+    first dimension is MPEG Version (1 or 2) }
+  GSamplesPerFrame: array[0..1, 0..2] of Integer = (
+    (   // MPEG Version 2 & 2.5
+      384,    // Layer1
+      1152,   // Layer2
+      576     // Layer3
+    ),
+    (   // MPEG Version 1
+      384,    // Layer1
+      1152,   // Layer2
+      1152    // Layer3
+    )
+  );
 
 {$ifdef DEBUG}
 procedure dmp_fr(const hdr: TMpeg1Header);
@@ -1103,7 +1123,7 @@ end;
  Return value: TBD
  Author: Krister Lagerström(krister@kmlager.com) }
 function Requantize_Pow_43(is_pos: Word): Real;
-{$ifdef POW34_TABLE}
+{$if Defined(POW34_TABLE)}
 var
   i: Integer;
 begin
@@ -1116,7 +1136,7 @@ begin
   {$endif DEBUG}
 
   Result := powtab34[is_pos];
-{$elseif POW34_ITERATE}
+{$elseif Defined(POW34_ITERATE)}
 var
   a4, a2, x, x2, x3, x_next, is_f1, is_f2, is_f3: Real;
   i: Integer;
@@ -1175,6 +1195,12 @@ begin
           + id.GFrameHeader.PaddingBit;
 end;
 
+{ Return number of samples per single frame }
+function GetSamplesPerFrame(const id: TPdmp3Handle): Integer;
+begin
+  Result := GSamplesPerFrame[id.GFrameHeader.Version, id.GFrameHeader.Layer-1]
+end;
+
 function Get_Inbuf_Filled(const id: TPdmp3Handle): Integer;
 begin
   if (id.IStart <= id.IEnd) then
@@ -1200,7 +1226,7 @@ end;
  Author: Erik Hofman(erik@ehofman.com) }
 function Get_Byte(var id: TPdmp3Handle; out AValue: Byte): Integer;
 begin
-  Result := Integer(C_EOF);
+  Result := C_EOF;
   if (id.IStart <> id.IEnd) then
   begin
     Inc(id.IStart);
@@ -1229,7 +1255,7 @@ begin
     val := Get_Byte(id, bt);
     if (val = C_EOF) then
     begin
-      Result := Integer(C_EOF);
+      Result := C_EOF;
       Exit;
     end
     else
@@ -1267,7 +1293,7 @@ end;
 { Description: reads 'number_of_bits' from local buffer containing main_data.
   Parameters: Stream handle,number_of_bits to read(max 24)
   Return value: The bits are returned in the LSB of the return value. }
-function Get_Main_Bits(var id: TPdmp3Handle; number_of_bits: Integer): Integer;
+function Get_Main_Bits(var id: TPdmp3Handle; number_of_bits: Integer): LongWord;
 var
   p: PByte;
 begin
@@ -1323,13 +1349,14 @@ end;
   Parameters: Stream handle,number_of_bits to read(max 16)
   Return value: The bits are returned in the LSB of the return value.
   Author: Krister Lagerström(krister@kmlager.com) }
-function Get_Side_Bits(var id: TPdmp3Handle; number_of_bits: Integer): Integer;
+function Get_Side_Bits(var id: TPdmp3Handle; number_of_bits: Integer): LongWord;
 var
   p: PByte;
 begin
   { Form a word of the next four bytes }
   { TODO: endianness }
-  p := id.GMainDataPtr;
+  p := id.SideInfoPtr;
+  Result := 0;
   Result := Result or (p^ shl 24);
   Inc(p);
   Result := Result or (p^ shl 16);
@@ -1750,6 +1777,7 @@ begin
     { This could be due to not enough data in reservoir }
     Exit;
   end;
+  { TODO: check that main data is sound data }
   for gr := 0 to 1 do
   begin
     for ch := 0 to nch-1 do
@@ -1894,6 +1922,7 @@ begin
   { If we get here we've found the sync word,and can decode the header
     which is in the low 20 bits of the 32-bit sync+header word. }
   { Decode the header }
+  id.GFrameHeader.Version            := (header and $00100000) shr 20;
   id.GFrameHeader.Id                 := (header and $00080000) shr 19;
   id.GFrameHeader.Layer              := (header and $00060000) shr 17;
   id.GFrameHeader.ProtectionBit      := (header and $00010000) shr 16;
@@ -2400,7 +2429,7 @@ begin
       win_len := GSfBandIndices[sfreq].s[sfb + 1] - GSfBandIndices[sfreq].s[sfb];
 
       i := 36;
-      while i < id.GSideInfo.count1[gr][ch] do
+      while i < id.GSideInfo.Count1[gr][ch] do
       begin
         { Inc(i) done below! }
         { Check if we're into the next scalefac band }
@@ -2439,6 +2468,7 @@ begin
           next_sfb := GSfBandIndices[sfreq].s[sfb + 1] * 3;
           win_len := GSfBandIndices[sfreq].s[sfb + 1] - GSfBandIndices[sfreq].s[sfb];
         end;
+        Assert(sfb < 12);
         for win := 0 to 2 do
         begin
           for j := 0 to win_len-1 do
@@ -2626,7 +2656,7 @@ begin
       for j := 0 to 15 do // sum += u_vec[j*32 + i];
         sum := sum + u_vec[(j shl 5) + i];
       { sum now contains time sample 32 * ss + i. Convert to 16-bit signed int }
-      samp := Round(sum * 32767.0);
+      samp := LongInt(Round(sum * 32767.0));
       if (samp > 32767) then
         samp := 32767
       else if (samp < -32767) then
@@ -2708,7 +2738,7 @@ end;
   Au0thor: Erik Hofman(erik@ehofman.com) }
 procedure Convert_Frame_S16(var id: TPdmp3Handle; var outbuf; buflen: Integer; out done: Integer);
 type
-  TSmallIntArr2x576 = array[0..2*576-1] of SmallInt; // 16 bit integer
+  TSmallIntArr2x576 = array[0..4*576-1] of SmallInt; // 16 bit integer, buffer is twice larger for 2-channel output
 var
   ps: ^TSmallIntArr2x576;
   lo, hi, nsamps, framesz: Integer;
