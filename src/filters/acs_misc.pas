@@ -197,6 +197,7 @@ end;
 procedure TAcsMemoryIn.Init();
 begin
   inherited Init();
+  BufStart:=FDataSize;
   BufEnd:=FDataSize;
 end;
 
