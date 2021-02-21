@@ -39,8 +39,6 @@ type
     FBuffer: PAcsBuffer8;
     FDataSize: Integer;
     FOnBufferDone: TAcsOnBufferDone;
-    BufStart: Integer;
-    BufEnd: Integer;
     FBPS, FSR, FChan: Integer;
     function GetBuffer: Pointer;
     procedure SetBuffer(v: Pointer);
@@ -226,7 +224,9 @@ begin
     Result:=ABufferSize
   else
     Result:=BufEnd-BufStart+1;
+  {$R-}
   Move(FBuffer[BufStart-1], ABuffer^, Result);
+  {$R+}
   Inc(BufStart, Result);
   Inc(FPosition, Result);
   Dec(FDataSize, Result);
