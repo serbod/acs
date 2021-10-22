@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
-  <Package Version="4">
+  <Package Version="5">
     <PathDelim Value="\"/>
     <Name Value="laz_acs_lib"/>
     <Type Value="RunAndDesignTime"/>
@@ -59,7 +59,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."/>
     <Version Major="3" Release="1"/>
-    <Files Count="24">
+    <Files Count="25">
       <Item1>
         <Filename Value="..\src\filters\acs_audio.pas"/>
         <UnitName Value="acs_audio"/>
@@ -153,10 +153,15 @@ SOFTWARE."/>
         <UnitName Value="acs_alsaaudio"/>
       </Item23>
       <Item24>
+        <Filename Value="..\src\devices\acs_aolive.pas"/>
+        <UnitName Value="acs_aolive"/>
+      </Item24>
+      <Item25>
         <Filename Value="..\src\filters\acs_volumequery.pas"/>
         <UnitName Value="acs_volumequery"/>
-      </Item24>
+      </Item25>
     </Files>
+    <CompatibilityMode Value="True"/>
     <RequiredPkgs Count="2">
       <Item1>
         <PackageName Value="LazUtils"/>
@@ -167,11 +172,11 @@ SOFTWARE."/>
       </Item2>
     </RequiredPkgs>
     <UsageOptions>
+      <CustomOptions Value="-dUseCThreads"/>
       <UnitPath Value="$(PkgOutDir)"/>
     </UsageOptions>
     <PublishOptions>
       <Version Value="2"/>
-      <DestinationDirectory Value="$(TestDir)\publishedpackage\"/>
     </PublishOptions>
     <CustomOptions Items="ExternHelp" Version="2">
       <_ExternHelp Items="Count"/>

@@ -12,7 +12,7 @@ uses
   acs_filters, acs_indicator, acs_misc, acs_mixer, acs_multimix, acs_procs, 
   acs_streams, acs_strings, acs_types, acs_flac, acs_lame, acs_mac, 
   acs_vorbis, acs_wave, acs_allformats, acs_stdaudio, acs_alsaaudio, 
-  acs_volumequery, LazarusPackageIntf;
+  acs_aolive, acs_volumequery, LazarusPackageIntf;
 
 implementation
 

@@ -7,11 +7,12 @@ See the license file for more details.
 This is the ACS for Linux version of the unit.
 *)
 
-{$ifdef mswindows}{$message error 'unit not supported'}{$endif}
-
 unit acs_aolive;
 
 interface
+
+{$ifdef LINUX}
+{$ifdef mswindows}{$message error 'unit not supported'}{$endif}
 
 uses
   Classes, ACS_Classes, ACS_Audio, libao, SysUtils, ACS_Strings, ACS_Types, ACS_Procs;
@@ -41,7 +42,11 @@ type
     destructor Destroy(); override;
   end;
 
+{$endif LINUX}
+
 implementation
+
+{$ifdef LINUX}
 
 {$DEFINE SEARCH_LIBS}
 var
@@ -185,7 +190,7 @@ var
 begin
   Result:=True;
   if Dev = '' then Exit;
-  if Busy then
+  if Active then
     raise EACSException.Create(strBusy);
   for i:=0 to FDrivers.Count-1 do
   if FDrivers.Strings[i] = Dev then
@@ -209,41 +214,18 @@ begin
 end;
 
 initialization
-{$IFDEF SEARCH_LIBS}
-  Libhandle:=nil;
-  LibPath:=FindLibs(LibaoPath);
-  if LibPath <> '' then Libhandle:=dlopen(@LibPath[1], RTLD_NOW or RTLD_GLOBAL);
-{$ELSE}
-  Libhandle:=dlopen(LibaoPath, RTLD_NOW or RTLD_GLOBAL);
-{$ENDIF}
 
-  if Libhandle <> nil then
+  if LoadAOLibrary() then
   begin
-    LibaoLoaded:=True;
-    ao_initialize:=dlsym(Libhandle, 'ao_initialize');
-    ao_shutdown:=dlsym(Libhandle, 'ao_shutdown');
-    ao_append_option:=dlsym(Libhandle, 'ao_append_option');
-    ao_free_options:=dlsym(Libhandle, 'ao_free_options');
-    ao_open_live:=dlsym(Libhandle, 'ao_open_live');
-    ao_open_file:=dlsym(Libhandle, 'ao_open_file');
-    ao_play:=dlsym(Libhandle, 'ao_play');
-    ao_close:=dlsym(Libhandle, 'ao_close');
-    ao_driver_id:=dlsym(Libhandle, 'ao_driver_id');
-    ao_default_driver_id:=dlsym(Libhandle, 'ao_default_driver_id');
-    ao_driver_info:=dlsym(Libhandle, 'ao_driver_info');
-    ao_driver_info_list:=dlsym(Libhandle, 'ao_driver_info_list');
-    //ao_file_extension:=dlsym(Libhandle, 'ao_file_extension');
-    ao_is_big_endian:=dlsym(Libhandle, 'ao_is_big_endian');
-
+    LibaoLoaded := True;
     RegisterAudioOut('AOLive', TAOLiveAudioOut, LATENCY);
   end;
 
 finalization
 
-  if Libhandle <> nil then
-  begin
-    dlclose(Libhandle);
-  end;
+  UnloadAOLibrary();
+
+{$endif LINUX}
 
 end.
 

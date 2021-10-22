@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
-  <Package Version="4">
+  <Package Version="5">
     <PathDelim Value="\"/>
     <Name Value="laz_acs"/>
     <Type Value="RunAndDesignTime"/>
@@ -42,6 +42,7 @@ Supports many audio devices and libraries, codecs, file formats."/>
         <UnitName Value="acs_properties"/>
       </Item3>
     </Files>
+    <CompatibilityMode Value="True"/>
     <RequiredPkgs Count="4">
       <Item1>
         <PackageName Value="laz_acs_lib"/>
@@ -57,6 +58,7 @@ Supports many audio devices and libraries, codecs, file formats."/>
       </Item4>
     </RequiredPkgs>
     <UsageOptions>
+      <CustomOptions Value="-dUseCThreads"/>
       <UnitPath Value="$(PkgOutDir)"/>
     </UsageOptions>
     <PublishOptions>

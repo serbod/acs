@@ -41,7 +41,6 @@ type
     FPeriodNum: Integer;
     _audio_handle: Psnd_pcm_t;
     _hw_params: Psnd_pcm_hw_params_t;
-    Busy: Boolean;
     BufStart: Integer;
     BufEnd:Integer;
     FOpened: Integer;
@@ -237,7 +236,7 @@ function TALSAAudioIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
   l: Integer;
 begin
-  if not Busy then
+  if not Active then
     raise EACSException.Create(strStreamnotopen);
   if FPosition >= FRecBytes then
   begin

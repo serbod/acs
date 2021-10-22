@@ -13,7 +13,7 @@ unit libao;
 interface
 
 uses
-  baseunix, dl;
+  baseunix, ACS_Procs;
 
 const
 
@@ -152,7 +152,49 @@ var
   ao_is_big_endian: ao_is_big_endian_t;
   
   AOInitialized: Integer = 0;
+  LibAOLoaded: Boolean = False;
+
+  function LoadAOLibrary(): boolean;
+  procedure UnloadAOLibrary();
 
 implementation
+
+var
+  LibHandle: TLibHandle;
+
+function LoadAOLibrary(): boolean;
+var
+  Path: string;
+begin
+  Path := FindLibs(LibaoPath);
+  if Path <> '' then Libhandle := LoadLibrary(Path);
+  if Libhandle <> NilHandle then
+  begin
+    ao_initialize := GetProcAddress(LibHandle, 'ao_initialize');
+    ao_shutdown := GetProcAddress(LibHandle, 'ao_shutdown');
+    ao_append_option := GetProcAddress(LibHandle, 'ao_append_option');
+    ao_free_options := GetProcAddress(LibHandle, 'ao_free_options');
+    ao_open_live := GetProcAddress(LibHandle, 'ao_open_live');
+    ao_open_file := GetProcAddress(LibHandle, 'ao_open_file');
+    ao_play := GetProcAddress(LibHandle, 'ao_play');
+    ao_close := GetProcAddress(LibHandle, 'ao_close');
+    ao_driver_id := GetProcAddress(LibHandle, 'ao_driver_id');
+    ao_default_driver_id := GetProcAddress(LibHandle, 'ao_default_driver_id');
+    ao_driver_info := GetProcAddress(LibHandle, 'ao_driver_info');
+    ao_driver_info_list := GetProcAddress(LibHandle, 'ao_driver_info_list');
+    //ao_file_extension := GetProcAddress(LibHandle, 'ao_file_extension');
+    ao_is_big_endian := GetProcAddress(LibHandle, 'ao_is_big_endian');
+
+    LibAOLoaded := True;
+  end;
+  Result := LibAOLoaded;
+end;
+
+procedure UnloadAOLibrary();
+begin
+  if LibHandle <> NilHandle then FreeLibrary(LibHandle);
+  LibAOLoaded := False;
+end;
+
 
 end.
