@@ -93,6 +93,7 @@ type
   private
     FDevNum: Integer;
     FChannels: array of TAcsMixerChannel;
+    FMixerName: string;
     {$IFDEF LINUX}
     _mix_fd: Integer;
     FFileName: String;
@@ -101,10 +102,9 @@ type
     FMixerCaps: TMixerCaps;
     FControls: array of TControlEntry;
     FMuteControls: array of TControlEntry;
-    {$ENDIF}
-    FMixerName: string;
     function GetControl(vControl: Integer): TControlEntry;
     function GetControlCount: Integer;
+    {$ENDIF}
     function GetRecSource(): Integer;
     function GetVolume(vChannel: Integer): TAcsMixerLevel;
     procedure SetVolume(vChannel: Integer; vLevel: TAcsMixerLevel);
@@ -128,8 +128,10 @@ type
     property RecordSource: Integer read GetRecSource write SetRecSource;
     property DevCount: Integer read GetDevCount;
     property ChannelCount: Integer read GetChannelCount;
+    {$IFDEF MSWINDOWS}
     property Control[vControl: Integer]: TControlEntry read GetControl;
     property ControlCount: Integer read GetControlCount;
+    {$ENDIF}
   published
     property DevNum: Integer read FDevNum write SetDevNum;
     property MixerName: string read FMixerName;
@@ -148,20 +150,20 @@ implementation
 function ChannelToStr(ch: TAcsMixerChannel): string;
 begin
   case ch of
-    mcVolume:  Result:=strMixerVolume;
-    mcTreble:  Result:=strMixerTreble;
-    mcBass:    Result:=strMixerBass;
-    mcSynth:   Result:=strMixerSynth;
-    mcPCM:     Result:=strMixerPCM;
-    mcSpeaker: Result:=strMixerSpeaker;
-    mcLine:    Result:=strMixerLine;
-    mcMic:     Result:=strMixerMic;
-    mcCD:      Result:=strMixerCD;
-    mcIMix:    Result:=strMixerIMix;
-    mcAltPCM:  Result:=strMixerAlt;
-    mcRecLev:  Result:=strMixerRec;
-    mcUnknown: Result:=strMixerUnknown;
-    else       Result:=IntToStr(Integer(ch));
+    mcVolume:  Result := strMixerVolume;
+    mcTreble:  Result := strMixerTreble;
+    mcBass:    Result := strMixerBass;
+    mcSynth:   Result := strMixerSynth;
+    mcPCM:     Result := strMixerPCM;
+    mcSpeaker: Result := strMixerSpeaker;
+    mcLine:    Result := strMixerLine;
+    mcMic:     Result := strMixerMic;
+    mcCD:      Result := strMixerCD;
+    mcIMix:    Result := strMixerIMix;
+    mcAltPCM:  Result := strMixerAlt;
+    mcRecLev:  Result := strMixerRec;
+    mcUnknown: Result := strMixerUnknown;
+    else       Result := IntToStr(Integer(ch));
   end;
 end;
 
@@ -174,29 +176,31 @@ end;
 function TAcsMixer.GetChannel(Num: Integer): TAcsMixerChannel;
 begin
   if (Num < 0) or (Num > (Length(FChannels)-1)) then
-    Result:=mcUnknown
+    Result := mcUnknown
   else
-    Result:=FChannels[Num];
+    Result := FChannels[Num];
 end;
   
 function TAcsMixer.GetDevCount: Integer;
 begin
-  Result:=MixersCount;
+  Result := MixersCount;
 end;
 
 function TAcsMixer.GetChannelCount: Integer;
 begin
-  Result:=Length(FChannels);
+  Result := Length(FChannels);
 end;
 
 function TAcsMixer.GetChannelName(vChannel: Integer): string;
 begin
   if (vChannel > -1) and (vChannel < ChannelCount) then
-    Result:=ChannelToStr(FChannels[vChannel])
+    Result := ChannelToStr(FChannels[vChannel])
   else
-    Result:='';
+    Result := '';
 end;
 
 initialization
-  MixersCount:=CountMixers;
+
+  MixersCount := CountMixers;
+
 end.

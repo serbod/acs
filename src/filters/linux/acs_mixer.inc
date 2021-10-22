@@ -46,9 +46,9 @@ const
                      Right? *)
 
 var
-  Mixers : array[0..MAX_MIXERS] of TMixerInfo; // one extra slot for /dev/mixer device
+  Mixers: array[0..MAX_MIXERS] of TMixerInfo; // one extra slot for /dev/mixer device
 
-function GetChannelMask(Ch : TAcsMixerChannel; Request : Integer): LongWord;
+function GetChannelMask(Ch: TAcsMixerChannel; Request: Integer): LongWord;
 begin
   Result := 0;
   case Request of
@@ -122,34 +122,34 @@ begin
   end;
 end;
 
-function GetMixerName(DevNum: integer): string;
+function GetMixerName(DevNum: Integer): string;
 begin
-  Result:='';
+  Result := '';
 end;
 
 procedure TAcsMixer.SetDevNum(Num: Integer);
 var
-  DevMask, i : Integer;
-  Channel : TAcsMixerChannel;
+  DevMask, i: Integer;
+  Channel: TAcsMixerChannel;
 begin
   if Num in [0..MixersCount - 1] then // check [0..0] [0..-1]
   begin
     FFileName := Mixers[Num].Path;
     FMixerName := Mixers[Num].Name;
-    setlength(FChannels,0);
+    SetLength(FChannels,0);
     _mix_fd := fpopen(PChar(FFileName), O_RDONLY);
     fpioctl(_mix_fd, TIOCtlRequest(SOUND_MIXER_READ_DEVMASK), @DevMask);
     fpclose(_mix_fd);
-    for i:=0 to 31 do
+    for i := 0 to 31 do
     begin
       if (DevMask and (1 shl i)) <> 0 then
       begin
         Channel := GetChannelType(i);
         if Channel <> mcUnknown then
-          begin
-            setlength(FChannels,length(FChannels)+1);
-            FChannels[length(FChannels)-1] := Channel;
-          end;
+        begin
+          SetLength(FChannels, Length(FChannels)+1);
+          FChannels[Length(FChannels)-1] := Channel;
+        end;
       end;
     end;
   end;
@@ -157,7 +157,7 @@ end;
 
 function TAcsMixer.GetRecSource(): Integer;
 var
-  rs, pow,i : Integer;
+  rs, pow, i: Integer;
 begin
   Result := -1;
   _mix_fd := fpopen(PChar(FFileName), O_RDONLY);
@@ -186,7 +186,9 @@ begin
   begin
     Result.Left := Lo(vol);
     Result.Right := Lo(vol shr 8);
-  end else Result.Main := vol;
+  end
+  else
+    Result.Main := vol;
 end;
 
 function TAcsMixer.IsStereo(vChannel: Integer): Boolean;
@@ -197,18 +199,18 @@ begin
   fpioctl(_mix_fd, TIOCtlRequest(SOUND_MIXER_READ_STEREODEVS), @mask);
   chan := GetChannelMask(FChannels[vChannel], 0);
   fpclose(_mix_fd);
-  Result := (mask and (1 shl chan))<>0;
+  Result := (mask and (1 shl chan)) <> 0;
 end;
 
 function TAcsMixer.IsRecordable(vChannel: Integer): Boolean;
 var
-  mask, chan : Integer;
+  mask, chan: Integer;
 begin
   _mix_fd := fpopen(PChar(FFileName), O_RDONLY);
   fpioctl(_mix_fd, TIOCtlRequest(SOUND_MIXER_READ_RECMASK), @mask);
   chan := GetChannelMask(FChannels[vChannel], 0);
   fpclose(_mix_fd);
-  Result := (mask and (1 shl chan))<>0;
+  Result := (mask and (1 shl chan)) <> 0;
 end;
 
 procedure TAcsMixer.SetRecSource(vChannel: Integer);
@@ -220,7 +222,7 @@ begin
   fpioctl(_mix_fd, TIOCtlRequest(SOUND_MIXER_WRITE_RECSRC), @chan);
   fpclose(_mix_fd);
   if chan <> (1 shl GetChannelMask(FChannels[vChannel], 0)) then
-  raise EACSException.Create(Format(strChannelnotRecordable,[vChannel]));
+  raise EACSException.Create(Format(strChannelnotRecordable, [vChannel]));
 end;
 
 function TAcsMixer.GetMute(vChannel: Integer) : Boolean;
@@ -234,12 +236,13 @@ end;
 
 procedure TAcsMixer.SetVolume(vChannel: Integer; vLevel: TAcsMixerLevel);
 var
-  vol, chan : Integer;
+  vol, chan: Integer;
 begin
   chan := GetChannelMask(FChannels[vChannel], 1);
   if IsStereo(vChannel) then
-  vol := vLevel.Left + (vLevel.Right shl 8)
-  else vol := vLevel.Main;
+    vol := vLevel.Left + (vLevel.Right shl 8)
+  else
+    vol := vLevel.Main;
   _mix_fd := fpopen(PChar(FFileName), O_WRONLY);
   fpioctl(_mix_fd, chan, @vol);
   fpclose(_mix_fd);
@@ -253,14 +256,14 @@ end;
 
 function CountMixers(): Byte;
 var
-  fd, i, DevMask : Integer;
-  fname : String;
-  mi : mixer_info;
+  fd, i, DevMask: Integer;
+  fname: String;
+  mi: mixer_info;
 begin
   Result := 0;
   for i := 0 to MAX_MIXERS-1 do
   begin
-    fname := '/dev/mixer'+IntToStr(i-1);
+    fname := '/dev/mixer' + IntToStr(i-1);
     try
       fd := fpopen(PChar(fname), O_RDONLY);
     except
