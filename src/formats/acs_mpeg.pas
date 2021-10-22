@@ -15,7 +15,7 @@ unit acs_mpeg;
 interface
 
 uses
-  Classes, SysUtils, ACS_file, ACS_classes, smpeg;
+  Classes, SysUtils, ACS_file, ACS_classes, acs_smpeg;
 
 type
   TMPEGIn = class(TAcsCustomFileIn)

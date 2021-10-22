@@ -24,7 +24,7 @@ This is the ACS for Linux and Windows version of the unit.
   {$endif}
 {$endif FPC}
 
-unit smpeg;
+unit acs_smpeg;
 
 interface
 
@@ -35,7 +35,7 @@ uses
   {$else}
   Windows,
   {$endif}
-  SysUtils, ACS_Procs, Dialogs;
+  SysUtils, ACS_Procs;
   
 const
 
