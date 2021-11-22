@@ -370,8 +370,8 @@ type
     is_last : FLAC__bool;
     length : unsigned;
     case data: FLAC__MetadataType of
-      0: (stream_info : FLAC__StreamMetadata_StreamInfo);
-      1: (vorbis_comment : FLAC__StreamMetadata_VorbisComment);
+      FLAC__METADATA_TYPE_STREAMINFO: (stream_info : FLAC__StreamMetadata_StreamInfo);
+      FLAC__METADATA_TYPE_PADDING: (vorbis_comment : FLAC__StreamMetadata_VorbisComment);
     // IMPORTANT: There is much more data in this structure actually,
     // but we don't care about the rest of it.
   end;
