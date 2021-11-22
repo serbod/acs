@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
-  <Package Version="5">
+  <Package Version="4">
     <PathDelim Value="\"/>
     <Name Value="laz_acs"/>
     <Type Value="RunAndDesignTime"/>
@@ -26,7 +26,7 @@
     <Description Value="Audio Component Suite - non-visual components for audio recording, playing and processing.
 Supports many audio devices and libraries, codecs, file formats."/>
     <License Value="The MIT License (MIT)"/>
-    <Version Major="3" Release="1"/>
+    <Version Major="3" Release="3"/>
     <Files Count="3">
       <Item1>
         <Filename Value="..\src\resources\acs_reg.lrs"/>
@@ -42,7 +42,6 @@ Supports many audio devices and libraries, codecs, file formats."/>
         <UnitName Value="acs_properties"/>
       </Item3>
     </Files>
-    <CompatibilityMode Value="True"/>
     <RequiredPkgs Count="4">
       <Item1>
         <PackageName Value="laz_acs_lib"/>
