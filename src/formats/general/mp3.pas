@@ -29,6 +29,9 @@ uses
 { use predefined tables, take 1224 bytes, but greatly offload CPU }
 {$define IMDCT_NTABLES}
 
+{ pre-calculate table, take 2048 bytes, but greatly offload CPU }
+{$define GGAIN_TABLE}
+
 { print debug info to STDOUT }
 {//$define DEBUG}
 
@@ -53,13 +56,13 @@ type
     Sync: 0..2047;               // 11 bits  MP3 Sync Word
     Version: 0..1;               // 1 bit    Version, 0 = verion 2, 1 = verion 1
     Id: 0..1;                    // 1 bit    Version, 1 = MPEG
-    Layer: 0..3;                 // 2 bits
+    Layer: 0..3;                 // 2 bits   0 = reserved, 1 = 3, 2 = 2, 3 = 1
     ProtectionBit: 0..1;         // 1 bit    Error protection, 1 = disabled
     BitrateIndex: 0..15;         // 4 bits
-    SamplingFrequency: 0..3;     // 2 bits   Sampling frequency index
+    SamplingFrequency: 0..3;     // 2 bits   Sampling frequency index, 0 = 44.1, 1 = 48, 2 = 32, 3 = unknown
     PaddingBit: 0..1;            // 1 bit
     PrivateBit: 0..1;            // 1 bit
-    Mode: 0..3;                  // 2 bits
+    Mode: 0..3;                  // 2 bits   0 = Stereo, 1 = JointStereo, 2 = DualChannel, 3 = SingleChannel
     ModeExtension: 0..3;         // 2 bits   for joint stereo
     Copyright: 0..1;             // 1 bit    False = not copyrighted
     Original: 0..1;              // 1 bit    False = copy, True = original
@@ -142,8 +145,8 @@ type
 
   { MPEG1 Layer 3 Main Data }
   TMpeg1MainData = record
-    ScalefacL: array[0..1, 0..1, 0..20] of Byte;    // 0-4 bits
-    ScalefacS: array[0..1, 0..1, 0..11, 0..2] of Byte; // 0-4 bits
+    ScalefacL: array[0..1, 0..1, 0..21] of Byte;    // 0-4 bits
+    ScalefacS: array[0..1, 0..1, 0..12, 0..2] of Byte; // 0-4 bits
     ls: array[0..1, 0..1, 0..575] of Real;          // Huffman coded freq. lines
   end;
 
@@ -175,6 +178,8 @@ const
 
 type
   TLongWordArr576 = array[0..575] of LongWord;
+  TRealArr18 = array[0..17] of Real;
+  TRealArr36 = array[0..35] of Real;
 
   TPdmp3Handle = record
     Processed: Integer;
@@ -186,10 +191,13 @@ type
     GMainData: TMpeg1MainData;
 
     HSynthInit: Word;
+    HSynthStore: array[0..1, 0..31] of TRealArr18;
+
     SynthInit: Word;
     { Bit reservoir for main data }
     GMainDataVec: array[0..2047] of Byte; // Large static data
-    GMainDataPtr: PByte;                 // Pointer into the reservoir
+    //GMainDataPtr: PByte;                 // Pointer into the reservoir
+    GMainDataPos: Integer;                 // Position in GMainDataVec
     GMainDataIdx: Byte;                  // Index into the current byte (0-7)
     GMainDataTop: Word;                  // Number of bytes in reservoir(0-1024)
     { Bit reservoir for side info }
@@ -232,15 +240,16 @@ type
     FrameNum: Integer;
   end;
 
-  TRealArr18 = array[0..17] of Real;
-  TRealArr36 = array[0..35] of Real;
-
 {$ifdef POW34_TABLE}
 var powtab34: array[0..8206] of Real;
 {$endif}
 
 {$ifdef IMDCT_TABLE}
 var GImdctWin: array[0..3, 0..35] of Real;
+{$endif}
+
+{$ifdef GGAIN_TABLE}
+var GlobalGainTable: array[Byte] of Real;
 {$endif}
 
 { synth table }
@@ -593,7 +602,8 @@ const
     (HuffTable: 2230; TreeLen:  512; LinBits:  11),  // Table 30
     (HuffTable: 2230; TreeLen:  512; LinBits:  13),  // Table 31
     (HuffTable: 2742; TreeLen:   31; LinBits:   0),  // Table 32
-    (HuffTable: 2261; TreeLen:   31; LinBits:   0)   // Table 33
+    //(HuffTable: 2261; TreeLen:   31; LinBits:   0)   // Table 33
+    (HuffTable: 2773; TreeLen:   31; LinBits:   0)   // Table 33
   );
 
   // ci[8]={-0.6,-0.535,-0.33,-0.185,-0.095,-0.041,-0.0142,-0.0037},
@@ -1102,6 +1112,17 @@ begin
 end;
 {$endif}
 
+{$ifdef GGAIN_TABLE}
+procedure InitGlobalGainTable();
+var
+  i: Integer;
+begin
+  for i := Low(GlobalGainTable) to High(GlobalGainTable) do
+    GlobalGainTable[i] := Power(2.0, 0.25 * (i - 210));
+end;
+{$endif}
+
+
 { Setup the n_win windowing table for polyphase subband synthesis }
 procedure InitSynthNWin();
 var
@@ -1229,8 +1250,8 @@ begin
   Result := C_EOF;
   if (id.IStart <> id.IEnd) then
   begin
-    Inc(id.IStart);
     AValue := id._in[id.IStart]; //  && 0xff;
+    Inc(id.IStart);
     Result := AValue;
     if (id.IStart = INBUF_SIZE) then
       id.IStart := 0;
@@ -1283,9 +1304,11 @@ end;
   Author: Krister Lagerström(krister@kmlager.com) }
 function Get_Main_Bit(var id: TPdmp3Handle): Integer;
 begin
-  Result := id.GMainDataPtr^ shr (7 - id.GMainDataIdx);
+  //Result := id.GMainDataPtr^ shr (7 - id.GMainDataIdx);
+  Result := id.GMainDataVec[id.GMainDataPos] shr (7 - id.GMainDataIdx);
   Result := Result and $01;
-  Inc(id.GMainDataPtr, (id.GMainDataIdx + 1) shr 3);
+  //Inc(id.GMainDataPtr, (id.GMainDataIdx + 1) shr 3);
+  Inc(id.GMainDataPos, (id.GMainDataIdx + 1) shr 3);
   id.GMainDataIdx := (id.GMainDataIdx + 1) and $07;
   // Done
 end;
@@ -1301,7 +1324,8 @@ begin
   if (number_of_bits = 0) then Exit;
 
   { Form a word of the next four bytes }
-  p := id.GMainDataPtr;
+  //p := id.GMainDataPtr;
+  p := Addr(id.GMainDataVec[id.GMainDataPos]);
   Result := Result or (p^ shl 24);
   Inc(p);
   Result := Result or (p^ shl 16);
@@ -1317,7 +1341,8 @@ begin
   Result := Result shr (32 - number_of_bits);
 
   { Update pointers }
-  Inc(id.GMainDataPtr, (id.GMainDataIdx + number_of_bits) shr 3);
+  //Inc(id.GMainDataPtr, (id.GMainDataIdx + number_of_bits) shr 3);
+  Inc(id.GMainDataPos, (id.GMainDataIdx + number_of_bits) shr 3);
   id.GMainDataIdx := (id.GMainDataIdx + number_of_bits) and $07;
   // Done
 end;
@@ -1326,10 +1351,11 @@ end;
   Parameters: Stream handle.
   Return value: Bit position.
   Author: Krister Lagerström(krister@kmlager.com) }
-function Get_Main_Pos(var id: TPdmp3Handle): Integer;
+function Get_Main_BitPos(var id: TPdmp3Handle): Integer;
 begin
-  Result := PtrInt(id.GMainDataPtr) - PtrInt(Addr(id.GMainDataVec[0]));
-  Result := Result div 4; // Divide by four to get number of bytes
+  //Result := PtrUInt(id.GMainDataPtr) - PtrUInt(Addr(id.GMainDataVec[0]));
+  Result := id.GMainDataPos;
+  //Result := Result div 4; // Divide by four to get number of bytes
   Result := Result * 8; // Multiply by 8 to get number of bits
   Result := Result + id.GMainDataIdx;  // Add current bit index
 end;
@@ -1340,7 +1366,8 @@ end;
   Author: Krister Lagerström(krister@kmlager.com) }
 function Set_Main_Pos(var id: TPdmp3Handle; bit_pos: Integer): Integer;
 begin
-  id.GMainDataPtr := Addr(id.GMainDataVec[bit_pos shr 3]);
+  //id.GMainDataPtr := Addr(id.GMainDataVec[bit_pos shr 3]);
+  id.GMainDataPos := bit_pos shr 3;
   id.GMainDataIdx := bit_pos and $07;
   Result := PDMP3_OK;
 end;
@@ -1397,7 +1424,8 @@ begin
       for decoding the next frame. }
     Get_Bytes(id, main_data_size, id.GMainDataVec[id.GMainDataTop]);
     // Set up pointers
-    id.GMainDataPtr := Addr(id.GMainDataVec[0]);
+    //id.GMainDataPtr := Addr(id.GMainDataVec[0]);
+    id.GMainDataPos := 0;
     id.GMainDataIdx := 0;
     id.GMainDataTop := id.GMainDataTop + main_data_size;
     // This frame cannot be decoded!
@@ -1412,7 +1440,8 @@ begin
   { Read the main_data from file }
   Get_Bytes(id, main_data_size, id.GMainDataVec[main_data_begin]);
   { Set up pointers }
-  id.GMainDataPtr := Addr(id.GMainDataVec[0]);
+  //id.GMainDataPtr := Addr(id.GMainDataVec[0]);
+  id.GMainDataPos := 0;
   id.GMainDataIdx := 0;
   id.GMainDataTop := main_data_begin + main_data_size;
   // Done
@@ -1578,7 +1607,8 @@ begin
   end;
 
   htPtr := GHuffmanMain[table_num].Hufftable;
-  repeat
+  while (BitsLeft > 0) and (point < TreeLen) do
+  begin
     { Start reading the Huffman code word, bit by bit }
     { Check if we've matched a code word }
     if ((GHuffmanTable[htptr + point] and $ff00) = 0) then
@@ -1604,7 +1634,7 @@ begin
       point := point + (GHuffmanTable[htptr + point] shr 8);
     end;
     Dec(BitsLeft);
-  until ((BitsLeft > 0) and (point < TreeLen));
+  end;
 
   if (error <> 0) then
   begin
@@ -1659,7 +1689,7 @@ end;
 procedure Read_Huffman(var id: TPdmp3Handle; part_2_start, gr, ch: Integer);
 var
   x, y, v, w: LongInt;
-  table_num, ls_pos, bit_pos_end, sfreq: Integer;
+  table_num, ls_pos, bit_pos_end, sfreq, bit_pos: Integer;
   region_1_start, region_2_start: Integer; { region_0_start = 0 }
 begin
   { Check that there is any data to decode. If not,zero the array. }
@@ -1704,7 +1734,8 @@ begin
   { Read small values until ls_pos = 576 or we run out of huffman data }
   table_num := id.GSideInfo.Count1TableSelect[gr][ch] + 32;
   ls_pos := id.GSideInfo.BigValues[gr][ch] * 2;
-  while (ls_pos <= 572) and (Get_Main_Pos(id) <= bit_pos_end) do
+  bit_pos := Get_Main_BitPos(id);
+  while (ls_pos <= 572) and (bit_pos < bit_pos_end) do
   begin
     { Get next Huffman coded words }
     Huffman_Decode(id, table_num, x, y, v, w);
@@ -1719,9 +1750,10 @@ begin
     if (ls_pos >= 576) then Break;
     id.GMainData.ls[gr][ch][ls_pos] := y;
     Inc(ls_pos);
+    bit_pos := Get_Main_BitPos(id);
   end;
   { Check that we didn't read past the end of this section }
-  if (Get_Main_Pos(id) > (bit_pos_end + 1)) then // Remove last words read
+  if (Get_Main_BitPos(id) > (bit_pos_end + 1)) then // Remove last words read
     ls_pos := ls_pos - 4;
   { Setup count1 which is the index of the first sample in the rzero reg. }
   id.GSideInfo.Count1[gr][ch] := ls_pos;
@@ -1782,12 +1814,14 @@ begin
   begin
     for ch := 0 to nch-1 do
     begin
-      part_2_start := Get_Main_Pos(id);
+      part_2_start := Get_Main_BitPos(id);
       { Number of bits in the bitstream for the bands }
       slen1 := Mpeg1ScalefacSizes[id.GSideInfo.ScalefacCompress[gr][ch]][0];
       slen2 := Mpeg1ScalefacSizes[id.GSideInfo.ScalefacCompress[gr][ch]][1];
+      { Read scalefactors }
       if ((id.GSideInfo.WinSwitchFlag[gr][ch] <> 0) and (id.GSideInfo.BlockType[gr][ch] = 2)) then
       begin
+        // short block
         if (id.GSideInfo.MixedBlockFlag[gr][ch] <> 0) then
         begin
           for sfb := 0 to 7 do
@@ -2113,20 +2147,28 @@ end;
 procedure Requantize_Process_Long(var id: TPdmp3Handle; gr, ch, is_pos, sfb: Integer);
 var
   tmp1, tmp2, tmp3, sf_mult, pf_x_pt: Real;
+  idx: Integer;
 const
-  pretab: array[0..20] of Real = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 3, 3, 2);
+  pretab: array[0..21] of Real = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 3, 3, 2, 0);
 begin
+  idx := Round(id.GMainData.ls[gr][ch][is_pos]);
+  if idx = 0 then Exit;
+
   if id.GSideInfo.ScalefacScale[gr][ch] <> 0 then
     sf_mult := 1.0
   else
     sf_mult := 0.5;
   pf_x_pt := id.GSideInfo.Preflag[gr][ch] * pretab[sfb];
   tmp1 := Power(2.0, -(sf_mult * (id.GMainData.ScalefacL[gr][ch][sfb] + pf_x_pt)));
-  tmp2 := Power(2.0, 0.25 * Real(Integer(id.GSideInfo.GlobalGain[gr][ch]) - 210));
-  if id.GMainData.ls[gr][ch][is_pos] < 0.0 then
-    tmp3 := -Requantize_Pow_43(-Round(id.GMainData.ls[gr][ch][is_pos]))
+{$ifdef GGAIN_TABLE}
+  tmp2 := GlobalGainTable[id.GSideInfo.GlobalGain[gr][ch]];
+{$else}
+  tmp2 := Power(2.0, 0.25 * (Integer(id.GSideInfo.GlobalGain[gr][ch]) - 210));
+{$endif}
+  if idx < 0 then
+    tmp3 := -Requantize_Pow_43(-idx)
   else
-    tmp3 := Requantize_Pow_43(Round(id.GMainData.ls[gr][ch][is_pos]));
+    tmp3 := Requantize_Pow_43(idx);
   id.GMainData.ls[gr][ch][is_pos] := tmp1 * tmp2 * tmp3;
 end;
 
@@ -2135,18 +2177,22 @@ end;
 procedure Requantize_Process_Short(var id: TPdmp3Handle; gr, ch, is_pos, sfb, win: Integer);
 var
   tmp1, tmp2, tmp3, sf_mult: Real;
+  idx: Integer;
 begin
+  idx := Round(id.GMainData.ls[gr][ch][is_pos]);
+  if idx = 0 then Exit;
+
   if id.GSideInfo.ScalefacScale[gr][ch] <> 0 then
     sf_mult := 1.0
   else
     sf_mult := 0.5;
   tmp1 := Power(2.0, -(sf_mult * id.GMainData.ScalefacS[gr][ch][sfb][win]));
-  tmp2 := Power(2.0,  0.25 * (id.GSideInfo.GlobalGain[gr][ch] - 210.0
-                     - 8.0 * id.GSideInfo.SubblockGain[gr][ch][win]));
-  if (id.GMainData.ls[gr][ch][is_pos] < 0.0) then
-    tmp3 := -Requantize_Pow_43(-Round(id.GMainData.ls[gr][ch][is_pos]))
+  tmp2 := Power(2.0,  0.25 * (Integer(id.GSideInfo.GlobalGain[gr][ch]) - 210
+                     - 8 * id.GSideInfo.SubblockGain[gr][ch][win]));
+  if idx < 0 then
+    tmp3 := -Requantize_Pow_43(-idx)
   else
-    tmp3 := Requantize_Pow_43(Round(id.GMainData.ls[gr][ch][is_pos]));
+    tmp3 := Requantize_Pow_43(idx);
   id.GMainData.ls[gr][ch][is_pos] := tmp1 * tmp2 * tmp3;
 end;
 
@@ -2297,7 +2343,6 @@ procedure L3_Hybrid_Synthesis(var id: TPdmp3Handle; gr, ch: Integer);
 var
   sb, i, j, bt: Integer;
   RawOut: TRealArr36;
-  store: array[0..1, 0..31] of TRealArr18;
 begin
   if (id.HSynthInit <> 0) then
   begin
@@ -2307,7 +2352,7 @@ begin
       for sb := 0 to 31 do
       begin
         for i := 0 to 17 do
-          store[j][sb][i] := 0.0;
+          id.HSynthStore[j][sb][i] := 0.0;
       end;
     end;
     id.HSynthInit := 0;
@@ -2328,8 +2373,8 @@ begin
     for i := 0 to 17 do
     begin
       { Overlapp add with stored vector into main_data vector }
-      id.GMainData.ls[gr][ch][sb*18 + i] := RawOut[i] + store[ch][sb][i];
-      store[ch][sb][i] := RawOut[i + 18];
+      id.GMainData.ls[gr][ch][sb*18 + i] := RawOut[i] + id.HSynthStore[ch][sb][i];
+      id.HSynthStore[ch][sb][i] := RawOut[i + 18];
     end;
   end;
 end;
@@ -2348,16 +2393,20 @@ begin
   begin
     { Check if the first two subbands
       (=2*18 samples = 8 long or 3 short sfb's) uses long blocks }
-    if (id.GSideInfo.MixedBlockFlag[gr][ch] <> 0) then
-      sfb := 3
-    else
-      sfb := 0; // 2 longbl. sb  first
+    if (id.GSideInfo.MixedBlockFlag[gr][ch] <> 0) then // 2 longbl. sb  first
+    begin
+      sfb := 3;
+      i := 36; // Don't touch the first 36 samples
+    end
+    else // Only short blocks
+    begin
+      sfb := 0;
+      i := 0;
+    end;
+    { Reorder the remaining, non-zero, bands which uses short blocks }
     next_sfb := GSfBandIndices[sfreq].s[sfb + 1] * 3;
     win_len := GSfBandIndices[sfreq].s[sfb + 1] - GSfBandIndices[sfreq].s[sfb];
-    if (sfb = 0) then
-      i := 0
-    else
-      i := 36;
+
     while i < 576 do
     begin
       { Inc(i) done below! }
@@ -2375,7 +2424,7 @@ begin
         next_sfb := GSfBandIndices[sfreq].s[sfb + 1] * 3;
         win_len := GSfBandIndices[sfreq].s[sfb + 1] - GSfBandIndices[sfreq].s[sfb];
       end;
-      for win := 0 to 3 do
+      for win := 0 to 2 do
       begin
         { Do the actual reordering }
         for j := 0 to win_len-1 do
@@ -2468,7 +2517,7 @@ begin
           next_sfb := GSfBandIndices[sfreq].s[sfb + 1] * 3;
           win_len := GSfBandIndices[sfreq].s[sfb + 1] - GSfBandIndices[sfreq].s[sfb];
         end;
-        Assert(sfb < 12);
+        Assert(sfb < 13);
         for win := 0 to 2 do
         begin
           for j := 0 to win_len-1 do
@@ -2525,6 +2574,7 @@ begin
       id.GMainData.ls[gr][1][i] := right;
     end;
   end;
+
   { Do intensity stereo processing }
   if (id.GFrameHeader.ModeExtension and $01) <> 0 then  // intensity_stereo
   begin
@@ -2613,30 +2663,30 @@ begin
     id.SynthInit := 0;
   end;
 
+  { Loop through 18 samples in 32 subbands }
   for ss := 0 to 17 do
   begin
-    { Loop through 18 samples in 32 subbands }
+    { Shift up the V vector }
     for i := 1023 downto 64 do
     begin
-      { Shift up the V vector }
       id.v_vec[ch][i] := id.v_vec[ch][i-64];
     end;
+    { Copy next 32 time samples to a temp vector }
     for i := 0 to 31 do
     begin
-      { Copy next 32 time samples to a temp vector }
-      s_vec[i] := Real(id.GMainData.ls[gr][ch][i*18 + ss]);
+      s_vec[i] := id.GMainData.ls[gr][ch][i*18 + ss];
     end;
+    { Matrix multiply input with n_win[][] matrix }
     for i := 0 to 63 do
     begin
-      { Matrix multiply input with n_win[][] matrix }
       sum := 0.0;
       for j := 0 to 31 do
         sum := sum + GSynthNWin[i][j] * s_vec[j];
       id.v_vec[ch][i] := sum;
     end;
+    { Build the U vector }
     for i := 0 to 7 do
     begin
-      { Build the U vector }
       for j := 0 to 31 do
       begin
         { <<7 == *128 }
@@ -2644,14 +2694,14 @@ begin
         u_vec[(i shl 6) + j + 32] := id.v_vec[ch][(i shl 7) + j + 96];
       end;
     end;
+    { Window by u_vec[i] with GSynthDtbl[i] }
     for i := 0 to 511 do
     begin
-      { Window by u_vec[i] with GSynthDtbl[i] }
       u_vec[i] := u_vec[i] * GSynthDtbl[i];
     end;
+    { Calc 32 samples, store in outdata vector }
     for i := 0 to 31 do
     begin
-      { Calc 32 samples, store in outdata vector }
       sum := 0.0;
       for j := 0 to 15 do // sum += u_vec[j*32 + i];
         sum := sum + u_vec[(j shl 5) + i];
@@ -2766,8 +2816,8 @@ begin
     begin
       lo :=  id._out[gr][i] and $ffff;
       hi := (id._out[gr][i] and $ffff0000) shr 16;
-      ps^[2*q] := hi;
-      ps^[2*q+1] := lo;
+      ps^[2*q] := SmallInt(hi);
+      ps^[2*q+1] := SmallInt(lo);
     end;
     Inc(i);
     if i = 576 then
@@ -2986,6 +3036,10 @@ InitPowtab43();
 
 {$ifdef IMDCT_TABLE}
 InitImdct();
+{$endif}
+
+{$ifdef GGAIN_TABLE}
+InitGlobalGainTable();
 {$endif}
 
 InitSynthNWin();
