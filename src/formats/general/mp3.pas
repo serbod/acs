@@ -10,6 +10,29 @@ Original version written by Krister Lagerström(krister@kmlager.com)
 Website: https://sites.google.com/a/kmlager.com/www/projects
 
 ported from PDMP3 Public domain mp3 decoder
+
+Usage example:
+
+procedure Decode(fsIn, fsOut: TStream);
+var
+  id: TPdmp3Handle;
+  res, InSize, OutSize: Integer;
+  InBuf, OutBuf: TByteArray;
+begin
+  pdmp3_open_feed(id);
+  res := PDMP3_NEED_MORE;
+  while (res = PDMP3_OK) or (res = PDMP3_NEED_MORE) do
+  begin
+    // transcode
+    inSize := fsIn.Read(InBuf, 2048);
+    res := pdmp3_decode(id, InBuf, inSize, OutBuf, SizeOf(OutBuf), OutSize);
+    if (res = PDMP3_OK) or (res = PDMP3_NEED_MORE) then
+    begin
+      fsOut.Write(OutBuf, OutSize);
+    end;
+  end;
+end;
+
 *)
 unit mp3;
 
@@ -1127,14 +1150,12 @@ end;
 procedure InitSynthNWin();
 var
   i, j: Integer;
-  PiDiv64: Real;
 begin
-  PiDiv64 := C_PI / 64.0;
   for i := 0 to 63 do
   begin
     for j := 0 to 31 do
     begin
-      GSynthNWin[i][j] := Cos(Real((16 + i) * (2 * j + 1)) * PiDiv64);
+      GSynthNWin[i][j] := Cos(((16+i) * (2*j+1)) * (Pi/64.0));
     end;
   end;
 end;
@@ -1145,8 +1166,6 @@ end;
  Author: Krister Lagerström(krister@kmlager.com) }
 function Requantize_Pow_43(is_pos: Word): Real;
 {$if Defined(POW34_TABLE)}
-var
-  i: Integer;
 begin
   {$ifdef DEBUG}
   if (is_pos > 8206) then
@@ -2407,6 +2426,7 @@ begin
     next_sfb := GSfBandIndices[sfreq].s[sfb + 1] * 3;
     win_len := GSfBandIndices[sfreq].s[sfb + 1] - GSfBandIndices[sfreq].s[sfb];
 
+    re[0] := 0;  // solve warning
     while i < 576 do
     begin
       { Inc(i) done below! }
@@ -2717,9 +2737,9 @@ begin
         { This function must be called for channel 0 first }
         { We always run in stereo mode, duplicate channels here for mono }
         if nch = 1 then
-          outdata[32*ss + i] := (samp shl 16) or samp
+          outdata[32*ss + i] := (Cardinal(samp) shl 16) or samp
         else
-          outdata[32*ss + i] := samp shl 16;
+          outdata[32*ss + i] := Cardinal(samp) shl 16;
       end
       else
       begin
