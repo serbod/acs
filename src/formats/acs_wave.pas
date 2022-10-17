@@ -593,6 +593,7 @@ begin
         FillHeaderPCM(Header);
         if FStream.Write(Header, WaveHeaderOffs) <> WaveHeaderOffs then
           raise EAcsException.Create('Error writing wave file');
+        FDataSizeOffs := SizeOf(Header) - SizeOf(Header.DataSize);
       end;
     end;
 
@@ -601,6 +602,7 @@ begin
       FillHeaderExtPCM(HeaderExt);
       if FStream.Write(HeaderExt, SizeOf(HeaderExt)) <> SizeOf(HeaderExt) then
         raise EAcsException.Create('Error writing wave file');
+      FDataSizeOffs := SizeOf(HeaderExt) - SizeOf(HeaderExt.DataSize);
     end;
 
     wtIMA_ADPCM:
@@ -623,9 +625,9 @@ begin
       else
       begin
         FillHeaderIMA_ADPCM(IMA_ADPCMHeader);
-        if FStream.Write(IMA_ADPCMHeader, SizeOf(IMA_ADPCMHeader)) <>
-          SizeOf(IMA_ADPCMHeader) then
+        if FStream.Write(IMA_ADPCMHeader, SizeOf(IMA_ADPCMHeader)) <> SizeOf(IMA_ADPCMHeader) then
           raise EAcsException.Create('Error writing wave file');
+        FDataSizeOffs := SizeOf(IMA_ADPCMHeader) - SizeOf(IMA_ADPCMHeader.DataSize);
         FEncodeState.Index_l := 0;
         FEncodeState.Index_r := 0;
       end;
