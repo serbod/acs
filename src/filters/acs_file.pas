@@ -184,7 +184,12 @@ end;
 function TAcsFileIn.GetValid(): Boolean;
 begin
   Result:=False;
-  if Assigned(FInput) then Result:=FInput.Valid;
+  if Assigned(FInput) then
+  begin
+    Result:=FInput.Valid;
+    FTotalSamples:=FInput.TotalSamples;
+    FTotalTime:=FInput.TotalTime;
+  end;
 end;
 
 function TAcsFileIn.GetTotalTime(): Real;
@@ -702,4 +707,3 @@ finalization
   FileFormats.Free;
 
 end.
-
