@@ -54,26 +54,33 @@ implementation
 
 uses Math;
 
+const
+  INBUF_SIZE = 2048;
+
 { TMP3In }
 
 procedure TMP3In.OpenFile();
 var
   res, done, BufSize: Integer;
   rate, channels, enc: Integer;
-  outbuf: array[0..INBUF_SIZE-1] of Byte;
+  InBuf: array[0..INBUF_SIZE-1] of Byte;
 begin
   inherited OpenFile();
 
   if FOpened then
   begin
+    // reset decoder handle
     pdmp3_open_feed(h);
     // read first chunk
-    BufSize := Length(FBuffer);
-    FStream.Read(FBuffer[0], BufSize);
+    InBuf[0] := 0;
+    FStream.Read(InBuf[0], SizeOf(InBuf));
     // rewind back
     FStream.Position := 0;
-    res := pdmp3_decode(h, FBuffer[0], BufSize, outbuf, SizeOf(outbuf), done);
-    if (res = PDMP3_OK) or (res = PDMP3_NEW_FORMAT) then
+    BufSize := Length(FBuffer);
+    res := pdmp3_decode(h, InBuf, SizeOf(InBuf), FBuffer[0], BufSize, done);
+    if (res = PDMP3_OK)
+    or (res = PDMP3_NEED_MORE)
+    or (res = PDMP3_NEW_FORMAT) then
     begin
       //if (res = PDMP3_NEW_FORMAT) then
       begin
@@ -84,6 +91,8 @@ begin
         FSampleSize := FChan * (FBPS div 8);
 
         FTotalSamples := (FStream.Size div GetFrameSize(h)) * GetSamplesPerFrame(h);
+        if FSR <> 0 then
+          FTotalTime := FTotalSamples / FSR;
         FSize := FStream.Size;
         FValid := True;
         FOpened := True;
@@ -102,7 +111,8 @@ end;
 constructor TMP3In.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FBufferSize := INBUF_SIZE div 2;
+  //FBufferSize := INBUF_SIZE div 2;
+  FBufferSize := INBUF_SIZE * 16; // more than compress ratio
   BufferSize := FBufferSize;
 end;
 
@@ -113,47 +123,48 @@ end;
 
 function TMP3In.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
-  res, done, BufSize: Integer;
-  outbuf: array[0..INBUF_SIZE-1] of Byte;
+  res, BufSize, InSize, OutSize, OutBufFreeSize: Integer;
+  InBuf: array[0..INBUF_SIZE-1] of Byte;
 begin
   //Result:=inherited GetData(ABuffer, ABufferSize);
-  BufSize := Min(ABufferSize, BufferSize);
-  //done := FStream.Read(FBuffer[0], BufSize);
-  //BufSize := Min(BufSize, done);
   Result := 0;
-
+  BufSize := Min(ABufferSize, BufferSize);
   if BufSize = 0 then
-  begin
-    Result := 0;
     Exit;
+
+  OutBufFreeSize := ABufferSize;
+  // feed rest of previously decoded data to output
+  BufSize := Min(BufEnd - BufStart, OutBufFreeSize);
+  if BufSize > 0 then
+  begin
+    Move(FBuffer[BufStart], ABuffer^, BufSize);
+    Inc(ABuffer, BufSize); // buf pointer to end of data
+    Inc(Result, BufSize);
+    Dec(OutBufFreeSize, BufSize);
+    Inc(BufStart, BufSize);
   end;
 
-  res := PDMP3_OK;
-  while (Result < ABufferSize) and ((res = PDMP3_OK) or (res = PDMP3_NEW_FORMAT)) do
+  InBuf[0] := 0;
+  res := PDMP3_NEED_MORE;
+  while (OutBufFreeSize > 0) and ((res = PDMP3_OK) or (res = PDMP3_NEED_MORE)) do
   begin
-    //res := pdmp3_decode(h, FBuffer[0], BufSize, outbuf, SizeOf(outbuf), done);
-    done := 0;
-    BufSize := Min(SizeOf(outbuf), ABufferSize - Result);
-    res := pdmp3_read(h, outbuf, BufSize, done);
-
-    if (res = PDMP3_OK) or (res = PDMP3_NEW_FORMAT) then
+    // transcode
+    InSize := FStream.Read(InBuf[0], SizeOf(InBuf));
+    BufStart := 0;
+    res := pdmp3_decode(h, InBuf, InSize, FBuffer[BufStart], BufferSize, OutSize);
+    if (res = PDMP3_OK) or (res = PDMP3_NEED_MORE) then
     begin
-      Result := Result + done;
-      Assert(done <= SizeOf(outbuf));
-      Move(outbuf, ABuffer^, done);
-      Inc(ABuffer, done);
-    end
-    else
-    if res = PDMP3_NEED_MORE then
-    begin
-      BufSize := Min(INBUF_SIZE, BufferSize);
-      done := FStream.Read(FBuffer[0], BufSize);
-      if done = 0 then
-        Break;
-
-      res := pdmp3_feed(h, FBuffer[0], done);
+      BufEnd := OutSize;
+      BufSize := Min(OutSize, OutBufFreeSize);
+      if BufSize > 0 then
+      begin
+        Move(FBuffer[BufStart], ABuffer^, BufSize);
+        Inc(ABuffer, BufSize);
+        Inc(Result, BufSize);
+        Dec(OutBufFreeSize, BufSize);
+        Inc(BufStart, BufSize);
+      end;
     end;
-
   end;
 end;
 
@@ -311,4 +322,3 @@ finalization
 {$endif}
 
 end.
-
