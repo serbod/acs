@@ -1162,7 +1162,7 @@ var
 begin
   if not Assigned(FStream) then
     Exit;
-  if ((FInputSize = 0) or (FFileMode = foAppend)) then
+  if ((FInputSize = 0) or (FFileMode = foAppend) or (FStream.Size > HeaderSize)) then
   begin
     case FWavType of
       wtPCM:
