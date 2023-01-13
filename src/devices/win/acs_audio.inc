@@ -18,8 +18,9 @@ end;
 
 function GetAudioDeviceInfo(DevID: Integer; OutputDev: Boolean): TAcsDeviceInfo;
 var
-  WIC: TWaveInCaps;
-  i: Integer;
+  WIC: WaveInCapsW;
+  WOC: WaveOutCapsW;
+  ws: WideString;
 begin
   if OutputDev then
   begin
@@ -32,17 +33,24 @@ begin
       raise EAcsException.Create(Format(strChannelnotavailable, [DevId]));
   end;
   if OutputDev then
-    waveOutGetDevCaps(DevID, @WIC, SizeOf(WIC))
+  begin
+    waveOutGetDevCapsW(DevID, @woc, SizeOf(WOC));
+    WIC.dwFormats := WOC.dwFormats;
+    WIC.wChannels := WOC.wChannels;
+    WIC.vDriverVersion := WOC.vDriverVersion;
+    ws := WOC.szPname;
+  end
   else
-    waveInGetDevCaps(DevID, @WIC, SizeOf(WIC));
-  i:=0;
-  while WIC.szPname[i] <> #0 do Inc(i);
-  SetLength(Result.DeviceName, i);
-  Move(WIC.szPname[0], Result.DeviceName[1], i);
+  begin
+    waveInGetDevCapsW(DevID, @Wic, SizeOf(WIC));
+    ws := WIC.szPname;
+  end;
+
+  Result.DeviceName := ws;
   {$ifdef FPC}
-  Result.DeviceName:=AnsiToUtf8(Result.DeviceName);
+  //Result.DeviceName := AnsiToUtf8(Result.DeviceName);
   {$endif}
-  Result.Formats:=[];
+  Result.Formats := [];
   if (WIC.dwFormats and WAVE_FORMAT_1M08) <> 0 then Result.Formats := Result.Formats + [af1M08];
   if (WIC.dwFormats and WAVE_FORMAT_1M16) <> 0 then Result.Formats := Result.Formats + [af1M16];
   if (WIC.dwFormats and WAVE_FORMAT_1S08) <> 0 then Result.Formats := Result.Formats + [af1S08];
@@ -55,8 +63,12 @@ begin
   if (WIC.dwFormats and WAVE_FORMAT_4M16) <> 0 then Result.Formats := Result.Formats + [af4M16];
   if (WIC.dwFormats and WAVE_FORMAT_4S08) <> 0 then Result.Formats := Result.Formats + [af4S08];
   if (WIC.dwFormats and WAVE_FORMAT_4S16) <> 0 then Result.Formats := Result.Formats + [af4S16];
-  Result.DrvVersion:=WIC.vDriverVersion;
-  if WIC.wChannels = 1 then Result.Stereo:=False else Result.Stereo:=True;
+
+  Result.DrvVersion := WIC.vDriverVersion;
+  if WIC.wChannels = 1 then
+    Result.Stereo := False
+  else
+    Result.Stereo := True;
 end;
 
 procedure WaveOutProc(hwo, Msg: LongWord; Instance: Pointer; Param1, Param2: LongWord); stdcall;
@@ -453,4 +465,3 @@ begin
   EOC:=@WH.lpNext;
   Dec(aBlock);
 end;
-
