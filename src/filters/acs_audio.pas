@@ -172,6 +172,8 @@ type
     function GetBPS: Integer; override;
     function GetCh: Integer; override;
     function GetSR: Integer; override;
+    procedure SetSR(sr:Integer);
+    procedure SetBPS(bps:Integer);
     //function GetTotalTime: Real; override;
 
     function GetDriversCount: Integer;
@@ -209,13 +211,13 @@ type
     property Device: Integer read FBaseChannel write SetDevice stored True;
     { Use this property to set the number of bits per sample for the input audio stream.
       Possible values are 8 and 16. }
-    property InBitsPerSample: Integer read GetBPS write FBPS stored True;
+    property InBitsPerSample: Integer read GetBPS write SetBPS stored True;
     { Use this property to set the number of channels for the input audio stream.
       Possible values are 1 (mono) and 2 (stereo). }
     property InChannels: Integer read GetCh write FChan stored True;
     { Use this property to set the sample rate for the input audio stream.
       Possible values are determined by the soundcard hardware. }
-    property InSampleRate: Integer read GetSR write FSampleRate stored True;
+    property InSampleRate: Integer read GetSR write SetSR stored True;
     { This property allow you to set the record duration time in seconds.
       If you assign -1 to this property TAudioIn will never stop recording by itself.
       In both cases you can stop recording at any time by calling Stop method of
@@ -645,6 +647,18 @@ begin
   if Assigned(FInput) then Result:=FInput.GetSR
   else Result:=inherited GetSR();
   //  raise EAcsException.Create(strNoDriverselected);
+end;
+
+procedure TAcsAudioIn.SetSR(sr: Integer);
+begin
+  FSampleRate:=sr;
+  if Assigned(FInput) then FInput.InSampleRate := sr;
+end;
+
+procedure TAcsAudioIn.SetBPS(bps: Integer);
+begin
+  FBPS:=bps;
+  if Assigned(FInput) then FInput.InBitsPerSample:=bps;
 end;
 
 {
