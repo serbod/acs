@@ -420,6 +420,7 @@ type
   snd_pcm_sw_params_current_t = function(pcm:Psnd_pcm_t; params:Psnd_pcm_sw_params_t):longint;cdecl;
   snd_pcm_prepare_t = function(pcm:Psnd_pcm_t):longint;cdecl;
   snd_pcm_reset_t = function(pcm:Psnd_pcm_t):longint;cdecl;
+  snd_pcm_recover_t = function(pcm:Psnd_pcm_t; err: longint; silent: longint):longint;cdecl;
   snd_pcm_status_t = function(pcm:Psnd_pcm_t; status:Psnd_pcm_status_t):longint;cdecl;
   snd_pcm_start_t_t = function(pcm:Psnd_pcm_t):longint;cdecl;
   snd_pcm_drop_t = function(pcm:Psnd_pcm_t):longint;cdecl;
@@ -842,6 +843,7 @@ var
   snd_pcm_prepare : snd_pcm_prepare_t;
   snd_pcm_readi : snd_pcm_readi_t;
   snd_pcm_reset : snd_pcm_reset_t;
+  snd_pcm_recover : snd_pcm_recover_t;
   snd_pcm_resume : snd_pcm_resume_t;
   snd_pcm_state : snd_pcm_state_t_t;
   snd_pcm_stream : snd_pcm_stream_t_t;
@@ -945,6 +947,7 @@ begin
     snd_pcm_prepare := GetProcAddress(Libhandle, 'snd_pcm_prepare');
     snd_pcm_readi := GetProcAddress(Libhandle, 'snd_pcm_readi');
     snd_pcm_reset := GetProcAddress(Libhandle, 'snd_pcm_reset');
+    snd_pcm_recover := GetProcAddress(Libhandle, 'snd_pcm_recover');
     snd_pcm_resume := GetProcAddress(Libhandle, 'snd_pcm_resume');
     snd_pcm_state := GetProcAddress(Libhandle, 'snd_pcm_state');
     snd_pcm_stream := GetProcAddress(Libhandle, 'snd_pcm_stream');
