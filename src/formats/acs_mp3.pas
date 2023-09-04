@@ -14,6 +14,10 @@ unit acs_mp3;
 
 interface
 
+{$IFDEF FPC}
+{$MODE delphi}
+{$ENDIF}
+
 uses
   Classes, SysUtils, ACS_file, ACS_classes,
   {$ifndef WIN64}smpeg,{$endif}

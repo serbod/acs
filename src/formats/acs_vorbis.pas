@@ -21,6 +21,10 @@ unit acs_vorbis;
 
 {$DEFINE USE_VORBIS_11}
 
+{$IFDEF FPC}
+{$MODE delphi}
+{$ENDIF}
+
 interface
 
 uses

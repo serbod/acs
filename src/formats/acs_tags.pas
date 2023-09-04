@@ -16,6 +16,10 @@ unit acs_tags;
 
 interface
 
+{$IFDEF FPC}
+{$MODE delphi}
+{$ENDIF}
+
 uses
   sysutils, Classes, ACS_Types;
 

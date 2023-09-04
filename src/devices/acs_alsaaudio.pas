@@ -15,6 +15,10 @@ unit acs_alsaaudio;
 
 interface
 
+{$IFDEF FPC}
+{$MODE delphi}
+{$ENDIF}
+
 {$ifdef LINUX}
 {$ifdef mswindows}{$message error 'unit not supported'}{$endif}
 

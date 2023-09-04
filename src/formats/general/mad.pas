@@ -14,6 +14,10 @@ unit mad;
 
 interface
 
+{$IFDEF FPC}
+{$mode delphi}
+{$ENDIF}
+
 uses
 
 {$IFDEF WIN32}

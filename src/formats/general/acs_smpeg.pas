@@ -12,6 +12,7 @@ This is the ACS for Linux and Windows version of the unit.
 
 // Linux and Windows C-Compilers use different byte-allignment
 {$ifdef FPC}
+  {$mode delphi}
   //{$PACKRECORDS 4}
 {$else}
   {$IFDEF Linux}
@@ -236,7 +237,9 @@ begin
   {$ifdef LINUX}
   Path:=FindLibs(LibsmpegPath);
   {$ENDIF}
-  Libhandle:=LoadLibrary(Path);
+  Libhandle:=NilHandle;
+  if Path <> '' then
+    Libhandle:=LoadLibrary(Path);
   if Libhandle = NilHandle then exit;
   if Libhandle <> NilHandle then
   begin

@@ -34,6 +34,10 @@ unit alsa;
 
 interface
 
+{$IFDEF FPC}
+{$MODE delphi}
+{$ENDIF}
+
 uses
   dynlibs, BaseUnix, ACS_Procs;
 

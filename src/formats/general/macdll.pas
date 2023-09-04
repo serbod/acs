@@ -33,6 +33,10 @@ unit macdll;
 
 interface
 
+{$IFDEF FPC}
+{$MODE delphi}
+{$ENDIF}
+
 {$ifdef linux}{$message error 'unit not supported'}{$endif linux}
 
 uses classes, sysutils, windows, mmsystem;

@@ -24,6 +24,10 @@ TWaveIn: AcsBuffer
 
 unit acs_wave;
 
+{$IFDEF FPC}
+{$mode delphi}
+{$ENDIF}
+
 interface
 
 uses
