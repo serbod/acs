@@ -65,7 +65,7 @@ const
 
 procedure TMP3In.OpenFile();
 var
-  res, done, BufSize: Integer;
+  res, done, BufSize, InSize: Integer;
   rate, channels, enc: Integer;
   InBuf: array[0..INBUF_SIZE-1] of Byte;
 begin
@@ -75,16 +75,22 @@ begin
   begin
     // reset decoder handle
     pdmp3_open_feed(h);
+    done:=0;
     // read first chunk
     InBuf[0] := 0;
-    FStream.Read(InBuf[0], SizeOf(InBuf));
+    InSize:=FStream.Read(InBuf[0], SizeOf(InBuf));
     // rewind back
     FStream.Position := 0;
     BufSize := Length(FBuffer);
-    res := pdmp3_decode(h, InBuf, SizeOf(InBuf), FBuffer[0], BufSize, done);
-    if (res = PDMP3_OK)
-    or (res = PDMP3_NEED_MORE)
-    or (res = PDMP3_NEW_FORMAT) then
+    res := PDMP3_ERR;
+    if InSize > 0 then
+    begin
+      res := pdmp3_decode(h, InBuf, InSize, FBuffer[0], BufSize, done);
+    end;
+    if (done > 0) and
+       ((res = PDMP3_OK)
+         or (res = PDMP3_NEED_MORE)
+         or (res = PDMP3_NEW_FORMAT)) then
     begin
       //if (res = PDMP3_NEW_FORMAT) then
       begin
@@ -154,6 +160,12 @@ begin
   begin
     // transcode
     InSize := FStream.Read(InBuf[0], SizeOf(InBuf));
+    if InSize <= 0 then
+    begin
+      // looks like "pdmp3_decode" does not work properly with InSize = 0
+      break;
+    end;
+
     BufStart := 0;
     res := pdmp3_decode(h, InBuf, InSize, FBuffer[BufStart], BufferSize, OutSize);
     if (res = PDMP3_OK) or (res = PDMP3_NEED_MORE) then
