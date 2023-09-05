@@ -187,30 +187,38 @@ begin
   iNearDir:=0; // target/chosen exact value is <,=,> val following dir (-1,0,1)
   OpenAudio();
 
-  snd_pcm_hw_params_malloc(_hw_params);
-  snd_pcm_hw_params_any(_audio_handle, _hw_params);
-  snd_pcm_hw_params_set_access(_audio_handle, _hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
-  if FBPS = 8 then
-    snd_pcm_hw_params_set_format(_audio_handle, _hw_params, SND_PCM_FORMAT_U8)
-  else
-    snd_pcm_hw_params_set_format(_audio_handle, _hw_params, SND_PCM_FORMAT_S16_LE);
-  Self.FSampleRate:=snd_pcm_hw_params_set_rate_near(_audio_handle, _hw_params, @FSampleRate, @iNearDir);
-  snd_pcm_hw_params_set_channels(_audio_handle, _hw_params, FChan);
-  if (FPeriodSize <> 0) and (FPeriodNum <> 0) then
-  begin
-    snd_pcm_hw_params_set_period_size_near(_audio_handle, _hw_params, @FPeriodSize, @iNearDir);
-    snd_pcm_hw_params_set_periods_near(_audio_handle, _hw_params, @FPeriodNum, @iNearDir);
-    iBufSize:=(FPeriodSize * FPeriodNum) div (FChan * (FBPS div 8));
-  end
-  else
-    iBufSize:=Self.BufferSize div (FChan * (FBPS div 8));
-  // approximate target buffer size in frames / returned chosen approximate target buffer size in frames
-  // Returns 0 otherwise a negative error code if configuration space is empty
-  snd_pcm_hw_params_set_buffer_size_near(_audio_handle, _hw_params, @iBufSize);
-  // set new buffer size
-  Self.BufferSize:=iBufSize * (FChan * (FBPS div 8));
-  snd_pcm_hw_params(_audio_handle, _hw_params);
-  snd_pcm_hw_params_free(_hw_params);
+  _hw_params:=nil;
+  try
+    snd_pcm_hw_params_malloc(_hw_params);
+    snd_pcm_hw_params_any(_audio_handle, _hw_params);
+    snd_pcm_hw_params_set_access(_audio_handle, _hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
+    if FBPS = 8 then
+      snd_pcm_hw_params_set_format(_audio_handle, _hw_params, SND_PCM_FORMAT_U8)
+    else
+      snd_pcm_hw_params_set_format(_audio_handle, _hw_params, SND_PCM_FORMAT_S16_LE);
+    Self.FSampleRate:=snd_pcm_hw_params_set_rate_near(_audio_handle, _hw_params, @FSampleRate, @iNearDir);
+    snd_pcm_hw_params_set_channels(_audio_handle, _hw_params, FChan);
+    if (FPeriodSize <> 0) and (FPeriodNum <> 0) then
+    begin
+      snd_pcm_hw_params_set_period_size_near(_audio_handle, _hw_params, @FPeriodSize, @iNearDir);
+      snd_pcm_hw_params_set_periods_near(_audio_handle, _hw_params, @FPeriodNum, @iNearDir);
+      iBufSize:=(FPeriodSize * FPeriodNum) div (FChan * (FBPS div 8));
+    end
+    else
+      iBufSize:=Self.BufferSize div (FChan * (FBPS div 8));
+    // approximate target buffer size in frames / returned chosen approximate target buffer size in frames
+    // Returns 0 otherwise a negative error code if configuration space is empty
+    snd_pcm_hw_params_set_buffer_size_near(_audio_handle, _hw_params, @iBufSize);
+    // set new buffer size
+    Self.BufferSize:=iBufSize * (FChan * (FBPS div 8));
+    snd_pcm_hw_params(_audio_handle, _hw_params);
+  finally
+    if _hw_params <> nil then
+    begin
+      snd_pcm_hw_params_free(_hw_params);
+      _hw_params:=nil;
+    end;
+  end;
   if snd_pcm_prepare(_audio_handle) < 0 then
   begin
     CloseAudio();
@@ -325,65 +333,73 @@ begin
      raise EACSException.Create(Format(strCoudntopendeviceOut, [FDeviceName]));
   // set audio parameters
   //snd_pcm_reset(_audio_handle);
-  Res:=snd_pcm_hw_params_malloc(_hw_params);
-  if Res < 0 then
-     raise EACSException.Create('cannot allocate hardware parameter structure');
-  Res:=snd_pcm_hw_params_any(_audio_handle, _hw_params);
-  if Res < 0 then
-     raise EACSException.Create('cannot initialize hardware parameter structure');
-  Res:=snd_pcm_hw_params_set_access(_audio_handle, _hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
-  if Res < 0 then
-     raise EACSException.Create('cannot set access type');
+  _hw_params:=nil;
+  try
+    Res:=snd_pcm_hw_params_malloc(_hw_params);
+    if Res < 0 then
+       raise EACSException.Create('cannot allocate hardware parameter structure');
+    Res:=snd_pcm_hw_params_any(_audio_handle, _hw_params);
+    if Res < 0 then
+       raise EACSException.Create('cannot initialize hardware parameter structure');
+    Res:=snd_pcm_hw_params_set_access(_audio_handle, _hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
+    if Res < 0 then
+       raise EACSException.Create('cannot set access type');
 
-  // set sample format
-  Res:=-1;
-  if FInput.BitsPerSample = 8 then
-    Res:=snd_pcm_hw_params_set_format(_audio_handle, _hw_params, SND_PCM_FORMAT_U8)
-  else if FInput.BitsPerSample = 16 then
-    Res:=snd_pcm_hw_params_set_format(_audio_handle, _hw_params, SND_PCM_FORMAT_S16)
-  else if FInput.BitsPerSample = 24 then
-    Res:=snd_pcm_hw_params_set_format(_audio_handle, _hw_params, SND_PCM_FORMAT_S24);
-  if Res < 0 then
-     raise EACSException.Create('cannot set sample format');
+    // set sample format
+    Res:=-1;
+    if FInput.BitsPerSample = 8 then
+      Res:=snd_pcm_hw_params_set_format(_audio_handle, _hw_params, SND_PCM_FORMAT_U8)
+    else if FInput.BitsPerSample = 16 then
+      Res:=snd_pcm_hw_params_set_format(_audio_handle, _hw_params, SND_PCM_FORMAT_S16)
+    else if FInput.BitsPerSample = 24 then
+      Res:=snd_pcm_hw_params_set_format(_audio_handle, _hw_params, SND_PCM_FORMAT_S24);
+    if Res < 0 then
+       raise EACSException.Create('cannot set sample format');
 
-  // set sample rate
-  iVal:=FInput.SampleRate;
-  Res:=snd_pcm_hw_params_set_rate_near(_audio_handle, _hw_params, @iVal, @iNearDir);
-  if Res < 0 then
-     raise EACSException.Create('cannot set sample rate');
+    // set sample rate
+    iVal:=FInput.SampleRate;
+    Res:=snd_pcm_hw_params_set_rate_near(_audio_handle, _hw_params, @iVal, @iNearDir);
+    if Res < 0 then
+       raise EACSException.Create('cannot set sample rate');
 
-  // set channel count
-  Res:=snd_pcm_hw_params_set_channels(_audio_handle, _hw_params, FInput.Channels);
-  if Res < 0 then
-     raise EACSException.Create('cannot set channel count');
+    // set channel count
+    Res:=snd_pcm_hw_params_set_channels(_audio_handle, _hw_params, FInput.Channels);
+    if Res < 0 then
+       raise EACSException.Create('cannot set channel count');
 
-  // buffer size in samples
-  //FPeriodNum:=4;
-  //FPeriodSize:=(FBuffer.Size div FSampleSize) div FPeriodNum;
-  if (FPeriodSize <> 0) and (FPeriodNum <> 0) then
-  begin
-    // approximate target period size in frames / returned chosen approximate target period size
-    Res:=snd_pcm_hw_params_set_period_size_near(_audio_handle, _hw_params, @FPeriodSize, @iNearDir);
-    // approximate target periods per buffer / returned chosen approximate target periods per buffer
-    Res:=snd_pcm_hw_params_set_periods_near(_audio_handle, _hw_params, @FPeriodNum, @iNearDir);
-    iBufSize:=(FPeriodSize * FPeriodNum) * FSampleSize;
-  end
-  else
-    iBufSize := FBuffer.Size div FSampleSize;
-  // approximate target buffer size in frames / returned chosen approximate target buffer size in frames
-  // Returns 0 otherwise a negative error code if configuration space is empty
-  if snd_pcm_hw_params_set_buffer_size_near(_audio_handle, _hw_params, @iBufSize) < 0 then
-    raise EACSException.Create('cannot set buffer');
-  // set new buffer size
-  FBuffer.Size:=iBufSize * FSampleSize;
-  FBuffer.Reset();
+    // buffer size in samples
+    //FPeriodNum:=4;
+    //FPeriodSize:=(FBuffer.Size div FSampleSize) div FPeriodNum;
+    if (FPeriodSize <> 0) and (FPeriodNum <> 0) then
+    begin
+      // approximate target period size in frames / returned chosen approximate target period size
+      Res:=snd_pcm_hw_params_set_period_size_near(_audio_handle, _hw_params, @FPeriodSize, @iNearDir);
+      // approximate target periods per buffer / returned chosen approximate target periods per buffer
+      Res:=snd_pcm_hw_params_set_periods_near(_audio_handle, _hw_params, @FPeriodNum, @iNearDir);
+      iBufSize:=(FPeriodSize * FPeriodNum) * FSampleSize;
+    end
+    else
+      iBufSize := FBuffer.Size div FSampleSize;
+    // approximate target buffer size in frames / returned chosen approximate target buffer size in frames
+    // Returns 0 otherwise a negative error code if configuration space is empty
+    if snd_pcm_hw_params_set_buffer_size_near(_audio_handle, _hw_params, @iBufSize) < 0 then
+      raise EACSException.Create('cannot set buffer');
+    // set new buffer size
+    FBuffer.Size:=iBufSize * FSampleSize;
+    FBuffer.Reset();
 
-  // set parameters
-  Res:=snd_pcm_hw_params(_audio_handle, _hw_params);
-  if Res < 0 then
-     raise EACSException.Create('cannot set parameters');
-  // free parameters structure
-  snd_pcm_hw_params_free(_hw_params);
+    // set parameters
+    Res:=snd_pcm_hw_params(_audio_handle, _hw_params);
+    if Res < 0 then
+       raise EACSException.Create('cannot set parameters');
+    // free parameters structure
+  finally
+    if _hw_params <> nil then
+    begin
+      snd_pcm_hw_params_free(_hw_params);
+      _hw_params:=nil;
+    end;
+  end;
 
   {
   if snd_pcm_prepare(_audio_handle) < 0 then
