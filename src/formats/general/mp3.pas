@@ -56,7 +56,7 @@ uses
 {$define GGAIN_TABLE}
 
 { print debug info to STDOUT }
-{//$define DEBUG}
+{//$define ACS_DEBUG}
 
 type
   { Types used in the frame header }
@@ -957,7 +957,7 @@ const
     )
   );
 
-{$ifdef DEBUG}
+{$ifdef ACS_DEBUG}
 procedure dmp_fr(const hdr: TMpeg1Header);
 begin
   WriteLn(Format('rate=%d sfreq=%d pad=%d mod=%d modext=%d emph=%d',
@@ -970,7 +970,7 @@ begin
 end;
 {$endif}
 
-{$ifdef DEBUG}
+{$ifdef ACS_DEBUG}
 procedure dmp_si(const hdr: TMpeg1Header; const si: TMpeg1SideInfo);
 var
   nch, ch, gr: Integer;
@@ -1017,7 +1017,7 @@ end;
 {$endif}
 
 
-{$ifdef DEBUG}
+{$ifdef ACS_DEBUG}
 procedure dmp_scf(const si: TMpeg1SideInfo; const md: TMpeg1MainData; gr, ch: Integer);
 var
   sfb, win: Integer;
@@ -1075,7 +1075,7 @@ begin
 end;
 {$endif}
 
-{$ifdef DEBUG}
+{$ifdef ACS_DEBUG}
 procedure dmp_huff(const md: TMpeg1MainData; gr, ch: Integer);
 var
   i: Integer;
@@ -1088,7 +1088,7 @@ begin
 end;
 {$endif}
 
-{$ifdef DEBUG}
+{$ifdef ACS_DEBUG}
 procedure dmp_samples(const md: TMpeg1MainData; gr, ch, tp: Integer);
 var
   i, val: Integer;
@@ -1167,13 +1167,13 @@ end;
 function Requantize_Pow_43(is_pos: Word): Real;
 {$if Defined(POW34_TABLE)}
 begin
-  {$ifdef DEBUG}
+  {$ifdef ACS_DEBUG}
   if (is_pos > 8206) then
   begin
     Writeln('is_pos=', is_pos, ' larger than 8206!');
     is_pos := 8206;
   end;
-  {$endif DEBUG}
+  {$endif ACS_DEBUG}
 
   Result := powtab34[is_pos];
 {$elseif Defined(POW34_ITERATE)}
@@ -1431,7 +1431,7 @@ function Get_Main_Data(var id: TPdmp3Handle; main_data_size: Integer; main_data_
 var
   i: Integer;
 begin
-  {$ifdef DEBUG}
+  {$ifdef ACS_DEBUG}
   if (main_data_size > 1500) then
     WriteLn('main_data_size = ', main_data_size);
   {$endif}
@@ -1475,7 +1475,7 @@ procedure Get_Sideinfo(var id: TPdmp3Handle; sideinfo_size: Integer);
 begin
   if (Get_Bytes(id, sideinfo_size, id.SideInfoVec) <> PDMP3_OK) then
   begin
-    {$ifdef DEBUG}
+    {$ifdef ACS_DEBUG}
     WriteLn();
     WriteLn('Couldn''t read sideinfo ', sideinfo_size, ' bytes at pos ', Get_Filepos(id));
     {$endif}
@@ -1502,7 +1502,7 @@ begin
   framesize := GetFrameSize(id);
   if (framesize > 2000) then
   begin
-    {$ifdef DEBUG}WriteLn('framesize=', framesize); {$endif}
+    {$ifdef ACS_DEBUG}WriteLn('framesize=', framesize); {$endif}
     Result := PDMP3_ERR;
     Exit;
   end;
@@ -1658,7 +1658,7 @@ begin
   if (error <> 0) then
   begin
     { Check for error. }
-    {$ifdef DEBUG}
+    {$ifdef ACS_DEBUG}
     WriteLn('Illegal Huff code in data. bleft=', BitsLeft,
             ', point=', point,
             '. tab=', table_num);
@@ -1804,7 +1804,7 @@ begin
 
   if(framesize > 2000) then
   begin
-    {$ifdef DEBUG}WriteLn('framesize=', framesize);{$endif}
+    {$ifdef ACS_DEBUG}WriteLn('framesize=', framesize);{$endif}
     Result := PDMP3_ERR;
     Exit;
   end;
@@ -2071,7 +2071,7 @@ begin
   if (Search_Header(id) <> PDMP3_OK) then
     Exit;
 
-{$ifdef DEBUG}
+{$ifdef ACS_DEBUG}
   Inc(Mp3Stats.FrameNum);
   WriteLn('');
   WriteLn('Frame ', Mp3Stats.FrameNum);
@@ -2088,7 +2088,7 @@ begin
   begin
     { Get audio data }
     Read_Audio_L3(id);  // Get side info
-    {$ifdef DEBUG}dmp_si(id.GFrameHeader, id.GSideInfo); {$endif}
+    {$ifdef ACS_DEBUG}dmp_si(id.GFrameHeader, id.GSideInfo); {$endif}
     { If there's not enough main data in the bit reservoir,
       signal to calling function so that decoding isn't done! }
     { Get main data(scalefactors and Huffman coded frequency data) }
@@ -2097,7 +2097,7 @@ begin
   end
   else
   begin
-    {$ifdef DEBUG}
+    {$ifdef ACS_DEBUG}
     WriteLn('Only layer 3(!= ', id.GFrameHeader.Layer, ') is supported!');
     {$endif}
     Exit;
@@ -2765,25 +2765,25 @@ begin
   begin
     for ch := 0 to nch-1 do
     begin
-      {$ifdef DEBUG}dmp_scf(id.GSideInfo, id.GMainData, gr, ch); {$endif}
-      {$ifdef DEBUG}dmp_huff(id.GMainData, gr, ch); {$endif}
+      {$ifdef ACS_DEBUG}dmp_scf(id.GSideInfo, id.GMainData, gr, ch); {$endif}
+      {$ifdef ACS_DEBUG}dmp_huff(id.GMainData, gr, ch); {$endif}
       L3_Requantize(id, gr, ch); // Requantize samples
-      {$ifdef DEBUG}dmp_samples(id.GMainData, gr, ch, 0); {$endif}
+      {$ifdef ACS_DEBUG}dmp_samples(id.GMainData, gr, ch, 0); {$endif}
       L3_Reorder(id, gr, ch); // Reorder short blocks
     end;
     L3_Stereo(id, gr); // Stereo processing
-    {$ifdef DEBUG}dmp_samples(id.GMainData, gr, 0, 1); {$endif}
-    {$ifdef DEBUG}dmp_samples(id.GMainData, gr, 1, 1); {$endif}
+    {$ifdef ACS_DEBUG}dmp_samples(id.GMainData, gr, 0, 1); {$endif}
+    {$ifdef ACS_DEBUG}dmp_samples(id.GMainData, gr, 1, 1); {$endif}
     for ch := 0 to nch-1 do
     begin
       L3_Antialias(id, gr, ch); // Antialias
-      {$ifdef DEBUG}dmp_samples(id.GMainData, gr, ch, 2); {$endif}
+      {$ifdef ACS_DEBUG}dmp_samples(id.GMainData, gr, ch, 2); {$endif}
       L3_Hybrid_Synthesis(id, gr, ch); // (IMDCT,windowing,overlapp add)
       L3_Frequency_Inversion(id, gr, ch); // Frequency inversion
-      {$ifdef DEBUG}dmp_samples(id.GMainData, gr, ch, 3); {$endif}
+      {$ifdef ACS_DEBUG}dmp_samples(id.GMainData, gr, ch, 3); {$endif}
       L3_Subband_Synthesis(id, gr, ch, id._out[gr]); // Polyphase subband synthesis
     end;
-    {$ifdef DEBUG}
+    {$ifdef ACS_DEBUG}
     ctr := 0;
     WriteLn('PCM:');
     for i := 0 to 575 do
