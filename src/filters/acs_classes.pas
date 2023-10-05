@@ -20,6 +20,10 @@ unit acs_classes;
 
 interface
 
+{$IFDEF FPC}
+{$MODE delphi}
+{$ENDIF}
+
 uses
 
 acs_strings, Classes, SysUtils, syncobjs;

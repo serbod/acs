@@ -12,6 +12,9 @@ libFLAC v. 1.1.4 headers Delphi translation by Andrei Borovsky.
 
 *)
 
+{$IFDEF FPC}
+{$mode delphi}
+{$ENDIF}
 
 unit flac;
 

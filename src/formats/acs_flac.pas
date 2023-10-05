@@ -26,6 +26,10 @@ unit acs_flac;
 
 interface
 
+{$IFDEF FPC}
+{$MODE delphi}
+{$ENDIF}
+
 uses
 
   Classes, SysUtils, {FastMove,} ACS_Types, ACS_Classes, ACS_Tags, flac

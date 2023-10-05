@@ -12,6 +12,10 @@ Status: tested
 
 unit acs_mpeg;
 
+{$IFDEF FPC}
+{$MODE delphi}
+{$ENDIF}
+
 interface
 
 uses

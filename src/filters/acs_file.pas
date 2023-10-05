@@ -18,6 +18,10 @@ unit acs_file;
 
 interface
 
+{$IFDEF FPC}
+{$MODE delphi}
+{$ENDIF}
+
 uses
   Classes, acs_classes, SysUtils, ACS_Strings;
 

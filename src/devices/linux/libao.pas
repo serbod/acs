@@ -12,6 +12,10 @@ unit libao;
 
 interface
 
+{$IFDEF FPC}
+{$MODE delphi}
+{$ENDIF}
+
 uses
   baseunix, ACS_Procs;
 

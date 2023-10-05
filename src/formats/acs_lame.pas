@@ -14,6 +14,10 @@ unit acs_lame;
 
 interface
 
+{$IFDEF FPC}
+{$mode delphi}
+{$ENDIF}
+
 uses
   ACS_File,Classes, SysUtils, ACS_Classes, lame;
 
@@ -124,7 +128,7 @@ end;
 
 procedure TMP3Out.Init();
 var
-  samples, br, tbr, sr, ql, FBufferSize: Integer;
+  samples, br, tbr, sr, ql, _FBufferSize: Integer;
 begin
   inherited Init();
   _plgf:=lame_init;
@@ -222,8 +226,8 @@ begin
   end;
 }
   lame_init_params(_plgf);
-  FBufferSize:=FBuffer.Size;
-  mp3buf_size:=(FBufferSize div 2) + (FBufferSize div 8) + 7200;
+  _FBufferSize:=FBuffer.Size;
+  mp3buf_size:=(_FBufferSize div 2) + (_FBufferSize div 8) + 7200;
   GetMem(mp3buf, mp3buf_size);
 end;
 

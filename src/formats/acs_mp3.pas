@@ -14,13 +14,25 @@ unit acs_mp3;
 
 interface
 
-uses
-  Classes, SysUtils, ACS_file, ACS_classes,
-  {$ifndef WIN64}smpeg,{$endif}
-  mp3;
+{$I ../../acs_defines.inc}
 
-type
+{$IFDEF FPC}
+{$MODE delphi}
+{$ENDIF}
+
+uses
+  Classes, SysUtils, ACS_file, ACS_classes
+  {$IFDEF ACS_MP3IN_L12_EXT}
+    {$ifndef WIN64}, acs_smpeg{$endif}
+  {$ENDIF}
+  {$IFDEF ACS_MP3IN_L3_BUILTIN}
+  , mp3
+  {$ENDIF}
+  ;
+
+  {$IFDEF ACS_MP3IN_L12_EXT}
   {$ifndef WIN64}
+  type
   TMPEGIn = class(TAcsCustomFileIn)
   private
     _M: Pointer;
@@ -34,9 +46,10 @@ type
     function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
   end;
   {$endif}
+  {$ENDIF}
 
-  { TMP3In }
-
+  {$IFDEF ACS_MP3IN_L3_BUILTIN}
+  type
   TMP3In = class(TAcsCustomFileIn)
   private
     h: TPdmp3Handle;
@@ -48,12 +61,14 @@ type
     destructor Destroy(); override;
     function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
   end;
+  {$ENDIF}
 
 
 implementation
 
 uses Math;
 
+{$IFDEF ACS_MP3IN_L3_BUILTIN}
 const
   INBUF_SIZE = 2048;
 
@@ -61,7 +76,7 @@ const
 
 procedure TMP3In.OpenFile();
 var
-  res, done, BufSize: Integer;
+  res, done, BufSize, InSize: Integer;
   rate, channels, enc: Integer;
   InBuf: array[0..INBUF_SIZE-1] of Byte;
 begin
@@ -71,16 +86,22 @@ begin
   begin
     // reset decoder handle
     pdmp3_open_feed(h);
+    done:=0;
     // read first chunk
     InBuf[0] := 0;
-    FStream.Read(InBuf[0], SizeOf(InBuf));
+    InSize:=FStream.Read(InBuf[0], SizeOf(InBuf));
     // rewind back
     FStream.Position := 0;
     BufSize := Length(FBuffer);
-    res := pdmp3_decode(h, InBuf, SizeOf(InBuf), FBuffer[0], BufSize, done);
-    if (res = PDMP3_OK)
-    or (res = PDMP3_NEED_MORE)
-    or (res = PDMP3_NEW_FORMAT) then
+    res := PDMP3_ERR;
+    if InSize > 0 then
+    begin
+      res := pdmp3_decode(h, InBuf, InSize, FBuffer[0], BufSize, done);
+    end;
+    if (done > 0) and
+       ((res = PDMP3_OK)
+         or (res = PDMP3_NEED_MORE)
+         or (res = PDMP3_NEW_FORMAT)) then
     begin
       //if (res = PDMP3_NEW_FORMAT) then
       begin
@@ -150,6 +171,12 @@ begin
   begin
     // transcode
     InSize := FStream.Read(InBuf[0], SizeOf(InBuf));
+    if InSize <= 0 then
+    begin
+      // looks like "pdmp3_decode" does not work properly with InSize = 0
+      break;
+    end;
+
     BufStart := 0;
     res := pdmp3_decode(h, InBuf, InSize, FBuffer[BufStart], BufferSize, OutSize);
     if (res = PDMP3_OK) or (res = PDMP3_NEED_MORE) then
@@ -167,7 +194,9 @@ begin
     end;
   end;
 end;
+{$ENDIF}
 
+{$IFDEF ACS_MP3IN_L12_EXT}
 {$ifndef WIN64}
 constructor TMPEGIn.Create();
 begin
@@ -303,22 +332,29 @@ begin
   Inc(FPosition, Result);
 end;
 {$endif}
+{$ENDIF}
 
 initialization
+  {$IFDEF ACS_MP3IN_L3_BUILTIN}
   FileFormats.Add('mp3', 'Mpeg Audio Layer 3', TMP3In);
+  {$ENDIF}
+  {$IFDEF ACS_MP3IN_L12_EXT}
+    {$ifndef WIN64}
+    if LoadMPEGLibrary() then
+    begin
+      //FileFormats.Add('mp3', 'Mpeg Audio Layer 3', TMPEGIn);
+      FileFormats.Add('mp2', 'Mpeg Audio Layer 2', TMPEGIn);
+      FileFormats.Add('mpeg', 'Mpeg Audio', TMPEGIn);
+    end;
+    {$endif}
+  {$ENDIF}
+
+
+{$IFDEF ACS_MP3IN_L12_EXT}
   {$ifndef WIN64}
-  if LoadMPEGLibrary() then
-  begin
-    //FileFormats.Add('mp3', 'Mpeg Audio Layer 3', TMPEGIn);
-    FileFormats.Add('mp2', 'Mpeg Audio Layer 2', TMPEGIn);
-    FileFormats.Add('mpeg', 'Mpeg Audio', TMPEGIn);
-  end;
+  finalization
+    UnLoadMPEGLibrary();
   {$endif}
-
-finalization
-
-{$ifndef WIN64}
-  UnLoadMPEGLibrary();
-{$endif}
+{$ENDIF}
 
 end.

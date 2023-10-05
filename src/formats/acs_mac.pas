@@ -14,6 +14,10 @@ unit acs_mac;
 
 interface
 
+{$IFDEF FPC}
+{$MODE delphi}
+{$ENDIF}
+
 {$ifdef WINDOWS}
 {$ifdef linux}{$message error 'unit not supported'}{$endif linux}
 

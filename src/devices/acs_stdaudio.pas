@@ -21,6 +21,10 @@ unit acs_stdaudio;
 
 interface
 
+{$IFDEF FPC}
+{$mode delphi}
+{$ENDIF}
+
 uses
   Classes, SysUtils, syncobjs, ACS_Types, ACS_Classes, ACS_Audio, ACS_Strings
 {$IFDEF MSWINDOWS}

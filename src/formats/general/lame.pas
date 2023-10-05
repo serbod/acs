@@ -20,6 +20,10 @@ unit lame;
 
 interface
 
+{$IFDEF FPC}
+{$mode delphi}
+{$ENDIF}
+
 uses
 {$IFDEF MSWINDOWS}
   Windows;

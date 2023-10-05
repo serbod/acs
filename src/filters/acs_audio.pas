@@ -20,6 +20,10 @@ unit acs_audio;
 
 interface
 
+{$IFDEF FPC}
+{$MODE delphi}
+{$ENDIF}
+
 uses
   acs_classes, Classes, acs_strings, SysUtils, acs_types;
 
