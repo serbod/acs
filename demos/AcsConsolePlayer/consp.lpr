@@ -30,22 +30,41 @@ type
 { TAcsApplication }
 
 procedure TAcsApplication.DoRun;
+var
+  i: Integer;
+  sl: TStringList;
 begin
   // parse parameters
   if (ParamCount < 1) or HasOption('h','help') then
   begin
     WriteLn('Usage: ', ExtractFileName(ExeName),' <audio_file_name>');
+    WriteLn('Supported file formats:');
+    sl := TStringList.Create;
+    try
+      FileIn.GetDriversList(sl);
+      for i := 0 to sl.Count-1 do
+        WriteLn('  ' + sl[i]);
+    finally
+      sl.Free();
+    end;
     Terminate;
     Exit;
   end;
 
   { add your program here }
   FileIn.FileName := Params[1];
-  AudioOut.Run();
-  while AudioOut.Active do
+  if FileIn.Valid then
   begin
-    Sleep(10);
-  end;
+    //WriteLn(Format('FileIn.SampleRate=%d  BitsPerSample=%d  Channels=%d  Size=%d', [FileIn.SampleRate, FileIn.BitsPerSample, FileIn.Channels, FileIn.Size]));
+    AudioOut.Run();
+    while AudioOut.Active do
+    begin
+      Sleep(10);
+      //WriteLn(Format('FileIn.Position=%d  TotalTime=%n  PositionTime=%n  Progress=%n', [FileIn.Position, FileIn.TotalTime, FileIn.PositionTime, FileIn.Progress]));
+    end;
+  end
+  else
+    WriteLn(Format('File not valid: %s', [FileIn.FileName]));
 
   // stop program loop
   Terminate;
@@ -76,4 +95,3 @@ begin
   Application.Run;
   Application.Free;
 end.
-

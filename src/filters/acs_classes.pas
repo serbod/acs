@@ -379,9 +379,9 @@ type
       procedure are caught within the procedure itself.
       The thread generates OnThreadException event to inform the application
       that an exception has occurred.
-      Avoid any potential exception-rising actions in this event’s handler!
+      Avoid any potential exception-rising actions in this eventâ€™s handler!
       Use the handler to reset application controls (if needed) and call the
-      input component’s Reset method.
+      input componentâ€™s Reset method.
       See the CD ripper demo for an example of handling thread exceptions. }
     property OnThreadException: TAcsThreadExceptionEvent read FOnThreadException write FOnThreadException;
     { This Property sets the BufferSize of the component }
@@ -960,8 +960,8 @@ begin
       Res:=ParentComponent.DoOutput(False);
       if (not Res) then Terminate()
       else
-        if Assigned(ParentComponent.OnProgress) then
-          Synchronize(CallOnProgress);
+      if Assigned(ParentComponent.OnProgress) then
+        Synchronize(CallOnProgress);
     except
       on E: Exception do
       begin
@@ -1844,5 +1844,4 @@ begin
 end;
 
 end.
-
 

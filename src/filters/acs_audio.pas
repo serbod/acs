@@ -530,9 +530,9 @@ begin
       end;
       FDriverName:=OutDriverInfos[i].DriverName;
       FLatency:=OutDriverInfos[i].Latency;
-      if Assigned(FInput) then FOutputDriver.Input:=FInput;
-      FOutputDriver.OnDone:=OutputDone;
-      FOutputDriver.OnProgress:=OutputProgress;
+      if Assigned(FInput) then FOutputDriver.Input := FInput;
+      if Assigned(OnDone) then FOutputDriver.OnDone := OutputDone;
+      if Assigned(OnProgress) then FOutputDriver.OnProgress:=OutputProgress;
       FOutputDriver.OnThreadException:=ThreadException;
       if FBufferSize > 0 then FOutputDriver.BufferSize:=FBufferSize;
       //FOutputDriver.Prefetch:=FPrefetch;
