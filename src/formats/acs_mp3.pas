@@ -50,16 +50,22 @@ uses
 
   {$IFDEF ACS_MP3IN_L3_BUILTIN}
   type
+
+  { TMP3In }
+
   TMP3In = class(TAcsCustomFileIn)
   private
     h: TPdmp3Handle;
   protected
+    FFrameSize: Integer;
+    FSamplesPerFrame: Integer;
     procedure OpenFile(); override;
     procedure CloseFile(); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
     function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
+    function Seek(SampleNum: Integer): Boolean; override;
   end;
   {$ENDIF}
 
@@ -82,6 +88,8 @@ var
 begin
   inherited OpenFile();
 
+  FFrameSize := 0;
+  FSamplesPerFrame := 0;
   if FOpened then
   begin
     // reset decoder handle
@@ -92,6 +100,7 @@ begin
     InSize:=FStream.Read(InBuf[0], SizeOf(InBuf));
     // rewind back
     FStream.Position := 0;
+    FPosition := 0;
     BufSize := Length(FBuffer);
     res := PDMP3_ERR;
     if InSize > 0 then
@@ -111,6 +120,8 @@ begin
         FBPS := 16;
         FSampleSize := FChan * (FBPS div 8);
 
+        FFrameSize := GetFrameSize(h);
+        FSamplesPerFrame := GetSamplesPerFrame(h);
         FTotalSamples := (FStream.Size div GetFrameSize(h)) * GetSamplesPerFrame(h);
         if FSR <> 0 then
           FTotalTime := FTotalSamples / FSR;
@@ -163,6 +174,7 @@ begin
     Inc(Result, BufSize);
     Dec(OutBufFreeSize, BufSize);
     Inc(BufStart, BufSize);
+    Inc(FPosition, BufSize);
   end;
 
   InBuf[0] := 0;
@@ -190,10 +202,29 @@ begin
         Inc(Result, BufSize);
         Dec(OutBufFreeSize, BufSize);
         Inc(BufStart, BufSize);
+        Inc(FPosition, BufSize);
       end;
     end;
   end;
 end;
+
+function TMP3In.Seek(SampleNum: Integer): Boolean;
+begin
+  Result := False;
+  if not Seekable then Exit;
+  // clear buffered data
+  BufStart := 0;
+  BufEnd := 0;
+  // reset decoder
+  pdmp3_open_feed(h);
+  if Assigned(FStream) and (FSamplesPerFrame > 0) then
+  begin
+    FPosition := SampleNum * FSampleSize;
+    FStream.Position := (SampleNum div FSamplesPerFrame) * FFrameSize;
+    Result := True;
+  end;
+end;
+
 {$ENDIF}
 
 {$IFDEF ACS_MP3IN_L12_EXT}

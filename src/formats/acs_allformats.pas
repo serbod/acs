@@ -26,7 +26,9 @@ uses
     {$ENDIF}
   {$ENDIF}
 
-  {$IFDEF ACS_FLAC_EXT}
+  {$IFDEF ACS_FLAC}{$DEFINE ACS_FLAC_ANY}{$ENDIF}
+  {$IFDEF ACS_FLAC_EXT}{$DEFINE ACS_FLAC_ANY}{$ENDIF}
+  {$IFDEF ACS_FLAC_ANY}
   , ACS_FLAC
   {$ENDIF}
 
@@ -43,4 +45,3 @@ uses
 implementation
 
 end.
-
