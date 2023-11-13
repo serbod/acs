@@ -54,14 +54,18 @@ type
       1 : (RawData : Array[0..128] of byte);
   end;
 
+  { TWaveConverter }
+
   TWaveConverter = class(TMemoryStream)
   private
     FMaxFmtSize: DWord;
+    procedure SetError(AErrStr: string; AErrCode: Integer);
   public
     CurrentFormat: TACMWaveFormat;
     NewFormat: TACMWaveFormat;
-    function LoadStream(Stream : TStream): integer;
-    function Convert: integer;
+    ErrorText: string;
+    function LoadStream(Stream : TStream): Integer;
+    function Convert: Integer;
     function SaveWavToStream(MS: TStream): Integer;
     constructor Create;
     destructor Destroy; override;
@@ -71,12 +75,12 @@ implementation
 
 { TWaveConverter }
 
-function TWaveConverter.Convert: integer;
+function TWaveConverter.Convert: Integer;
 var
   FStreamHandle: HACMStream;
   OutputBufferSize: DWord;
   FStreamHeader: TACMStreamHeader;
-  OutPut: Pointer;
+  PtrOutPut: Pointer;
 begin
   FStreamHandle := nil;
 
@@ -84,99 +88,100 @@ begin
   // Open the stream we're going to use to convert from the current to the
   // new format
   //
-  Result := acmStreamOpen(FStreamhandle, nil, CurrentFormat.Format,
+  Result := acmStreamOpen(FStreamHandle, nil, CurrentFormat.Format,
    NewFormat.Format, nil, 0, 0, ACM_STREAMOPENF_NONREALTIME);
   if Result <> 0 then
   begin
-    //SetError('acmStreamOpen', Result);
+    SetError('acmStreamOpen', Result);
     Exit;
   end;
 
   //
   // Calculate the size of the converted data
   //
-  Result := acmStreamSize(FStreamHandle, self. Size, OutputBufferSize,
-   ACM_STREAMSIZEF_SOURCE);
+  Result := acmStreamSize(FStreamHandle, self.Size, OutputBufferSize, ACM_STREAMSIZEF_SOURCE);
 
   if Result <> 0 then
   begin
-//    SetError('acmStreamSize', Result);
+    SetError('acmStreamSize', Result);
     Exit;
   end;
 
   //
   // Allocate memory for the converted data
   //
-  GetMem(OutPut, OutputBufferSize);
-  FillChar(OutPut^,OutputBufferSize,#0);
+  GetMem(PtrOutPut, OutputBufferSize);
+  try
+    FillChar(PtrOutPut^, OutputBufferSize, #0);
 
-  Self.Seek(0,0);
+    Self.Position := 0;
 
-  //
-  // Initialize and prepare a header
-  //
-  with FStreamHeader do
-  begin
-    cbStruct := SizeOf(TACMStreamHeader);
-    fdwStatus := 0;
-    dwUser := 0;
-    pbSrc := self.Memory;
-    cbSrcLength := self.Size;
-    cbSrcLengthUsed := 0;
-    dwSrcUser := 0;
-    pbDst := OutPut;
-    cbDstLength := OutputBufferSize;
-    cbDstLengthUsed := 0;
-    dwDstUser := 0;
+    //
+    // Initialize and prepare a header
+    //
+    with FStreamHeader do
+    begin
+      cbStruct := SizeOf(TACMStreamHeader);
+      fdwStatus := 0;
+      dwUser := 0;
+      pbSrc := self.Memory;
+      cbSrcLength := self.Size;
+      cbSrcLengthUsed := 0;
+      dwSrcUser := 0;
+      pbDst := PtrOutPut;
+      cbDstLength := OutputBufferSize;
+      cbDstLengthUsed := 0;
+      dwDstUser := 0;
+    end;
+    Result := acmStreamPrepareHeader(FStreamHandle, FStreamHeader, 0);
+    if Result <> 0 then
+    begin
+      SetError('acmStreamPrepareHeader', Result);
+      Exit;
+    end;
+
+    //
+    // Tell acm to convert the stream
+    //
+    Result := acmStreamConvert(FStreamHandle, FStreamHeader, ACM_STREAMCONVERTF_BLOCKALIGN);
+    if Result <> 0 then
+    begin
+      SetError('acmStreamConvert', Result);
+      Exit;
+    end;
+
+    //
+    // Set the format eqaul to the newformat and copy the
+    // data over to the streams memory
+    //
+    Move(NewFormat.RawData, CurrentFormat.RawData, FMaxFmtSize);
+    Self.SetSize(OutputBufferSize);
+    Self.Position := 0;
+    Self.Write(PtrOutput^, OutputBufferSize);
+
+    //
+    // Unprepeare the header
+    //
+    Result := acmStreamUnprepareHeader(FStreamHandle, FStreamHeader, 0);
+    if Result <> 0 then
+    begin
+      SetError('acmStreamUnprepareHeader', Result);
+      Exit;
+    end;
+
+    //
+    // Close the stream
+    //
+    Result := acmStreamClose(FStreamHandle, 0);
+    if Result <> 0 then
+    begin
+      SetError('acmStreamClose', Result);
+      Exit;
+    end;
+
+  finally
+    FreeMem(PtrOutPut);
   end;
-  Result := acmStreamPrepareHeader(FStreamHandle,FStreamHeader, 0);
-  if Result <> 0 then
-  begin
-//    SetError('acmStreamPrepareHeader', Result);
-    Exit;
-  end;
-
-  //
-  // Tell acm to convert the stream
-  //
-  Result := acmStreamConvert(FStreamHandle,FStreamHeader,
-    ACM_STREAMCONVERTF_BLOCKALIGN);
-  if Result <> 0 then
-  begin
-//    SetError('acmStreamConvert', Result);
-    Exit;
-  end;
-
-  //
-  // Set the format eqaul to the newformat and copy the
-  // data over to the streams memory
-  //
-  Move(NewFormat.RawData, CurrentFormat.RawData, FMaxFmtSize);
-  Self.SetSize(OutputBufferSize);
-  Self.Seek(0,0);
-  Self.Write(Output^, OutputBufferSize);
-
-  //
-  // Unprepeare the header
-  //
-  Result := acmStreamUnprepareHeader(FStreamHandle,FStreamHeader, 0);
-  if Result <> 0 then
-  begin
-//    SetError('acmStreamUnprepareHeader', Result);
-    Exit;
-  end;
-
-  //
-  // Close the stream
-  //
-  Result := acmStreamClose(FStreamHandle, 0);
-  if Result <> 0 then
-  begin
-//    SetError('acmStreamClose', Result);
-    Exit;
-  end;
-
-  FreeMem(OutPut);
 end;
 
 constructor TWaveConverter.Create;
@@ -192,6 +197,23 @@ end;
 destructor TWaveConverter.Destroy;
 begin
   inherited;
+end;
+
+procedure TWaveConverter.SetError(AErrStr: string; AErrCode: Integer);
+begin
+  ErrorText := Format('%s: (%s)', [AErrStr, IntToHex(AErrCode, 8)]);
+  AErrStr := '';
+  case AErrCode of
+    ACMERR_NOTPOSSIBLE: AErrStr := 'The requested operation cannot be performed.';
+    ACMERR_BUSY: AErrStr := 'The stream header is currently in use and cannot be reused.';
+    ACMERR_UNPREPARED: AErrStr := 'The stream header is currently not prepared by the acmStreamPrepareHeader function.';
+    MMSYSERR_INVALFLAG: AErrStr := 'At least one flag is invalid.';
+    MMSYSERR_INVALHANDLE: AErrStr := 'The specified handle is invalid.';
+    MMSYSERR_INVALPARAM: AErrStr := 'At least one parameter is invalid.';
+    MMSYSERR_NOMEM: AErrStr := 'The system is unable to allocate resources.';
+  end;
+  if AErrStr <> '' then
+    ErrorText := ErrorText + ': ' + AErrStr;
 end;
 
 function TWaveConverter.LoadStream(Stream : TStream): integer;
@@ -222,7 +244,7 @@ begin
 
     while Pos < Stream.Size -1 do
     begin
-      Dec(Pos,7);
+      Dec(Pos, 7);
       Stream.Seek(Pos, soFromBeginning);
 
       NumRead := Stream.Read(Header, SizeOf(Header));

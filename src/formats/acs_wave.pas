@@ -1330,7 +1330,7 @@ begin
               wFormatTag := WAVE_FORMAT_PCM;
               ValidItems := ACM_FORMATSUGGESTF_WFORMATTAG;
               Res := acmFormatSuggest(nil,
-                WaveConverter.CurrentFormat.format,
+                WaveConverter.CurrentFormat.Format,
                 WaveConverter.NewFormat.Format,
                 SizeOf(TACMWaveFormat),
                 ValidItems);
@@ -1349,7 +1349,9 @@ begin
               //WaveConverter.CurrentFormat.Format.wFormatTag;
               _wavType := wtACM;
               FValid := True;
-            end;
+            end
+            else
+              raise EAcsException.Create('Error: WaveConverter.' + WaveConverter.ErrorText);
           finally
             FreeAndNil(WaveConverter);
           end;
@@ -1380,7 +1382,8 @@ begin
       end;
     end;
     FSampleSize := FChan * (FBPS div 8);
-    FTotalTime := FSize / (FSR * FSampleSize);
+    if (FSampleSize <> 0) and (FSR <> 0) then
+      FTotalTime := FSize / (FSR * FSampleSize);
   finally
     OpenCS.Leave();
   end;
