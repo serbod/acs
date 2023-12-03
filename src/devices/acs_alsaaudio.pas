@@ -458,27 +458,49 @@ end;
 
 function TALSAAudioOut.PollFreeBufferSize(): Integer;
 begin
-  repeat
-    // Try to get allowed output data size
-    // wait till the interface is ready for data, or 50 msecond has elapsed.
-    Result:=snd_pcm_wait(_audio_handle, 50);
-  until snd_ok(Result);
-  if Result = 0 then
-  begin
-    // timeout, need to wait a bit
-    Exit;
-  end;
-  if Result < 0 then
-  begin
-    //if Assigned(OnThreadException) then
-    //  OnThreadException(Self, Exception.Create('poll failed'));
-    Exit;
-  end;
-
   // find out how much space is available for playback data
   repeat
+
+    repeat
+      // Try to get allowed output data size
+      // wait till the interface is ready for data, or 50 msecond has elapsed.
+      Result:=snd_err('PollFreeBufferSize.snd_pcm_wait', snd_pcm_wait(_audio_handle, 50));
+    until snd_ok(Result);
+
     Result:=snd_err('PollFreeBufferSize.snd_pcm_avail_update', snd_pcm_avail_update(_audio_handle) );
+
+    // Strange, but sometimes "snd_pcm_avail_update" returns zeroes (instead of -ESysESTRPIPE???)
+    // and playback starts inifinite loop waiting
+    // Handle it the same as -ESysESTRPIPE
+    if (Result = 0) or (Result = -ESysESTRPIPE) then
+      begin
+        //WriteLn('Zero result instead of ESysESTRPIPE???');
+
+        // Wait until resumes
+        // See https://www.alsa-project.org/alsa-doc/alsa-lib/pcm.html#Error%20codes for details on ESTRPIPE
+        repeat
+          Result:=snd_pcm_resume(_audio_handle);
+          //WriteLn('snd_pcm_resume ', Result);
+          if snd_ok(Result) then
+            break;
+
+          sleep(10);
+        until false;
+
+        // Despite official documentation, "snd_pcm_prepare" is necessary even if snd_pcm_resume returned 0
+        //if Result < 0 then
+          begin
+            //WriteLn('snd_pcm_resume returned ', Result);
+            Result:=snd_pcm_prepare(_audio_handle);
+            //WriteLn('snd_pcm_prepare returned ', Result);
+          end;
+
+        //WriteLn('Result:=-ESysEAGAIN');
+        Result:=-ESysEAGAIN;
+      end;
+
   until snd_ok(Result);
+
   if Result < 0 then
   begin
     //if Assigned(OnThreadException) then
@@ -503,6 +525,7 @@ begin
   BytesAllowed:=PollFreeBufferSize();
   if BytesAllowed < 0 then Exit;
   // returned BytesAllowed not accurate, and can be greater, than actual
+  //WriteLn('TALSAAudioOut.DoOutput1. PollFreeBufferSize ', BytesAllowed);
 
   Result:=True;
   if BytesAllowed = 0 then
@@ -517,6 +540,7 @@ begin
     Len:=FInput.GetData(FBuffer.Memory + FBuffer.WritePosition, Len);
     FBuffer.WritePosition:=FBuffer.WritePosition + Len;
   end;
+  //WriteLn('TALSAAudioOut.DoOutput2. Len ', Len, ' FBuffer.UnreadSize ', FBuffer.UnreadSize);
 
   Result:=FBuffer.UnreadSize > 0; // current buffer is not empty
 
@@ -527,7 +551,7 @@ begin
     if BytesAllowed = 0 then Exit(True);
 
     iSamplesCount:=min(BytesAllowed, FBuffer.UnreadSize) div FSampleSize;
-    //WriteLn('TALSAAudioOut.DoOutput. PollFreeBufferSize ', BytesAllowed, ' Unread ', FBuffer.UnreadSize, ' -> Samples ', BytesAllowed div FSampleSize);
+    //WriteLn('TALSAAudioOut.DoOutput3. PollFreeBufferSize ', BytesAllowed, ' Unread ', FBuffer.UnreadSize, ' -> Samples ', BytesAllowed div FSampleSize);
 
     iSamplesWritten:=0;
     repeat
@@ -535,7 +559,7 @@ begin
       // size	- frames to be written
       // Returns a positive number of frames actually written, otherwise a negative error code
       repeat
-        Res:=snd_err('TALSAAudioOut.DoOutput1', snd_pcm_writei(_audio_handle, FBuffer.Memory + FBuffer.ReadPosition, iSamplesCount) );
+        Res:=snd_err('TALSAAudioOut.DoOutput4', snd_pcm_writei(_audio_handle, FBuffer.Memory + FBuffer.ReadPosition, iSamplesCount) );
       until snd_ok(Res);
 
       if Res < 0 then
