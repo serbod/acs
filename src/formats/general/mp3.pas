@@ -205,9 +205,10 @@ type
   TRealArr36 = array[0..35] of Real;
 
   TPdmp3Handle = record
-    Processed: Integer;
-    IStart, IEnd, OStart: Integer;
-    _in: array[0..INBUF_SIZE-1] of Byte;
+    Processed: Integer;     // readed bytes from beginning of stream, current position
+    IStart, IEnd: Integer;  // bounds inside _in[] round buffer
+    OStart: Integer;        // output position for Convert_Frame_S16()
+    _in: array[0..INBUF_SIZE-1] of Byte;  // round buffer
     _out: array[0..1] of TLongWordArr576;
     GFrameHeader: TMpeg1Header;
     GSideInfo: TMpeg1SideInfo;  // < 100 words
@@ -1747,8 +1748,10 @@ begin
     { In the big_values area there are two freq lines per Huffman word }
     id.GMainData.ls[gr][ch][ls_pos] := x;
     Inc(ls_pos);
+    if (ls_pos >= 576) then Break;
     id.GMainData.ls[gr][ch][ls_pos] := y;
     Inc(ls_pos);
+    if (ls_pos >= 576) then Break;
   end;
   { Read small values until ls_pos = 576 or we run out of huffman data }
   table_num := id.GSideInfo.Count1TableSelect[gr][ch] + 32;
@@ -1988,40 +1991,48 @@ begin
   id.GFrameHeader.Copyright          := (header and $00000008) shr 3;
   id.GFrameHeader.Original           := (header and $00000004) shr 2;
   id.GFrameHeader.Emphasis           := (header and $00000003) shr 0;
+
+  {$ifdef ACS_DEBUG}
+  WriteLn('Header=', IntToHex(header, 8), ' at file pos ', Get_Filepos(id));
+  {$endif}
   { Check for invalid values and impossible combinations }
   if (id.GFrameHeader.Id <> 1) then
   begin
+    {$ifdef ACS_DEBUG}
     WriteLn('ID must be 1');
-    WriteLn('Header=', IntToHex(header, 8), ' at file pos ', Get_Filepos(id));
+    {$endif}
     Exit;
   end;
   if (id.GFrameHeader.BitrateIndex = 0) then
   begin
+    {$ifdef ACS_DEBUG}
     WriteLn('Free bitrate format NIY!');
-    WriteLn('Header=', IntToHex(header, 8), ' at file pos ', Get_Filepos(id));
+    {$endif}
     Exit;
   end;
   if (id.GFrameHeader.BitrateIndex = 15) then
   begin
+    {$ifdef ACS_DEBUG}
     WriteLn('bitrate_index = 15 is invalid!');
-    WriteLn('Header=', IntToHex(header, 8), ' at file pos ', Get_Filepos(id));
+    {$endif}
     Exit;
   end;
   if (id.GFrameHeader.SamplingFrequency = 3) then
   begin
+    {$ifdef ACS_DEBUG}
     WriteLn('sampling_frequency = 3 is invalid!');
-    WriteLn('Header=', IntToHex(header, 8), ' at file pos ', Get_Filepos(id));
+    {$endif}
     Exit;
   end;
   if (id.GFrameHeader.Layer = 0) then
   begin
+    {$ifdef ACS_DEBUG}
     WriteLn('layer = 0 is invalid!');
-    WriteLn('Header=', IntToHex(header, 8), ' at file pos ', Get_Filepos(id));
+    {$endif}
     Exit;
   end;
 
   id.GFrameHeader.layer := 4 - id.GFrameHeader.layer;
-  { WriteLn('Header=', IntToHex(header, 8)); }
   if (id.NewHeader <> 0) then
     id.NewHeader := 1;
 

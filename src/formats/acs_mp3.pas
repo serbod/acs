@@ -122,7 +122,7 @@ begin
 
         FFrameSize := GetFrameSize(h);
         FSamplesPerFrame := GetSamplesPerFrame(h);
-        FTotalSamples := (FStream.Size div GetFrameSize(h)) * GetSamplesPerFrame(h);
+        FTotalSamples := (FStream.Size div FFrameSize) * FSamplesPerFrame;
         if FSR <> 0 then
           FTotalTime := FTotalSamples / FSR;
         FSize := FStream.Size;
