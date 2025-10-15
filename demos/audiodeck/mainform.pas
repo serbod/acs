@@ -15,7 +15,7 @@ uses
   {$ENDIF}
   acs_stdaudio, //Wavemapper Driver
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ComCtrls, EditBtn, acs_file, acs_audio, acs_allformats, acs_classes,
+  ComCtrls, EditBtn, ExtCtrls, acs_file, acs_audio, acs_allformats, acs_classes,
   TypInfo;
 
 type
@@ -34,7 +34,9 @@ type
     gbInput: TGroupBox;
     gbOutput: TGroupBox;
     gbProgress: TGroupBox;
+    lbOutSamples: TLabel;
     lbOutPosition: TLabel;
+    lbOutSamplesLabel: TLabel;
     ListBoxAudioInDrivers: TListBox;
     ListBoxAudioInDevices: TListBox;
     ListBoxAudioOutDevices: TListBox;
@@ -47,6 +49,7 @@ type
     pgcOutputTypes: TPageControl;
     pgcInputTypes: TPageControl;
     ProgressBar1: TProgressBar;
+    tmr100ms: TTimer;
     tsInputFile: TTabSheet;
     tsOutFile: TTabSheet;
     tsOutAudioDevice: TTabSheet;
@@ -64,6 +67,7 @@ type
       User: boolean);
     procedure ListBoxFileOutDriversSelectionChange(Sender: TObject;
       User: boolean);
+    procedure tmr100msTimer(Sender: TObject);
   private
     { private declarations }
     procedure OnProgressHandler(Sender: TComponent);
@@ -304,10 +308,21 @@ begin
   //SelectedExt:=
 end;
 
+procedure TFormMain.tmr100msTimer(Sender: TObject);
+begin
+  ProgressBar1.Position := Round(AcsFileIn1.Progress);
+  if Assigned(AcsOut) then
+  begin
+    lbOutPosition.Caption := SecondsToStr(AcsOut.TimeElapsed);
+    lbOutSamples.Caption := IntToStr(AcsOut.TotalSamplesCount);
+  end;
+end;
+
 procedure TFormMain.OnProgressHandler(Sender: TComponent);
 begin
   ProgressBar1.Position:=Round(AcsFileIn1.Progress);
-  lbOutPosition.Caption:=SecondsToStr(AcsOut.TimeElapsed);
+  if Assigned(AcsOut) then
+    lbOutPosition.Caption:=SecondsToStr(AcsOut.TimeElapsed);
 end;
 
 procedure TFormMain.PrepareAudioChain();
