@@ -19,6 +19,7 @@ TVorbisIn - AcsBuffer, tested
 
 unit acs_vorbis;
 
+{$I ../../acs_defines.inc}
 {$DEFINE USE_VORBIS_11}
 
 {$IFDEF FPC}
@@ -32,7 +33,13 @@ uses
   baseunix,
 {$ENDIF}
 
-  ACS_File, Classes, SysUtils, ACS_Classes, ogg, vorbiscodec, VorbisFile, VorbisEnc,
+  ACS_File, Classes, SysUtils, ACS_Classes,
+{$IFDEF ACS_VORBIS_EXT}
+  ogg, vorbiscodec, VorbisFile, VorbisEnc,
+{$ENDIF}
+{$IFDEF ACS_VORBIS_BUILTIN}
+  vorbis,
+{$ENDIF}
   ACS_Strings, acs_tags, acs_types;
 
 type
@@ -55,6 +62,7 @@ type
     FDesiredNominalBitrate: TVorbisBitRate;
     FDesiredMaximumBitrate: TVorbisBitRate;
     FMinimumBitrate: TVorbisBitRate;
+    {$IFDEF ACS_VORBIS_EXT}
     OggSS: ogg_stream_state;
     OggPg: ogg_page;
     OggPk: ogg_packet;
@@ -63,6 +71,7 @@ type
     Vdsp: vorbis_dsp_state;
     VBlock: vorbis_block;
     header, header_comm, header_code: ogg_packet;
+    {$ENDIF}
     FCompression: Single;
     EndOfStream: Boolean;
     FComments: TStringList;
@@ -150,7 +159,17 @@ type
     FComments: TStringList;
     FTags : TVorbisTags;
     //FVendor: String;
+    {$IFDEF ACS_VORBIS_EXT}
     VFile: OggVorbis_File;
+    {$ENDIF}
+    {$IFDEF ACS_VORBIS_BUILTIN}
+    FVorb: TStbVorbis;  // stb_vorbis context
+    FVorbData: TBytes;
+    FVorbDataPos, FVorbDataSize: Integer;
+    FIsNeedRefillBuffer: Boolean;
+    FVorbOutputs: TOutputs;  // float-point samples
+    FOutSamplesArr: TSamplesArray;
+    {$ENDIF}
     cursec: Integer;
     FMaxBitrate: Integer;
     FNominalBitrate: Integer;
@@ -172,7 +191,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function GetData(ABuffer: Pointer; ABufferSize: Integer): Integer; override;
-    function Seek(SampleNum: Integer): Boolean; override;
+    function Seek(ASampleNum: Integer): Boolean; override;
     (* Property: BitStreams
       Read this property to get number of logical bitstreams in the
       multi-streamed file. By default the component plays all the bitstreams
@@ -214,15 +233,17 @@ type
 
 implementation
 
+{$IFDEF ACS_VORBIS_EXT}
+// callcack functions
 function cbRead(ptr: Pointer; size, nmemb: Cardinal; const datasource: Pointer): Cardinal; cdecl;
 var
   VI: TVorbisIn;
   //Buffer: array of Byte;
 begin
-  VI:=TVorbisIn(datasource);
+  VI := TVorbisIn(datasource);
   //SetLength(Buffer, size*nmemb);
-  //Result:=VI.FStream.Read(Buffer[0], size*nmemb);
-  Result:=VI.FStream.Read(ptr^, size*nmemb);
+  //Result := VI.FStream.Read(Buffer[0], size*nmemb);
+  Result := VI.FStream.Read(ptr^, size*nmemb);
   //Move(Buffer[0], ptr^, Result);
   //SetLength(Buffer, 0);
 end;
@@ -235,55 +256,89 @@ begin
   VI:=TVorbisIn(datasource);
   if not VI.Seekable then
   begin
-    Result:=-1;
+    Result := -1;
     Exit;
   end;
   case whence of
-    SEEK_SET: Origin:=TSeekOrigin(soFromBeginning);
-    SEEK_CUR: Origin:=TSeekOrigin(soFromCurrent);
-    SEEK_END: Origin:=TSeekOrigin(soFromEnd);
+    SEEK_SET: Origin := TSeekOrigin(soFromBeginning);
+    SEEK_CUR: Origin := TSeekOrigin(soFromCurrent);
+    SEEK_END: Origin := TSeekOrigin(soFromEnd);
   end;
-  Result:=VI.FStream.Seek(offset, Origin);
+  Result := VI.FStream.Seek(offset, Origin);
 end;
 
 function cbClose(const datasource: Pointer): Integer; cdecl;
 var
   VI: TVorbisIn;
 begin
-  VI:=TVorbisIn(datasource);
+  VI := TVorbisIn(datasource);
   if Assigned(VI.FStream) then FreeAndNil(VI.FStream);
-  Result:=0;
+  Result := 0;
 end;
 
 function cbTell(const datasource: Pointer): Integer; cdecl;
 var
   VI: TVorbisIn;
 begin
-  VI:=TVorbisIn(datasource);
-  Result:=VI.FStream.Position
+  VI := TVorbisIn(datasource);
+  Result := VI.FStream.Position
 end;
+{$ENDIF ACS_VORBIS_EXT}
+
+{$IFDEF ACS_VORBIS_BUILTIN}
+function GerVorbErrorText(VorbError: STBVorbisError): string;
+begin
+  case VorbError of
+    VORBIS__no_error: Result := 'no error';
+    VORBIS_need_more_data: Result := 'need more data'; // not a real error
+    VORBIS_invalid_api_mixing: Result := 'can''t mix API modes';
+    VORBIS_outofmem: Result := 'not enough memory';
+    VORBIS_feature_not_supported: Result := 'feature not supported'; // uses floor 0
+    VORBIS_too_many_channels: Result := 'STB_VORBIS_MAX_CHANNELS is too small';
+    VORBIS_file_open_failure: Result := 'file open failed';
+    VORBIS_seek_without_length: Result := 'can''t seek in unknown-length file';
+
+    VORBIS_unexpected_eof: Result := 'file is truncated?';
+    VORBIS_seek_invalid: Result := 'seek past EOF';
+    // decoding errors (corrupt/invalid stream) -- you probably
+    // don't care about the exact details of these
+    // vorbis errors:
+    VORBIS_invalid_setup: Result := 'invalid setup';
+    VORBIS_invalid_stream: Result := 'invalid stream';
+    // ogg errors:
+    VORBIS_missing_capture_pattern: Result := 'missing capture pattern';
+    VORBIS_invalid_stream_structure_version: Result := 'invalid stream structure version';
+    VORBIS_continued_packet_flag_invalid: Result := 'continued packet flag invalid';
+    VORBIS_incorrect_stream_serial_number: Result := 'incorrect stream serial number';
+    VORBIS_invalid_first_page: Result := 'invalid first page';
+    VORBIS_bad_packet_type: Result := 'bad packet type';
+    VORBIS_cant_find_last_page: Result := 'can''t find last page';
+    VORBIS_seek_failed: Result := 'seek failed';
+  end;
+end;
+{$ENDIF ACS_VORBIS_BUILTIN}
 
 function VorbisBitrateToInt(Bitrate: TVorbisBitrate): Integer;
 begin
   case Bitrate of
-    br24: Result:=24000;
-    br32: Result:=32000;
-    br45: Result:=45000;
-    br48: Result:=48000;
-    br56: Result:=46000;
-    br64: Result:=64000;
-    br80: Result:=80000;
-    br96: Result:=96000;
-    br112: Result:=112000;
-    br128: Result:=128000;
-    br144: Result:=144000;
-    br160: Result:=160000;
-    br192: Result:=192000;
-    br224: Result:=224000;
-    br256: Result:=256000;
-    br320: Result:=320000;
-    br499: Result:=499000;
-    else Result:=-1;
+    br24:  Result :=  24000;
+    br32:  Result :=  32000;
+    br45:  Result :=  45000;
+    br48:  Result :=  48000;
+    br56:  Result :=  46000;
+    br64:  Result :=  64000;
+    br80:  Result :=  80000;
+    br96:  Result :=  96000;
+    br112: Result := 112000;
+    br128: Result := 128000;
+    br144: Result := 144000;
+    br160: Result := 160000;
+    br192: Result := 192000;
+    br224: Result := 224000;
+    br256: Result := 256000;
+    br320: Result := 320000;
+    br499: Result := 499000;
+    else Result   := -1;
   end;
 end;
 
@@ -292,24 +347,26 @@ end;
 constructor TVorbisOut.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FBufferSize:=$10000; // default buffer size
-  FCompression:=0.2;
-  FComments:=TStringList.Create();
-  FTags:=TVorbisTags.Create();
-  FDesiredNominalBitrate:=brAutoSelect;
-  FDesiredMaximumBitrate:=brAutoSelect;
-  FMinimumBitrate:=brAutoSelect;
+  FBufferSize := $10000; // default buffer size
+  FCompression := 0.2;
+  FComments := TStringList.Create();
+  FTags := TVorbisTags.Create();
+  FDesiredNominalBitrate := brAutoSelect;
+  FDesiredMaximumBitrate := brAutoSelect;
+  FMinimumBitrate := brAutoSelect;
+  {$IFDEF ACS_VORBIS_EXT}
   if not (csDesigning in ComponentState) then
   begin
     if not LiboggLoaded then
-      raise EAcsException.Create(Format(strCoudntloadLib,[Liboggpath]));
+      raise EAcsException.Create(Format(strCoudntloadLib, [Liboggpath]));
     if not LibvorbisLoaded then
-      raise EAcsException.Create(Format(strCoudntloadLib,[LibvorbisPath]));
+      raise EAcsException.Create(Format(strCoudntloadLib, [LibvorbisPath]));
     if not LibvorbisfileLoaded then
-      raise EAcsException.Create(Format(strCoudntloadLib,[LibvorbisfilePath]));
+      raise EAcsException.Create(Format(strCoudntloadLib, [LibvorbisfilePath]));
     if not LibvorbisencLoaded then
-      raise EAcsException.Create(Format(strCoudntloadLib,[LibvorbisencPath]));
+      raise EAcsException.Create(Format(strCoudntloadLib, [LibvorbisencPath]));
   end;
+  {$ENDIF ACS_VORBIS_EXT}
 end;
 
 destructor TVorbisOut.Destroy();
@@ -338,7 +395,7 @@ begin
 
   if FFileMode = foAppend then
     FStream.Seek(0, soFromEnd);
-  EndOfStream:=False;
+  EndOfStream := False;
   InitVorbis();
  (*
   vorbis_info_init(VInfo);
@@ -387,11 +444,13 @@ procedure TVorbisOut.Done();
 begin
   FComments.Clear();
   FTags.Clear();
+  {$IFDEF ACS_VORBIS_EXT}
   ogg_stream_clear(OggSS);
   vorbis_block_clear(VBlock);
   vorbis_dsp_clear(Vdsp);
   vorbis_comment_clear(VComm);
   vorbis_info_clear(VInfo);
+  {$ENDIF}
   inherited Done();
 end;
 
@@ -399,26 +458,30 @@ function TVorbisOut.DoOutput(Abort: Boolean):Boolean;
 var
   i, j, SamplesRead, BytesPerSample : LongWord;
   Len: LongWord;
+  {$IFDEF ACS_VORBIS_EXT}
   out_buf: PPFloat;
   tmpBuf: array[0..16] of PFloat;
+  {$ENDIF}
   buf8: PAcsBuffer8;
   Ptr : Pointer;
   wres : Integer;
 begin
   // No exceptions Here
-  Result:=True;
+  Result := True;
   if not CanOutput then Exit;
   if Abort or EndOfStream then
   begin
     (* We don't close file here to avoide exceptions
       if output componenet's Stop method is called *)
-    Result:=False;
+    Result := False;
     Exit;
   end;
 
-  Len:=FillBufferFromInput();
+  Len := FillBufferFromInput();
   BytesPerSample := FInput.Channels * (FInput.BitsPerSample div 8);
   SamplesRead := Len div BytesPerSample;
+
+  {$IFDEF ACS_VORBIS_EXT}
   out_buf := vorbis_analysis_buffer(Vdsp, FBuffer.Size);
   if Len <> 0 then
   begin
@@ -487,6 +550,7 @@ begin
       end;
     end;
   end;
+  {$ENDIF ACS_VORBIS_EXT}
 end;
 
 { TVorbisIn }
@@ -494,9 +558,10 @@ end;
 constructor TVorbisIn.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FBufferSize:=$8000;
-  FComments:=TStringList.Create();
-  FTags:=TVorbisTags.Create();
+  FBufferSize := $8000;
+  FComments := TStringList.Create();
+  FTags := TVorbisTags.Create();
+  {$IFDEF ACS_VORBIS_EXT}
   if not (csDesigning in ComponentState) then
   begin
     if not LiboggLoaded then
@@ -508,6 +573,7 @@ begin
     if not LibvorbisencLoaded then
     raise EAcsException.Create(Format(strCoudntloadLib, [LibvorbisencPath]));
   end;
+  {$ENDIF ACS_VORBIS_EXT}
 end;
 
 destructor TVorbisIn.Destroy();
@@ -519,41 +585,50 @@ end;
 
 procedure TVorbisIn.OpenFile();
 var
+  {$IFDEF ACS_VORBIS_EXT}
   PVComm: PVORBIS_COMMENT;
   PVInfo: PVORBIS_INFO;
+  Callbacks: OV_CALLBACKS;
   PComment: PPAnsiChar;
   Comment: PAnsiChar;
   StrComment: AnsiString;
-  Callbacks: OV_CALLBACKS;
   res, n : Integer;
   CN, CV : String;
+  {$ENDIF}
+  {$IFDEF ACS_VORBIS_BUILTIN}
+  pData: PUInt8;
+  iBytesRead: Integer;
+  VError: STBVorbisError;
+  VInfo: TStbVorbisInfo;
+  {$ENDIF}
 begin
   OpenCS.Enter();
   try
     inherited OpenFile();
     if FOpened then
     begin
-      FValid:=False;
-      EndOfStream:=False;
-      Callbacks.read_func:=cbRead;
-      Callbacks.close_func:=cbClose;
-      Callbacks.seek_func:=cbSeek;
-      Callbacks.tell_func:=cbTell;
-      res:=ov_open_callbacks(Self, VFile, nil, 0, Callbacks);
+      FValid := False;
+      EndOfStream := False;
+      FComments.Clear();
+      {$IFDEF ACS_VORBIS_EXT}
+      Callbacks.read_func := cbRead;
+      Callbacks.close_func := cbClose;
+      Callbacks.seek_func := cbSeek;
+      Callbacks.tell_func := cbTell;
+      res := ov_open_callbacks(Self, VFile, nil, 0, Callbacks);
       if res <> 0 then
         raise EAcsException.Create('Failed to open an ogg file: ' + IntToStr(res));
       ov_test_open(VFile);
 
-      FComments.Clear();
-      PVComm:=ov_comment(VFile, -1);
-      PComment:=PVComm.user_comments;
-      Comment:=PComment^;
+      PVComm := ov_comment(VFile, -1);
+      PComment := PVComm.user_comments;
+      Comment := PComment^;
 
       while Comment <> nil do
       begin
-        StrComment:=Comment;
+        StrComment := Comment;
         FComments.Add(StrComment);
-        n:=Pos('=', StrComment);
+        n := Pos('=', StrComment);
         CN := Copy(StrComment, 1, n-1);
         CV := Copy(StrComment, n+1, MaxInt);
         CN := AnsiLowerCase(CN);
@@ -565,23 +640,76 @@ begin
         else if CN = _vorbis_Track  then FTags.Track := UTF8Decode(CV);
 
         Inc(PtrUInt(PComment), SizeOf(PVComm.user_comments));
-        Comment:=PComment^;
+        Comment := PComment^;
       end;
-      //FVendor:=PVComm.vendor;
-      PVInfo:=ov_info(VFile, -1);
-      FChan:=PVInfo.channels;
-      FSR:=PVInfo.rate;
-      FBPS:=16;
-      FMaxBitrate:=PVInfo.bitrate_upper;
-      FNominalBitrate:=PVInfo.bitrate_nominal;
-      FMinBitrate:=PVInfo.bitrate_lower;
-      FTotalSamples:=ov_pcm_total(VFile, -1);
-      FSize:=(FTotalSamples shl 1) * PVInfo.channels;
-      cursec:=-1;
-      FTotalTime:=ov_time_total(VFile, -1);
+      //FVendor := PVComm.vendor;
+      PVInfo := ov_info(VFile, -1);
+      FChan := PVInfo.channels;
+      FSR := PVInfo.rate;
+      FBPS := 16;
+      FMaxBitrate := PVInfo.bitrate_upper;
+      FNominalBitrate := PVInfo.bitrate_nominal;
+      FMinBitrate := PVInfo.bitrate_lower;
+      FTotalSamples := ov_pcm_total(VFile, -1);
+      FSize := (FTotalSamples shl 1) * PVInfo.channels;
+      cursec := -1;
+      FTotalTime := ov_time_total(VFile, -1);
       //ov_pcm_seek(VFile, FOffset);
-      FValid:=True;
-      FOpened:=True;
+      {$ENDIF ACS_VORBIS_EXT}
+
+      {$IFDEF ACS_VORBIS_BUILTIN}
+      SetLength(FVorbData, FBufferSize);
+      // read file
+      FStream.Read(FVorbData[0], FBufferSize);
+
+      pData := Addr(FVorbData[0]);
+      iBytesRead := 0;
+      VError := VORBIS__no_error;
+
+      if not stb_vorbis_open_pushdata(FVorb, pData, FBufferSize, iBytesRead, VError) then
+      begin
+        raise EAcsException.Create('Failed to open an ogg file: ' + GerVorbErrorText(VError));
+      end;
+
+      if (VError = VORBIS_need_more_data) and (iBytesRead = 0) then
+      begin
+        raise EAcsException.Create('Need more buffer size for Vorbis!');
+      end;
+
+      // get file info (only for file)
+      {
+      VInfo := stb_vorbis_get_info(FVorb);
+      //FMaxBitrate := VInfo.bitrate_upper;
+      //FNominalBitrate := VInfo.bitrate_nominal;
+      //FMinBitrate := VInfo.bitrate_lower;
+      FTotalSamples := stb_vorbis_stream_length_in_samples(FVorb);
+      FSize := (FTotalSamples shl 1) * FChan;
+      cursec := -1;
+      FTotalTime := stb_vorbis_stream_length_in_seconds(FVorb);
+      }
+
+      FChan := FVorb.channels;
+      FSR := FVorb.sample_rate;
+      FBPS := 16;
+      FMaxBitrate := FVorb.bitrate_upper;
+      FNominalBitrate := FVorb.bitrate_nominal;
+      FMinBitrate := FVorb.bitrate_lower;
+
+      if FNominalBitrate > 0 then
+      begin
+        // roughly guess by file size
+        FTotalTime := FStream.Size / (FNominalBitrate / 8) * 1.40;
+      end;
+
+      // init data buf
+      FVorbDataPos := Length(FVorbData);
+      FVorbDataSize := 0;
+      FIsNeedRefillBuffer := True;
+      FStream.Position := iBytesRead;
+
+      {$ENDIF ACS_VORBIS_BUILTIN}
+      FValid := True;
+      FOpened := True;
     end;
 
   finally
@@ -596,8 +724,13 @@ begin
     if FOpened then
     begin
       //if ov_seekable(VFile) <> 0 then ov_pcm_seek(VFile, 0);
+      {$IFDEF ACS_VORBIS_EXT}
       ov_clear(VFile);
-      FOpened:=False;
+      {$ENDIF}
+      {$IFDEF ACS_VORBIS_BUILTIN}
+      stb_vorbis_close(FVorb);
+      {$ENDIF ACS_VORBIS_BUILTIN}
+      FOpened := False;
     end;
     inherited CloseFile();
   finally
@@ -607,29 +740,34 @@ end;
 
 function TVorbisIn.GetData(ABuffer: Pointer; ABufferSize: Integer): Integer;
 var
-  Len, offs, BufSizeRemain: Integer;
+  OutSize, offs, BufSizeRemain: Integer;
+  nChan, nSamples, nSampesSize: Integer;
+  OutArrOffs: Integer;
 begin
   if not Active then
     raise EAcsException.Create('The Stream is not opened');
+
   if FAudioBuffer.UnreadSize <= 0 then
   begin
     {
     // seek if offset defined
     if FOffset <> 0 then
     begin
-      offs:=Round((FOffset/100)*FSize);
-      FPosition:=FPosition + offs;
+      offs := Round((FOffset/100)*FSize);
+      FPosition := FPosition + offs;
       if FPosition < 0 then FPosition:=0
       else if FPosition > FSize then FPosition:=FSize;
-      //tmp:=(FPosition/FSize)*FTime;
+      //tmp := (FPosition/FSize)*FTime;
       if ov_seekable(VFile) <> 0 then
       ov_pcm_seek(VFile, (FPosition shr 1) div FChan);
-      FOffset:=0;
+      FOffset := 0;
     end;
     }
 
     FAudioBuffer.Reset();
-    BufSizeRemain:=FAudioBuffer.Size;
+    BufSizeRemain := FAudioBuffer.Size;
+
+    {$IFDEF ACS_VORBIS_EXT}
     if not EndOfStream then
     begin
       (* The ov_read function can return data in quite small chunks
@@ -637,121 +775,201 @@ begin
         or there is no more data to read. *)
       while BufSizeRemain > 0 do
       begin
-        Len:=ov_read(VFile, (FAudioBuffer.Memory+FAudioBuffer.WritePosition), BufSizeRemain, 0, 2, 1, @cursec);
-        FAudioBuffer.WritePosition:=FAudioBuffer.WritePosition + Len;
-        Dec(BufSizeRemain, Len);
-        if Len <= 0 then
-        begin
-          EndOfStream:=True;
-          Break;
-        end;
+        OutSize := ov_read(VFile, (FAudioBuffer.Memory+FAudioBuffer.WritePosition), BufSizeRemain, 0, 2, 1, @cursec);
+      end;
+
+      FAudioBuffer.WritePosition := FAudioBuffer.WritePosition + OutSize;
+      Dec(BufSizeRemain, OutSize);
+      if OutSize <= 0 then
+      begin
+        EndOfStream := True;
+        Break;
       end;
     end;
+    {$ENDIF}
+
+    {$IFDEF ACS_VORBIS_BUILTIN}
+    // read next portion
+    OutSize := 1;
+    while (not EndOfStream) and ((OutSize > 0) or FIsNeedRefillBuffer) do
+    begin
+
+      if FIsNeedRefillBuffer then
+      begin
+        FIsNeedRefillBuffer := False;
+        // refill buffer
+        FStream.Position := FStream.Position - (Length(FVorbData) - FVorbDataPos); // file position to bufInPos
+        FVorbDataPos := 0;
+        FVorbDataSize := FStream.Read(FVorbData[FVorbDataPos], Length(FVorbData) - FVorbDataPos);
+      end;
+
+      // decode samples
+      OutSize := stb_vorbis_decode_frame_pushdata(FVorb, @FVorbData[FVorbDataPos], FVorbDataSize,
+        nChan, FVorbOutputs, nSamples);
+
+      if (OutSize = 0) and (nSamples = 0) then
+      begin
+        if FStream.Position >= FStream.Size then
+        begin
+          EndOfStream := True;
+          Break;
+        end;
+
+        // need more data
+        if FVorbDataPos > 0 then
+        begin
+          FIsNeedRefillBuffer := True;
+        end
+        else
+        begin
+          raise EAcsException.Create('Vorbis: unexpected end of file!');
+        end;
+      end
+      else
+      if (OutSize > 0) then
+      begin
+        // skip used data
+        Inc(FVorbDataPos, OutSize);
+        Dec(FVorbDataSize, OutSize);
+        if FVorbDataSize < 16 then
+          FIsNeedRefillBuffer := True;
+
+        if (nSamples > 0) then
+        begin
+          Inc(FTotalSamples, nSamples);
+
+          // convert samples (real to int16)
+          SetLength(FOutSamplesArr, nSamples * nChan);
+          convert_channels_short_interleaved(nChan, FOutSamplesArr, 0, nChan, FVorbOutputs, 0, nSamples);
+
+          // copy decoded samples to audio buffer
+          nSampesSize := nSamples * nChan * SizeOf(Smallint);
+          FAudioBuffer.Write(FOutSamplesArr[0], nSampesSize);
+          Dec(BufSizeRemain, nSampesSize);
+
+          if BufSizeRemain < nSampesSize then
+            Break;
+        end;
+      end;
+
+    end;
+    {$ENDIF ACS_VORBIS_BUILTIN}
   end;
 
-  Result:=ABufferSize;
+  Result := ABufferSize;
   if Result > FAudioBuffer.UnreadSize then
-    Result:=FAudioBuffer.UnreadSize;
+    Result := FAudioBuffer.UnreadSize;
   FAudioBuffer.Read(ABuffer^, Result);
   Inc(FPosition, Result);
 end;
 
 function TVorbisIn.GetMaxBitrate(): Integer;
 begin
-  Result:=FMaxBitrate;
+  Result := FMaxBitrate;
 end;
 
 function TVorbisIn.GetNominalBitrate(): Integer;
 begin
-  Result:=FNominalBitrate;
+  Result := FNominalBitrate;
 end;
 
 function TVorbisIn.GetComments(): TStringList;
 begin
-  Result:=FComments;
+  Result := FComments;
 end;
 
 function TVorbisIn.GetTags(): TVorbisTags;
 begin
-  Result:=FTags;
+  Result := FTags;
 end;
 
 function TVorbisIn.GetMinBitrate(): Integer;
 begin
-  Result:=FMinBitrate;
+  Result := FMinBitrate;
 end;
 
 procedure TVorbisOut.SetFileMode(AMode: TAcsFileOutputMode);
 begin
-  FFileMode:=AMode;
+  FFileMode := AMode;
 end;
 
 function TVorbisIn.GetBitStreams(): Integer;
 begin
-  Result:=0;
+  Result := 0;
   if Active then
   begin
-    if ov_seekable(VFile)<>0 then
-      Result:=ov_streams(VFile);
+    {$IFDEF ACS_VORBIS_EXT}
+    if ov_seekable(VFile) <> 0 then
+      Result := ov_streams(VFile);
+    {$ENDIF}
   end;
 end;
 
 function TVorbisIn.GetInstantBitRate(): Integer;
 begin
-  Result:=0;
+  Result := 0;
   if Active then
   begin
-    Result:=ov_bitrate_instant(VFile);
+    {$IFDEF ACS_VORBIS_EXT}
+    Result := ov_bitrate_instant(VFile);
+    {$ENDIF}
   end;
 end;
 
 function TVorbisIn.GetCurrentBitStream(): Integer;
 begin
-  Result:=-1;
+  Result := -1;
   if Active then
   begin
-    if ov_seekable(VFile)<>0 then
-      Result:=VFile.current_link;
+    {$IFDEF ACS_VORBIS_EXT}
+    if ov_seekable(VFile) <> 0 then
+      Result := VFile.current_link;
+    {$ENDIF}
   end;
 end;
 
 procedure TVorbisIn.SetCurrentBitStream(BS: Integer);
+{$IFDEF ACS_VORBIS_EXT}
 var
   Offset: POGG_INT64_T;
+{$ENDIF}
 begin
   if Active then
   begin
-    if ov_seekable(VFile)<>0 then
+    {$IFDEF ACS_VORBIS_EXT}
+    if ov_seekable(VFile) <> 0 then
       if (BS >= 0) and (BS < ov_streams(VFile)) then
       begin
-        Offset:=VFile.offsets;
+        Offset := VFile.offsets;
         Inc(Offset, BS);
         FStream.Seek(Offset^, soFromBeginning);
       end;
+    {$ENDIF}
   end;
 end;
 
 procedure TVorbisOut.SetDesiredNominalBitrate(AValue: TVorbisBitRate);
 begin
-  FDesiredNominalBitrate:=AValue;
+  FDesiredNominalBitrate := AValue;
   if FMinimumBitrate > FDesiredNominalBitrate then
-    FMinimumBitrate:=FDesiredNominalBitrate;
+    FMinimumBitrate := FDesiredNominalBitrate;
   if FDesiredMaximumBitrate < FDesiredNominalBitrate then
-    FDesiredMaximumBitrate:=FDesiredNominalBitrate;
+    FDesiredMaximumBitrate := FDesiredNominalBitrate;
   if FDesiredNominalBitrate = brAutoSelect then
-    FDesiredMaximumBitrate:=brAutoSelect;
+    FDesiredMaximumBitrate := brAutoSelect;
 end;
 
 procedure TVorbisOut.SetDesiredMaximumBitrate(AValue: TVorbisBitRate);
 begin
   if FDesiredNominalBitrate = brAutoSelect then Exit;
   if (AValue = brAutoSelect) or (AValue >= FDesiredNominalBitrate) then
-  FDesiredMaximumBitrate:=AValue;
+  FDesiredMaximumBitrate := AValue;
 end;
 
 procedure TVorbisOut.SetMinimumBitrate(AValue: TVorbisBitRate);
 begin
-  if AValue <= FDesiredNominalBitrate then FMinimumBitrate:=AValue;
+  if AValue <= FDesiredNominalBitrate then
+    FMinimumBitrate := AValue;
 end;
 
 procedure TVorbisOut.InitVorbis();
@@ -759,6 +977,7 @@ var
   i, maxbr, minbr, nombr : Integer;
   Name, Value : AnsiString;
 begin
+  {$IFDEF ACS_VORBIS_EXT}
   vorbis_info_init(VInfo);
   if DesiredNominalBitrate = brAutoSelect then
   begin
@@ -806,24 +1025,32 @@ begin
     FStream.Write(OggPg.header^, OggPg.header_len);
     FStream.Write(OggPg.body^, OggPg.body_len);
   end;
+  {$ENDIF ACS_VORBIS_EXT}
 end;
 
-function TVorbisIn.Seek(SampleNum: Integer): Boolean;
+function TVorbisIn.Seek(ASampleNum: Integer): Boolean;
 begin
-  Result:=False;
+  Result := False;
   if not FSeekable then Exit;
-  if FOpened then ov_pcm_seek(VFile, SampleNum);
-  Result:=True;
+  {$IFDEF ACS_VORBIS_EXT}
+  if FOpened then ov_pcm_seek(VFile, ASampleNum);
+  {$ENDIF}
+  Result := True;
 end;
   
 initialization
+  {$IFDEF ACS_VORBIS_EXT}
   if VorbisLoadLibrary() then
+  {$ENDIF}
   begin
     FileFormats.Add('ogg', 'Ogg Vorbis', TVorbisOut);
     FileFormats.Add('ogg', 'Ogg Vorbis', TVorbisIn);
   end;
 
 finalization
+
+{$IFDEF ACS_VORBIS_EXT}
   VorbisUnloadLibrary();
+{$ENDIF}
 
 end.

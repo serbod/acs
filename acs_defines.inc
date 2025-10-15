@@ -7,8 +7,12 @@
 //{$define ACS_MP3IN_L12_EXT}
 
 //
+// Uncomment to enable native Pascal vorbis encoders/decoders, which no NOT require external dependencies
+{$define ACS_VORBIS_BUILTIN}
+
+//
 // Uncomment to enable external vorbis encoders/decoders, which DO require external dependencies
-{$define ACS_VORBIS_EXT}
+//{$define ACS_VORBIS_EXT}
 
 //
 // Uncomment to enable built-in FLAC decoder, which do not require external dependencies
