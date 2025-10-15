@@ -89,6 +89,7 @@ type
     //function GetProgress: real;
     function GetStatus(): TAcsOutputStatus; override;
     function GetTE(): Real; override;
+    function GetTotalSamplesCount(): Int64; override;
 
     procedure ThreadException(Sender: TComponent; E: Exception);
     procedure OutputDone(Sender: TComponent);
@@ -456,6 +457,14 @@ begin
     Result:=FOutputDriver.TimeElapsed
   else
     Result:=0;
+end;
+
+function TAcsAudioOut.GetTotalSamplesCount(): Int64;
+begin
+  if Assigned(FOutputDriver) then
+    Result := FOutputDriver.GetTotalSamplesCount()
+  else
+    Result := inherited GetTotalSamplesCount();
 end;
 
 procedure TAcsAudioOut.SetPriority(AValue: TThreadPriority);

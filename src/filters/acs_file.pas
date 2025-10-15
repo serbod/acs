@@ -334,6 +334,7 @@ end;
 
 function TAcsFileIn.GetFileOpenFilterString(): string;
 begin
+  Result := '';
   FileFormats.BuildFilterStrings(Result, [fcLoad]);
 end;
 

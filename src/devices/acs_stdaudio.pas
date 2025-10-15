@@ -165,7 +165,8 @@ end;
 
 procedure TStdAudioOut.PlayedBytes(AValue: Integer);
 begin
-  FTimeElapsed:=FTimeElapsed + ((AValue div FSampleSize) / FInput.SampleRate);
+  Inc(FTotalSamplesCount, AValue div FSampleSize);
+  FTimeElapsed := FTimeElapsed + ((AValue div FSampleSize) / FInput.SampleRate);
 end;
 
 { TStdAudioIn }

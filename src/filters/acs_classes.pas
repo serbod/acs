@@ -167,8 +167,10 @@ type
     //Velocity: Integer;
     constructor Create();
     destructor Destroy(); override;
-    function Read(var Buffer; Count: Longint): Longint; override;
-    function Write(const Buffer; Count: Longint): Longint; override;
+    { Copy ACount bytes from ReadPosition to ABuffer }
+    function Read(var ABuffer; ACount: Longint): Longint; override;
+    { Copy ACount bytes from ABuffer to WritePosition }
+    function Write(const ABuffer; ACount: Longint): Longint; override;
     { Size of sound sample in bytes }
     function BytesPerSample(): Integer;
     { Reset WritePosition and ReadPosition to 0 }
@@ -298,6 +300,7 @@ type
     FPrefetchMode: TAcsPrefetchMode;
     { Unread buffer size for triggering fetching from input. Calculated in Init() }
     FPrefetchSize: Integer;
+    FTotalSamplesCount: Int64;
 
     { Read data from Input into Buffer, return bytes read
       AEndOfInput set to True if end of input buffer is reached }
@@ -318,6 +321,7 @@ type
     procedure HandleThreadException(E: Exception); virtual;
     function GetBufferSize(): Integer; virtual;
     procedure SetBufferSize(AValue: Integer); virtual;
+    function GetTotalSamplesCount(): Int64; virtual;
   public
     LastErrorDescription: string;
     constructor Create(AOwner: TComponent); override;
@@ -358,6 +362,8 @@ type
     property Status: TAcsOutputStatus read GetStatus;
     { Time from start of playing, seconds }
     property TimeElapsed: Real read GetTE;
+    { Total samples played from Run() }
+    property TotalSamplesCount: Int64 read GetTotalSamplesCount;
   published
     { Data source component for this component.
       The valid input components must be descendants of TAcsInput. }
@@ -456,20 +462,20 @@ type
     property Name: string read GetName;
     function AsString: string; virtual;
     function Streamable: Boolean; virtual;
-    procedure SaveToStream(Stream: TStream); virtual;
-    procedure LoadFromStream(Stream: TStream); virtual;
+    procedure SaveToStream(AStream: TStream); virtual;
+    procedure LoadFromStream(AStream: TStream); virtual;
   end;
   
 
   { TAcsFileInfo }
   { This class introduces an base class for file tag lists }
   TAcsFileInfo = class
-  private
-    procedure ReadFromFile(); virtual;
-    procedure SetStringTag(Idx: string; const AValue: TAcsFileTag);
-    function GetStringTag(Idx: string): TAcsFileTag;
+  protected
+    procedure SetStringTag(AIdx: string; const AValue: TAcsFileTag); virtual; abstract;
+    function GetStringTag(AIdx: string): TAcsFileTag; virtual; abstract;
   public
-    procedure SaveToFile(); virtual;
+    procedure ReadFromFile(); virtual; abstract;
+    procedure SaveToFile(); virtual; abstract;
     property Tags[Idx: string]: TAcsFileTag read GetStringTag write SetStringTag;
   end;
   
@@ -757,9 +763,9 @@ end;
 constructor TAcsAudioBuffer.Create();
 begin
   inherited Create;
-  FLock:=TMultiReadExclusiveWriteSynchronizer.Create();
-  FReadExtract:=False;
-  Interleaved:=True;
+  FLock := TMultiReadExclusiveWriteSynchronizer.Create();
+  FReadExtract := False;
+  Interleaved := True;
   Reset();
 end;
 
@@ -771,7 +777,7 @@ end;
 
 function TAcsAudioBuffer.GetSamplesCount(): Integer;
 begin
-  Result:=(Self.Size div BytesPerSample());
+  Result := (Self.Size div BytesPerSample());
 end;
 
 procedure TAcsAudioBuffer.SetSamplesCount(AValue: Integer);
@@ -780,7 +786,7 @@ begin
   begin
     if FLock.BeginWrite() then
     begin
-      Self.Size:=AValue * BytesPerSample();
+      Self.Size := AValue * BytesPerSample();
       FLock.EndWrite();
     end;
   end;
@@ -789,51 +795,52 @@ end;
 function TAcsAudioBuffer.GetByte(Index: Integer): Byte;
 begin
   if (Index >= 0) and (Index < Size) then
-    Result:=PByte(Self.Memory)[Index]
+    Result := PByte(Self.Memory)[Index]
   else
-    Result:=0;
+    Result := 0;
 end;
 
 procedure TAcsAudioBuffer.SetByte(Index: Integer; AValue: Byte);
 begin
   if (Index >= 0) and (Index < Size) then
-    PByte(Self.Memory)[Index]:=AValue;
+    PByte(Self.Memory)[Index] := AValue;
 end;
 
 function TAcsAudioBuffer.GetSamplePtr(Index: Integer): Pointer;
 begin
   if (Index >= 0) and (Index < Size) then
-    Result:=Self.Memory + (Index * BytesPerSample())
+    Result := Self.Memory + (Index * BytesPerSample())
   else
-    Result:=nil;
+    Result := nil;
 end;
 
 procedure TAcsAudioBuffer.SetWritePos(AValue: Int64);
 var
   Delta: Int64;
 begin
-  Delta:=AValue-FWritePos;
-  FWritePos:=AValue;
-  FUnreadSize:=FUnreadSize+Delta;
+  Delta := AValue - FWritePos;
+  FWritePos := AValue;
+  FUnreadSize := FUnreadSize + Delta;
 end;
 
 procedure TAcsAudioBuffer.SetReadPos(AValue: Int64);
 var
   Delta: Int64;
 begin
-  Delta:=AValue-FReadPos;
-  FReadPos:=AValue;
-  FUnreadSize:=FUnreadSize-Delta;
+  Delta := AValue - FReadPos;
+  FReadPos := AValue;
+  FUnreadSize := FUnreadSize - Delta;
 end;
 
-function TAcsAudioBuffer.Read(var Buffer; Count: Longint): Longint;
+function TAcsAudioBuffer.Read(var ABuffer; ACount: Longint): Longint;
 var
   s: AnsiString;
 begin
   FLock.BeginRead();
-  Position:=FReadPos;
-  if Count > (Size-Position) then Count:=(Size-Position);
-  Result:=inherited Read(Buffer, Count);
+  Position := FReadPos;
+  if ACount > (Size-Position) then
+    ACount := (Size - Position);
+  Result := inherited Read(ABuffer, ACount);
   Inc(FReadPos, Result);
   if ReadExtract then
   begin
@@ -852,29 +859,29 @@ begin
   FLock.EndRead();
 end;
 
-function TAcsAudioBuffer.Write(const Buffer; Count: Longint): Longint;
+function TAcsAudioBuffer.Write(const ABuffer; ACount: Longint): Longint;
 begin
   if FLock.BeginWrite() then
   begin
-    Position:=FWritePos;
-    Result:=inherited Write(Buffer, Count);
+    Position := FWritePos;
+    Result := inherited Write(ABuffer, ACount);
     Inc(FWritePos, Result);
     Inc(FUnreadSize, Result);
     FLock.EndWrite();
   end
-  else Result:=0;
+  else Result := 0;
 end;
 
 function TAcsAudioBuffer.BytesPerSample(): Integer;
 begin
-  Result:=SampleRate * (BitDepth div 8) * ChannelsCount;
+  Result := SampleRate * (BitDepth div 8) * ChannelsCount;
 end;
 
 procedure TAcsAudioBuffer.Reset();
 begin
-  FWritePos:=0;
-  FReadPos:=0;
-  FUnreadSize:=0;
+  FWritePos := 0;
+  FReadPos := 0;
+  FUnreadSize := 0;
 end;
 
 function TAcsAudioBuffer.GetBufWriteSize(ASize: Integer): Integer;
@@ -889,20 +896,20 @@ end;
 
 procedure TAcsVerySmallThread.CallOnDone();
 begin
- if Assigned(FOnDone) then FOnDone(Sender);
+  if Assigned(FOnDone) then FOnDone(Sender);
 end;
 
 procedure TAcsVerySmallThread.Execute();
 begin
- Synchronize(CallOnDone);
+  Synchronize(CallOnDone);
 end;
 
 { TAcsOutThread }
 
 constructor TAcsOutThread.Create();
 begin
- inherited Create(True);
- //InitCriticalSection(CS);
+  inherited Create(True);
+  //InitCriticalSection(CS);
 end;
 
 destructor TAcsOutThread.Destroy();
@@ -1158,6 +1165,7 @@ begin
     raise EAcsException.Create(strInputnotAssigned);
   InputLock:=False;
   FActive:=True;
+  FTotalSamplesCount:=0;
 
   Thread:=TAcsOutThread.Create();
   Thread.Parent:=Self;
@@ -1223,6 +1231,11 @@ end;
 procedure TAcsCustomOutput.SetPriority(Priority: TThreadPriority);
 begin
   if Assigned(Thread) then Thread.Priority:=Priority;
+end;
+
+function TAcsCustomOutput.GetTotalSamplesCount: Int64;
+begin
+  Result := FTotalSamplesCount;
 end;
 
 function TAcsCustomOutput.FillBufferFromInput(var AEndOfInput: Boolean
@@ -1456,6 +1469,7 @@ end;
 
 procedure TAcsCustomFileIn.OpenFile();
 begin
+  FSize:=0;
   if not FStreamDisabled then
   begin
     if not Assigned(FStream) then
@@ -1465,10 +1479,10 @@ begin
         inherited Done();
         raise EAcsException.Create(strFilenamenotassigned);
       end;
-      FStream:=TFileStream.Create(FFileName, fmOpenRead or fmShareDenyWrite);
+      FStream := TFileStream.Create(FFileName, fmOpenRead or fmShareDenyWrite);
+      FSize := FStream.Size;
     end;
   end;
-  FSize:=0;
   FOpened:=True;
 end;
 
@@ -1480,7 +1494,10 @@ end;
 
 function TAcsCustomFileIn.GetTotalTime(): Real;
 begin
-  Result:=FTotalTime;
+  if FTotalTime <> 0 then
+    Result := FTotalTime
+  else
+    Result := TotalSamples / SampleRate;
 end;
 
 procedure TAcsCustomFileIn.Jump(Offs: Real);
@@ -1799,25 +1816,6 @@ begin
   else Result:=0;
 end;
 
-{ TAcsFileInfo }
-
-function TAcsFileInfo.GetStringTag(Idx: string): TAcsFileTag;
-begin
- Result:=nil;
-end;
-
-procedure TAcsFileInfo.ReadFromFile();
-begin
-end;
-
-procedure TAcsFileInfo.SetStringTag(Idx: string; const AValue: TAcsFileTag);
-begin
-end;
-
-procedure TAcsFileInfo.SaveToFile();
-begin
-end;
-
 { TAcsFileTag }
 
 function TAcsFileTag.GetName(): string;
@@ -1835,11 +1833,11 @@ begin
   Result:=False;
 end;
 
-procedure TAcsFileTag.SaveToStream(Stream: TStream);
+procedure TAcsFileTag.SaveToStream(AStream: TStream);
 begin
 end;
 
-procedure TAcsFileTag.LoadFromStream(Stream: TStream);
+procedure TAcsFileTag.LoadFromStream(AStream: TStream);
 begin
 end;
 
