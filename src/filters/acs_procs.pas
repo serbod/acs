@@ -87,11 +87,17 @@ end;
 
 begin
   Result:=FindInPath('/usr/lib/');
-  {$IFDEF CPU32}
+  {$IFDEF CPUX86}
   if Result = '' then Result:=FindInPath('/usr/lib/i386-linux-gnu/');
   {$ENDIF}
-  {$IFDEF CPU64}
+  {$IFDEF CPUX86_64}
   if Result = '' then Result:=FindInPath('/usr/lib/x86_64-linux-gnu/');
+  {$ENDIF}
+  {$IFDEF CPUARM}
+  if Result = '' then Result:=FindInPath('/usr/lib/arm-linux-gnueabihf/');
+  {$ENDIF}
+  {$IFDEF CPUAARCH64}
+  if Result = '' then Result:=FindInPath('/usr/lib/aarch64-linux-gnu/');
   {$ENDIF}
   if Result = '' then Result:=FindInPath('/usr/local/lib/');
 end;
