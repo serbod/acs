@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
-  <Package Version="4">
+  <Package Version="5">
     <PathDelim Value="\"/>
     <Name Value="laz_acs_directx"/>
     <Type Value="RunTimeOnly"/>
@@ -39,9 +39,9 @@
         </OtherDefines>
       </Other>
     </CompilerOptions>
-    <Description Value="Audio Component Suite addon for MS Windows DirectX audio devices, codecs, file formats."/>
+    <Description Value="Audio Component Suite optional addon for MS Windows DirectX audio devices, codecs, file formats. Depends on pl_Win_DirectX package (also known as pl_directx)."/>
     <License Value="The MIT License (MIT)"/>
-    <Version Major="3" Release="3"/>
+    <Version Major="3" Release="4"/>
     <Files Count="2">
       <Item1>
         <Filename Value="..\src\devices\acs_dxaudio.pas"/>
@@ -52,9 +52,10 @@
         <UnitName Value="acs_dsfiles"/>
       </Item2>
     </Files>
+    <CompatibilityMode Value="True"/>
     <RequiredPkgs Count="3">
       <Item1>
-        <PackageName Value="pl_directx"/>
+        <PackageName Value="pl_Win_DirectX"/>
       </Item1>
       <Item2>
         <PackageName Value="laz_acs"/>
